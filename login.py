@@ -22,12 +22,12 @@ def get_password(cpps, user, remember = True):
 			break
 		if c == '\b':
 			if len(password) > 0:
-				sys.stdout.write("\x08 \x08")
+				sys.stdout.write("\b \b")
 				password = password[:-1]
 		else:
 			sys.stdout.write('*')
 			password += c
-	print '\n'
+	print ""
 	
 	if remember and raw_input("Remember? [y/N] ") == "y":
 		if not cpps in data:

@@ -236,36 +236,58 @@ class Client:
 		return False
 		
 	def room(self, id, x = 0, y = 0):
+		if self.log:
+			print "going to room " + str(id) + "..."
 		self._send("%xt%s%j#jr%" + self.internal_room_id + "%" + id + "%" + str(x) + "%" + str(y) + "%")
 		
 	def update_color(self, id):
+		if self.log:
+			print "changing color to " + str(id) + "..."
 		self._send("%xt%s%s#upc%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_head(self, id):
+		if self.log:
+			print "changing head item to " + str(id) + "..."
 		self._send("%xt%s%s#uph%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_face(self, id):
+		if self.log:
+			print "changing face item to " + str(id) + "..."
 		self._send("%xt%s%s#upf%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_neck(self, id):
+		if self.log:
+			print "changing neck item to " + str(id) + "..."
 		self._send("%xt%s%s#upn%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_body(self, id):
+		if self.log:
+			print "changing body item to " + str(id) + "..."
 		self._send("%xt%s%s#upb%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_hand(self, id):
+		if self.log:
+			print "changing hand item to " + str(id) + "..."
 		self._send("%xt%s%s#upa%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_feet(self, id):
+		if self.log:
+			print "changing feet item to " + str(id) + "..."
 		self._send("%xt%s%s#upe%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_pin(self, id):
+		if self.log:
+			print "changing pin to " + str(id) + "..."
 		self._send("%xt%s%s#upl%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def update_background(self, id):
+		if self.log:
+			print "changing background to " + str(id) + "..."
 		self._send("%xt%s%s#upp%" + self.internal_room_id + "%" + str(id) + "%")
 		
 	def walk(self, x, y):
+		if self.log:
+			print "walking to (" + str(x) + ", " + str(y) + ")..."
 		self._send("%xt%s%u#sp%" + self.id + "%" + str(x) + "%" + str(y) + "%")
 		
 	def _action(self, id):
@@ -275,12 +297,18 @@ class Client:
 		self._send("%xt%s%u#sf%" + self.internal_room_id + "%" + str(id) + "%")
 		
 	def dance(self):
+		if self.log:
+			print "dancing..."
 		self._frame(26)
 
 	def wave(self):
+		if self.log:
+			print "waving..."
 		self._action(25)
 		
 	def sit(self, dir):
+		if self.log:
+			print "sitting..."
 		dirs = {
 			"se": 24,
 			"e": 23,
@@ -291,27 +319,42 @@ class Client:
 			"sw": 18,
 			"s": 17
 		}
-		self._frame(dirs[dir])
+		if dir in dirs:
+			self._frame(dirs[dir])
+		else:
+			self._frame(dirs["s"])
 
 	def snowball(self, x, y):
+		if self.log:
+			print "throwing snowball to (" + str(x) + ", " + str(y) + ")..."
 		self._send("%xt%s%u#sb%" + self.internal_room_id + "%" + str(x) + "%" + str(y) + "%")
 
 	def say(self, message, safe = False):
+		if self.log:
+			print "saying '" + message + "'..."
 		if safe:
 			self._send("%xt%s%u#ss%" + self.internal_room_id + "%" + message + "%")
 		else:
 			self._send("%xt%s%m#sm%" + self.internal_room_id + "%" + self.id + "%" + message + "%")
 
 	def joke(self, joke):
+		if self.log:
+			print "saying joke " + str(joke) + "..."
 		self._send("%xt%s%u#sj%" + self.id + "%" + str(joke) + "%")
 		
 	def emote(self, emote):
+		if self.log:
+			print "saying emote " + str(emote) + "..."
 		self._send("%xt%s%u#se%" + self.internal_room_id + "%" + str(emote) + "%")
 		
 	def add_item(self, id):
+		if self.log:
+			print "adding item " + str(id) + "..."
 		self._send("%xt%s%i#ai%" + self.internal_room_id + "%" + str(id) + "%")
 
 	def follow(self, name, offset_x = 0, offset_y = 0):
+		if self.log:
+			print "following " + name + "..."
 		id = self._get_id(name)
 		if id:
 			self.followed = {"id": id, "x": offset_x, "y": offset_y}
@@ -319,7 +362,11 @@ class Client:
 			self.walk(penguin.x + offset_x, penguin.y + offset_y)
 
 	def unfollow(self):
+		if self.log:
+			print "unfollowing..."
 		self.followed = None
 
 	def logout(self):
+		if self.log:
+			print "logging out..."
 		self.sock.close()
