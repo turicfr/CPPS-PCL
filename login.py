@@ -65,7 +65,8 @@ if not server in port:
 port = port[server]
 
 client = client.Client(ip, login, port)
-print "Connecting..."
+if not client.log:
+	print "Connecting..."
 connected = client.connect(user, password)
 if connected:
 	print "Connected!"
