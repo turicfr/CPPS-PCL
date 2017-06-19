@@ -4,7 +4,6 @@ A simple Penguin Client Library for Club Penguin Private Servers written in Pyth
 # Requirements
 - Python 2.x or 3.x
 - Internet connection
-- Computer
 
 # Usage
 1. Run login.py
