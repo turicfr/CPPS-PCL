@@ -3,7 +3,7 @@ import hashlib
 import re
 import os
 import json
-from threading import Thread
+import threading
 
 class Penguin:
 	def __init__(self, id, name, clothes, x, y):
@@ -145,6 +145,8 @@ class Client:
 		return None
 		
 	def _game(self):
+		thread = threading.Thread(target = self._heartbeat)
+		thread.start()
 		while True:
 			packet = self._packet()
 			if not packet:
@@ -203,6 +205,10 @@ class Client:
 					self.snowball(x, y)
 			elif self.log:
 				print "# UNKNOWN OPCODE: " + op
+				
+	def _heartbeat(self):
+		threading.Timer(600, self._heartbeat)
+		self._send("%xt%s%u#h%1%")
 
 	def connect(self, user, password, ver = 153):
 		if self.log:
@@ -224,31 +230,71 @@ class Client:
 			
 			buf = self._join_server(user, login_key, ver)
 			if buf:
-				thread = Thread(target = self._game)
+				thread = threading.Thread(target = self._game)
 				thread.start()
 				return True
 		return False
+		
+	def room(self, id, x = 0, y = 0):
+		self._send("%xt%s%j#jr%" + self.internal_room_id + "%" + id + "%" + str(x) + "%" + str(y) + "%")
+		
+	def update_color(self, id):
+		self._send("%xt%s%s#upc%" + self.internal_room_id + "%" + str(id) + "%")
 
+	def update_head(self, id):
+		self._send("%xt%s%s#uph%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_face(self, id):
+		self._send("%xt%s%s#upf%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_neck(self, id):
+		self._send("%xt%s%s#upn%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_body(self, id):
+		self._send("%xt%s%s#upb%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_hand(self, id):
+		self._send("%xt%s%s#upa%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_feet(self, id):
+		self._send("%xt%s%s#upe%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_pin(self, id):
+		self._send("%xt%s%s#upl%" + self.internal_room_id + "%" + str(id) + "%")
+
+	def update_background(self, id):
+		self._send("%xt%s%s#upp%" + self.internal_room_id + "%" + str(id) + "%")
+		
 	def walk(self, x, y):
 		self._send("%xt%s%u#sp%" + self.id + "%" + str(x) + "%" + str(y) + "%")
-
+		
+	def _action(self, id):
+		self._send("%xt%s%u#sa%" + self.internal_room_id + "%" + str(id) + "%")
+		
+	def _frame(self, id):
+		self._send("%xt%s%u#sf%" + self.internal_room_id + "%" + str(id) + "%")
+		
 	def dance(self):
-		# TODO
-		pass
+		self._frame(26)
 
 	def wave(self):
-		# TODO
-		pass
+		self._action(25)
 		
 	def sit(self, dir):
-		# TODO
-		pass
+		dirs = {
+			"se": 24,
+			"e": 23,
+			"ne": 22,
+			"n": 21,
+			"nw": 20,
+			"w": 19,
+			"sw": 18,
+			"s": 17
+		}
+		self._frame(dirs[dir])
 
 	def snowball(self, x, y):
 		self._send("%xt%s%u#sb%" + self.internal_room_id + "%" + str(x) + "%" + str(y) + "%")
-
-	def room(self, id, x = 0, y = 0):
-		self._send("%xt%s%j#jr%" + self.internal_room_id + "%" + id + "%" + str(x) + "%" + str(y) + "%")
 
 	def say(self, message, safe = False):
 		if safe:
