@@ -37,7 +37,7 @@ def get_password(cpps, user, remember = True):
 	if cpps in data and user in data[cpps]:
 		return data[cpps][user]
 	password = raw_input("Password: ")
-	if remember and raw_input("Remember? [y/n] ") == "y":
+	if remember and raw_input("Remember? [y/N] ") == "y":
 		if not cpps in data:
 			data[cpps] = {}
 		data[cpps][user] = password
@@ -65,9 +65,12 @@ if not server in port:
 port = port[server]
 
 client = client.Client(ip, login, port)
+print "Connecting..."
 connected = client.connect(user, password)
 if connected:
 	print "Connected!"
 	while True:
 		cmd = raw_input()
 		command(cmd, client)
+else:
+	sys.exit("Failed to connect")
