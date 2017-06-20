@@ -1,6 +1,8 @@
 # CPPS-PCL
 A simple Penguin Client Library for Club Penguin Private Servers written in Python
 
+**Warning:** High ban risk - Do not use with your own main penguin.
+
 # Requirements
 - Python 2.x or 3.x
 - Internet connection
