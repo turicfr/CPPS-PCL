@@ -76,7 +76,7 @@ class Client:
 		with open(filename) as file:
 			data = json.load(file)
 		code = packet[4]
-		print data[code]
+		print "Error #" + code + ": " + data[code]
 
 	def _ver_check(self, ver = 153):
 		if self.log:

@@ -25,15 +25,20 @@ def get_password(cpps, user, remember = True):
 	
 	print "Password: ",
 	password = ""
+	special = False
 	while True:
 		c = msvcrt.getch()
-		if c == '\r' or c == '\n':
+		if special:
+			special = False
+		elif c == '\r' or c == '\n':
 			break
-		if c == '\b':
+		elif c == '\b':
 			if len(password) > 0:
 				sys.stdout.write("\b \b")
 				password = password[:-1]
-		else:
+		elif c == '\xe0':
+			special = True
+		elif 32 <= ord(c) < 127:
 			sys.stdout.write('*')
 			password += c
 	print ""
@@ -46,130 +51,199 @@ def get_password(cpps, user, remember = True):
 			json.dump(data, file)
 	return password, False
 
-def help(params):
+def help(client, params):
 	print """HELP"""
 
-def room(params):
-	client.room(params[0])
+def room(client, params):
+	if len(params) > 0:
+		client.room(params[0])
+	else:
+		# TODO
+		pass
 	
-def color(params):
-	client.update_color(params[0])
+def color(client, params):
+	if len(params) > 0:
+		client.update_color(params[0])
+	else:
+		# TODO
+		pass
 
-def head(params):
-	client.update_head(params[0])
+def head(client, params):
+	if len(params) > 0:
+		client.update_head(params[0])
+	else:
+		# TODO
+		pass
 
-def face(params):
-	client.update_face(params[0])
+def face(client, params):
+	if len(params) > 0:
+		client.update_face(params[0])
+	else:
+		# TODO
+		pass
 
-def neck(params):
-	client.update_neck(params[0])
+def neck(client, params):
+	if len(params) > 0:
+		client.update_neck(params[0])
+	else:
+		# TODO
+		pass
 
-def body(params):
-	client.update_body(params[0])
+def body(client, params):
+	if len(params) > 0:
+		client.update_body(params[0])
+	else:
+		# TODO
+		pass
 
-def hand(params):
-	client.update_hand(params[0])
+def hand(client, params):
+	if len(params) > 0:
+		client.update_hand(params[0])
+	else:
+		# TODO
+		pass
 
-def feet(params):
-	client.update_feet(params[0])
+def feet(client, params):
+	if len(params) > 0:
+		client.update_feet(params[0])
+	else:
+		# TODO
+		pass
 
-def pin(params):
-	client.update_pin(params[0])
+def pin(client, params):
+	if len(params) > 0:
+		client.update_pin(params[0])
+	else:
+		# TODO
+		pass
 
-def background(params):
-	client.update_background(params[0])
+def background(client, params):
+	if len(params) > 0:
+		client.update_background(params[0])
+	else:
+		# TODO
+		pass
 
-def walk(params):
-	client.walk(params[0], params[1])
+def walk(client, params):
+	if len(params) < 2:
+		# TODO
+		pass
+	else:
+		client.walk(params[0], params[1])
 
-def dance(params):
+def dance(client, params):
 	client.dance()
 
-def wave(params):
+def wave(client, params):
 	client.wave()
 
-def sit(params):
-	client.sit(params[0])
+def sit(client, params):
+	if len(params) > 0:
+		client.sit(params[0])
+	else:
+		# TODO
+		pass
 
-def snowball(params):
-	client.snowball(params[0], params[1])
+def snowball(client, params):
+	if len(params) < 2:
+		# TODO
+		pass
+	else:
+		client.snowball(params[0], params[1])
 
-def say(params):
-	client.say(' '.join(params))
+def say(client, params):
+	if len(params) > 0:
+		client.say(' '.join(params))
+	else:
+		# TODO
+		pass
 
-def joke(params):
-	client.joke(params[0])
+def joke(client, params):
+	if len(params) > 0:
+		client.joke(params[0])
+	else:
+		# TODO
+		pass
 
-def emote(params):
-	client.emote(params[0])
+def emote(client, params):
+	if len(params) > 0:
+		client.emote(params[0])
+	else:
+		# TODO
+		pass
 
-def item(params):
-	client.add_item(params[0])
+def item(client, params):
+	if len(params) > 0:
+		client.add_item(params[0])
+	else:
+		# TODO
+		pass
 
-def follow(params):
+def follow(client, params):
 	client.follow(' '.join(params))
 
-def unfollow(params):
+def unfollow(client, params):
 	client.unfollow()
 
-def logout(params):
+def logout(client, params):
 	client.logout()
 	sys.exit(0)
 
-cpps = "cpr"
-data = get_server(cpps)
-user = raw_input("Username: ")
-password, encrypted = get_password(cpps, user)
-server = raw_input("Server: ").lower()
-
-ip = data["ip"]
-login = data["login"]
-port = data["servers"]
-if not server in port:
-	sys.exit("Server not found")
-port = port[server]
-
-client = client.Client(ip, login, port)
-if not client.log:
-	print "Connecting..."
-connected = client.connect(user, password, encrypted)
-if connected:
-	print "Connected!"
+if __name__ == "__main__":
+	cpps = "cpr"
+	data = get_server(cpps)
+	user = raw_input("Username: ")
+	password, encrypted = get_password(cpps, user)
+	server = raw_input("Server: ").lower()
 	
-	commands = {
-		"help": help,
-		"room": room,
-		"color": color,
-		"head": head,
-		"face": face,
-		"neck": neck,
-		"body": body,
-		"hand": hand,
-		"feet": feet,
-		"pin": pin,
-		"background": background,
-		"walk": walk,
-		"dance": dance,
-		"wave": wave,
-		"sit": sit,
-		"snowball": snowball,
-		"say": say,
-		"joke": joke,
-		"emote": emote,
-		"item": item,
-		"follow": follow,
-		"unfollow": unfollow,
-		"logout": logout
-	}
+	ip = data["ip"]
+	login_port = data["login"]
+	game_port = data["servers"]
+	if not server in game_port:
+		sys.exit("Server not found")
+	game_port = game_port[server]
 	
-	while True:
-		print ">>>",
-		cmd = raw_input().split(' ')
-		name = cmd[0]
-		params = cmd[1:]
-		if name in commands:
-			commands[name](params)
-		else:
-			print "command '" + name + "' doesn't exist"
-else:
-	sys.exit("Failed to connect")
+	client = client.Client(ip, login_port, game_port)
+	if not client.log:
+		print "Connecting..."
+	connected = client.connect(user, password, encrypted)
+	if connected:
+		print "Connected!"
+		
+		commands = {
+			"help": help,
+			"room": room,
+			"color": color,
+			"head": head,
+			"face": face,
+			"neck": neck,
+			"body": body,
+			"hand": hand,
+			"feet": feet,
+			"pin": pin,
+			"background": background,
+			"walk": walk,
+			"dance": dance,
+			"wave": wave,
+			"sit": sit,
+			"snowball": snowball,
+			"say": say,
+			"joke": joke,
+			"emote": emote,
+			"item": item,
+			"follow": follow,
+			"unfollow": unfollow,
+			"logout": logout
+		}
+		
+		while True:
+			print ">>>",
+			cmd = raw_input().split(' ')
+			name = cmd[0]
+			params = cmd[1:]
+			if name in commands:
+				commands[name](client, params)
+			else:
+				print "command '" + name + "' doesn't exist"
+	else:
+		sys.exit("Failed to connect")
