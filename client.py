@@ -39,10 +39,12 @@ class Client:
 		self.penguins = {}
 		self.followed = None
 
-	def _swapped_md5(self, password):
-		hash = hashlib.md5(password).hexdigest()
-		swap = hash[16:32] + hash[0:16]
-		return swap
+	@staticmethod
+	def swapped_md5(password, encrypted = False):
+		if not encrypted:
+			password = hashlib.md5(password).hexdigest()
+		password = password[16:32] + password[0:16]
+		return password
 
 	def _send(self, data):
 		if self.log:
@@ -103,12 +105,12 @@ class Client:
 			return key
 		raise Exception("Invalid response")
 
-	def _login(self, user, password, ver):
+	def _login(self, user, password, encrypted, ver):
 		if self.log:
 			print "Logging in..."
 		self._ver_check(ver)
 		rndk = self._key()
-		hash = self._swapped_md5(self._swapped_md5(password).upper() + rndk + "Y(02.>'H}t\":E1")
+		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + "Y(02.>'H}t\":E1")
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._packet()
 		if not packet:
@@ -126,7 +128,7 @@ class Client:
 			print "Joining server..."
 		self._ver_check(ver)
 		rndk = self._key()
-		hash = self._swapped_md5(login_key + rndk) + login_key
+		hash = self.swapped_md5(login_key + rndk) + login_key
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._packet()
 		if packet and packet[2] == 'l':
@@ -210,14 +212,14 @@ class Client:
 		threading.Timer(600, self._heartbeat)
 		self._send("%xt%s%u#h%1%")
 
-	def connect(self, user, password, ver = 153):
+	def connect(self, user, password, encrypted = False, ver = 153):
 		if self.log:
 			print "Connecting to " + self.ip + ":" + str(self.login_port) + "..."
 		
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.connect((self.ip, self.login_port))
 			
-		buf = self._login(user, password, ver)
+		buf = self._login(user, password, encrypted, ver)
 		if buf:
 			self.id = buf[4]
 			login_key = buf[5]

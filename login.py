@@ -1,9 +1,18 @@
 import sys
 import msvcrt
+import hashlib
 import os
 import json
 import client
-		
+
+def get_server(cpps):
+	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
+	with open(filename) as file:
+		data = json.load(file)
+	if not cpps in data:
+		sys.exit("CPPS not found")
+	return data[cpps]
+
 def get_password(cpps, user, remember = True):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
 	try:
@@ -12,7 +21,7 @@ def get_password(cpps, user, remember = True):
 	except:
 		data = {}
 	if cpps in data and user in data[cpps]:
-		return data[cpps][user]
+		return data[cpps][user], True
 	
 	print "Password: ",
 	password = ""
@@ -32,10 +41,10 @@ def get_password(cpps, user, remember = True):
 	if remember and raw_input("Remember? [y/N] ") == "y":
 		if not cpps in data:
 			data[cpps] = {}
-		data[cpps][user] = password
+		data[cpps][user] = hashlib.md5(password).hexdigest()
 		with open(filename, "w") as file:
 			json.dump(data, file)
-	return password
+	return password, False
 
 def help(params):
 	print """HELP"""
@@ -108,15 +117,9 @@ def logout(params):
 	sys.exit(0)
 
 cpps = "cpr"
-filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
-with open(filename) as file:
-	data = json.load(file)
-if not cpps in data:
-	sys.exit("CPPS not found")
-data = data[cpps]
-
+data = get_server(cpps)
 user = raw_input("Username: ")
-password = get_password(cpps, user)
+password, encrypted = get_password(cpps, user)
 server = raw_input("Server: ").lower()
 
 ip = data["ip"]
@@ -129,7 +132,7 @@ port = port[server]
 client = client.Client(ip, login, port)
 if not client.log:
 	print "Connecting..."
-connected = client.connect(user, password)
+connected = client.connect(user, password, encrypted)
 if connected:
 	print "Connected!"
 	
