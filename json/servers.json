@@ -4,6 +4,20 @@
 		"login": 6112,
 		"servers": {
 			"blizzard": 6113
+			"sleet": 6119,
+			"marshmallow": 7000,
+			"zipline": 7001,
+			"deep freeze": 7002,
+			"snow avalanche": 6114,
+			"antarctic": 7003,
+			"abominable": 7004,
+			"alaska": 7005,
+			"alpine": 7006,
+			"arctic": 7007,
+			"ascent": 7008,
+			"aurora": 7009,
+			"avalanche": 7010,
+			"beanie": 7011
 		}
 	}
 }
