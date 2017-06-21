@@ -50,4 +50,4 @@ A simple Penguin Client Library for Club Penguin Private Servers written in Pyth
 
 ## Tips and Tricks
 - Edit json/servers.json in order to define more CPPSs and servers (ports can be found using a packet sniffer)
-- Turn on log by changing line 195 in login.py to 'client = client.Client(ip, login_port, game_port, True)'
+- Turn on log by changing line 200 in login.py to 'client = client.Client(ip, login_port, game_port, True)'
