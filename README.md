@@ -15,6 +15,7 @@ A simple Penguin Client Library for Club Penguin Private Servers written in Pyth
 
 ## Commands
 - help - prints "HELP" (will be done in the future)
+- log - toggles log on/off
 - id - prints your id
 - coins - prints current coins
 - room [id] - goes to room with id [id] / prints current room
@@ -43,11 +44,10 @@ A simple Penguin Client Library for Club Penguin Private Servers written in Pyth
 - say [message] - says [message]
 - joke [id] - says joke with id [id]
 - emote [id] - says an emote with id [id]
-- add [id] - adds items with id [id]
+- buy [id] - buys item with id [id]
 - follow [name] - follows a penguin named [name] / prints currently followed penguin
 - unfollow - disables follow
-- logout - logouts
+- logout - logouts (may take few minutes)
 
 ## Tips and Tricks
 - Edit json/servers.json in order to define more CPPSs and servers (ports can be found using a packet sniffer)
-- Turn on log by changing line 200 in login.py to 'client = client.Client(ip, login_port, game_port, True)'
