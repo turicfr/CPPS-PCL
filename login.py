@@ -162,14 +162,19 @@ def emote(client, params):
 	else:
 		print "An argument is required"
 
-def item(client, params):
+def add(client, params):
 	if len(params) > 0:
 		client.add_item(params[0])
 	else:
 		print "An argument is required"
 
 def follow(client, params):
-	client.follow(' '.join(params))
+	if len(params) > 0:
+		client.follow(' '.join(params))
+	elif client.followed:
+		print "Currently following " + client.penguins[client.followed.id].name
+	else:
+		print "Currently not following"
 
 def unfollow(client, params):
 	client.unfollow()
@@ -192,7 +197,7 @@ if __name__ == "__main__":
 		sys.exit("Server not found")
 	game_port = game_port[server]
 	
-	client = client.Client(ip, login_port, game_port, False)
+	client = client.Client(ip, login_port, game_port)
 	if not client.log:
 		print "Connecting..."
 	connected = client.connect(user, password, encrypted)
@@ -221,7 +226,7 @@ if __name__ == "__main__":
 			"say": say,
 			"joke": joke,
 			"emote": emote,
-			"item": item,
+			"add": add,
 			"follow": follow,
 			"unfollow": unfollow,
 			"logout": logout
