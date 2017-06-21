@@ -70,7 +70,6 @@ class Client:
 			packet = buf.split('%')
 			if packet[2] == "e":
 				self._error(packet)
-				return None
 			return packet
 		raise Exception("Invalid packet")
 
@@ -79,7 +78,7 @@ class Client:
 		with open(filename) as file:
 			data = json.load(file)
 		code = int(packet[4])
-		print "Error #" + str(code) + ": " + data[code]
+		print "Error #" + str(code) + ": " + data[str(code)]
 
 	def _ver_check(self, ver = 153):
 		if self.log:
@@ -116,15 +115,15 @@ class Client:
 		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + "Y(02.>'H}t\":E1")
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._packet()
-		if not packet:
-			return None
-		while packet[2] != 'l':
+		if packet[2] == "e":
+			return packet, False
+		while packet[2] != "l":
 			packet = self._packet()
-			if not packet:
-				return None
+			if packet[2] == "e":
+				return packet, False
 		if self.log:
 			print "Logged in."
-		return packet
+		return packet, True
 
 	def _join_server(self, user, login_key, ver):
 		if self.log:
@@ -134,14 +133,14 @@ class Client:
 		hash = self.swapped_md5(login_key + rndk) + login_key
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._packet()
-		if packet and packet[2] == 'l':
+		if packet[2] == "l":
 			self._send("%xt%s%j#js%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + login_key + "%en%")
 			packet = self._packet()
-			if packet and packet[2] == "js":
+			if packet[2] == "js":
 				if self.log:
 					print "Joined server."
-				return packet
-		return None
+				return packet, True
+		return packet, False
 		
 	def _get_id(self, name):
 		for penguin in self.penguins.values():
@@ -154,9 +153,9 @@ class Client:
 		thread.start()
 		while True:
 			packet = self._packet()
-			if not packet:
-				return
 			op = packet[2]
+			if op == "e":
+				pass
 			if op == "h":
 				pass
 			elif op == "lp":
@@ -297,8 +296,9 @@ class Client:
 					self.emote(emote)
 			elif op == "ai":
 				id = int(packet[4])
-				cost = int(packet[5])
-				self.coins -= cost
+				coins = int(packet[5])
+				cost = self.coins - coins
+				self.coins = coins
 				print "Added item " + str(id) + " (cost " + str(cost) + " coins)"
 			elif self.log:
 				print "# UNKNOWN OPCODE: " + op
@@ -310,28 +310,27 @@ class Client:
 	def connect(self, user, password, encrypted = False, ver = 153):
 		if self.log:
 			print "Connecting to " + self.ip + ":" + str(self.login_port) + "..."
-		
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.connect((self.ip, self.login_port))
 			
-		buf = self._login(user, password, encrypted, ver)
-		if buf:
-			self.id = int(buf[4])
-			login_key = buf[5]
-			
-			if self.log:
-				print "Connecting to " + self.ip + ":" + str(self.game_port) + "..."
-			
-			self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			self.sock.connect((self.ip, self.game_port))
-			
-			buf = self._join_server(user, login_key, ver)
-			if buf:
-				thread = threading.Thread(target = self._game)
-				thread.start()
-				return True
-		return False
+		packet, ok = self._login(user, password, encrypted, ver)
+		if not ok:
+			return int(packet[4])
+		self.id = int(packet[4])
+		login_key = packet[5]
 		
+		if self.log:
+			print "Connecting to " + self.ip + ":" + str(self.game_port) + "..."
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.sock.connect((self.ip, self.game_port))
+		
+		packet, ok = self._join_server(user, login_key, ver)
+		if not ok:
+			return int(packet[4])
+		thread = threading.Thread(target = self._game)
+		thread.start()
+		return 0
+
 	def room(self, id, x = 0, y = 0):
 		if self.log:
 			print "Going to room " + str(id) + "..."
@@ -403,7 +402,7 @@ class Client:
 			print "Waving..."
 		self._action(25)
 		
-	def sit(self, dir):
+	def sit(self, dir = "s"):
 		if self.log:
 			print "Sitting..."
 		dirs = {
@@ -453,7 +452,7 @@ class Client:
 		if self.log:
 			print "Following " + name + "..."
 		id = self._get_id(name)
-		if id > 0:
+		if id:
 			self.followed = {"id": id, "x": offset_x, "y": offset_y}
 			penguin = self.penguins[id]
 			self.walk(penguin.x + offset_x, penguin.y + offset_y)
