@@ -53,81 +53,76 @@ def get_password(cpps, user, remember = True):
 
 def help(client, params):
 	print """HELP"""
+	
+def id(client, params):
+	print "id: " + str(client.id)
+
+def coins(client, params):
+	print "Current coins: " + str(client.coins)
 
 def room(client, params):
 	if len(params) > 0:
 		client.room(params[0])
 	else:
-		# TODO
-		pass
+		print "Current room: " + str(client.current_room)
 	
 def color(client, params):
 	if len(params) > 0:
 		client.update_color(params[0])
 	else:
-		# TODO
-		pass
+		print "Current color: " + str(client.penguins[client.id].clothes["color"])
 
 def head(client, params):
 	if len(params) > 0:
 		client.update_head(params[0])
 	else:
-		# TODO
-		pass
+		print "Current head item: " + str(client.penguins[client.id].clothes["head"])
 
 def face(client, params):
 	if len(params) > 0:
 		client.update_face(params[0])
 	else:
-		# TODO
-		pass
+		print "Current face item: " + str(client.penguins[client.id].clothes["face"])
 
 def neck(client, params):
 	if len(params) > 0:
 		client.update_neck(params[0])
 	else:
-		# TODO
-		pass
+		print "Current neck item: " + str(client.penguins[client.id].clothes["neck"])
 
 def body(client, params):
 	if len(params) > 0:
 		client.update_body(params[0])
 	else:
-		# TODO
-		pass
+		print "Current body item: " + str(client.penguins[client.id].clothes["body"])
 
 def hand(client, params):
 	if len(params) > 0:
 		client.update_hand(params[0])
 	else:
-		# TODO
-		pass
+		print "Current hand item: " + str(client.penguins[client.id].clothes["hand"])
 
 def feet(client, params):
 	if len(params) > 0:
 		client.update_feet(params[0])
 	else:
-		# TODO
-		pass
+		print "Current feet item: " + str(client.penguins[client.id].clothes["feet"])
 
 def pin(client, params):
 	if len(params) > 0:
 		client.update_pin(params[0])
 	else:
-		# TODO
-		pass
+		print "Current pin: " + str(client.penguins[client.id].clothes["pin"])
 
 def background(client, params):
 	if len(params) > 0:
 		client.update_background(params[0])
 	else:
-		# TODO
-		pass
+		print "Current background: " + str(client.penguins[client.id].clothes["background"])
 
 def walk(client, params):
 	if len(params) < 2:
-		# TODO
-		pass
+		print "2 arguments are required"
 	else:
 		client.walk(params[0], params[1])
 
@@ -141,13 +136,11 @@ def sit(client, params):
 	if len(params) > 0:
 		client.sit(params[0])
 	else:
-		# TODO
-		pass
+		client.sit("s")
 
 def snowball(client, params):
 	if len(params) < 2:
-		# TODO
-		pass
+		print "2 arguments are required"
 	else:
 		client.snowball(params[0], params[1])
 
@@ -155,29 +148,25 @@ def say(client, params):
 	if len(params) > 0:
 		client.say(' '.join(params))
 	else:
-		# TODO
-		pass
+		print "An argument is required"
 
 def joke(client, params):
 	if len(params) > 0:
 		client.joke(params[0])
 	else:
-		# TODO
-		pass
+		print "An argument is required"
 
 def emote(client, params):
 	if len(params) > 0:
 		client.emote(params[0])
 	else:
-		# TODO
-		pass
+		print "An argument is required"
 
 def item(client, params):
 	if len(params) > 0:
 		client.add_item(params[0])
 	else:
-		# TODO
-		pass
+		print "An argument is required"
 
 def follow(client, params):
 	client.follow(' '.join(params))
@@ -203,7 +192,7 @@ if __name__ == "__main__":
 		sys.exit("Server not found")
 	game_port = game_port[server]
 	
-	client = client.Client(ip, login_port, game_port)
+	client = client.Client(ip, login_port, game_port, False)
 	if not client.log:
 		print "Connecting..."
 	connected = client.connect(user, password, encrypted)
@@ -212,6 +201,8 @@ if __name__ == "__main__":
 		
 		commands = {
 			"help": help,
+			"id": id,
+			"coins": coins,
 			"room": room,
 			"color": color,
 			"head": head,
