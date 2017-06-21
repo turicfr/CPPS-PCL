@@ -265,9 +265,16 @@ class Client:
 				penguin.y = int(packet[6])
 				if self.followed and id == self.followed["id"]:
 					self.walk(penguin.x + self.followed["x"], penguin.y + self.followed["y"])
-			# TODO dance
-			# TODO wave
-			# TODO sit
+			elif op == "sa":
+				id = int(packet[4])
+				action = int(packet[5])
+				if self.followed and id == self.followed["id"]:
+					self._action(action)
+			elif op == "sf":
+				id = int(packet[4])
+				frame = int(packet[5])
+				if self.followed and id == self.followed["id"]:
+					self._frame(frame)
 			elif op == "sb":
 				id = int(packet[4])
 				x = int(packet[5])
