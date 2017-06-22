@@ -66,7 +66,7 @@ A complex login with multiple penguins managed by a certain shape.
 - buy [id] - buys item with id [id]
 - follow [name] - follows a penguin named [name] / prints currently followed penguin
 - unfollow - disables follow
-- logout - logouts (may take few minutes)
+- logout - logouts from the game
 
 ## Tips and Tricks
 - Edit json/servers.json in order to define more CPPSs and servers (ports can be found using a packet sniffer)
