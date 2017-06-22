@@ -13,7 +13,7 @@ def room(clients, params):
 			client.room(params[0])
 	else:
 		print "An argument is required"
-	
+
 def color(clients, params):
 	if len(params):
 		for client in clients:
@@ -188,6 +188,7 @@ if __name__ == "__main__":
 			data = json.load(file)
 	except:
 		data = {}
+	
 	if cpps in data:
 		for user, password in data[cpps].items():
 			error = clients[count - 1].connect(user, password, True)

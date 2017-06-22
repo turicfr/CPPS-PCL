@@ -198,9 +198,15 @@ class Client:
 				penguin = self.penguins.pop(id)
 				if self.followed and id == self.followed["id"]:
 					self._send("%xt%s%b#bf%" + str(self.internal_room_id) + "%" + str(id) + "%")
+			elif op == "br":
+				id = int(packet[4])
+				name = packet[5]
+				if raw_input("Buddy with " + name + "? [y/n]") == "y":
+					self._send("%xt%s%b#ba%" + str(self.internal_room_id) + "%" + str(id) + "%")
 			elif op == "bf":
 				room = int(packet[4])
-				if self.followed:
+				id = int(packet[6])
+				if self.followed and id == self.followed["id"]:
 					self.room(room)
 			elif op == "upc":
 				id = int(packet[4])
@@ -461,12 +467,18 @@ class Client:
 		if self.log:
 			print "Adding item " + str(id) + "..."
 		self._send("%xt%s%i#ai%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		
+	def buddy(self, id):
+		if self.log:
+			print "Sending buddy request to " + str(id) + "..."
+		self._send("%xt%s%b#br%" + str(self.internal_room_id) + "%" + str(id) + "%")
 
 	def follow(self, name, offset_x = 0, offset_y = 0):
 		if self.log:
 			print "Following " + name + "..."
 		id = self._get_id(name)
 		if id:
+			self.buddy(id)
 			self.followed = {"id": id, "x": offset_x, "y": offset_y}
 			penguin = self.penguins[id]
 			self.walk(penguin.x + offset_x, penguin.y + offset_y)
