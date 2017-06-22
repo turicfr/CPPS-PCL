@@ -55,8 +55,11 @@ class Client:
 		self.sock.send(data + chr(0))
 
 	def _receive(self):
-		while not chr(0) in self.buf:
-			self.buf += self.sock.recv(4096)
+		try:
+			while not chr(0) in self.buf:
+				self.buf += self.sock.recv(4096)
+		except:
+			return None
 		i = self.buf.index(chr(0)) + 1
 		message = self.buf[:i]
 		self.buf = self.buf[i:]
@@ -66,6 +69,8 @@ class Client:
 
 	def _packet(self):
 		buf = self._receive()
+		if not buf:
+			return None
 		if buf.startswith("%"):
 			packet = buf.split('%')
 			if packet[2] == "e":
@@ -115,7 +120,7 @@ class Client:
 		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + "Y(02.>'H}t\":E1")
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._packet()
-		if packet[2] == "e":
+		if not packet or packet[2] == "e":
 			return packet, False
 		while packet[2] != "l":
 			packet = self._packet()
@@ -133,7 +138,7 @@ class Client:
 		hash = self.swapped_md5(login_key + rndk) + login_key
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._packet()
-		if packet[2] == "l":
+		if packet and packet[2] == "l":
 			self._send("%xt%s%j#js%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + login_key + "%en%")
 			packet = self._packet()
 			if packet[2] == "js":
@@ -153,6 +158,8 @@ class Client:
 		thread.start()
 		while True:
 			packet = self._packet()
+			if not packet:
+				break
 			op = packet[2]
 			if op == "e":
 				pass
@@ -472,4 +479,5 @@ class Client:
 	def logout(self):
 		if self.log:
 			print "Logging out..."
+		self.sock.shutdown(socket.SHUT_RDWR)
 		self.sock.close()
