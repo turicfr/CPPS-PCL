@@ -124,7 +124,7 @@ class Client:
 			return packet, False
 		while packet[2] != "l":
 			packet = self._packet()
-			if packet[2] == "e":
+			if not packet or packet[2] == "e":
 				return packet, False
 		if self.log:
 			print "Logged in."
@@ -141,7 +141,7 @@ class Client:
 		if packet and packet[2] == "l":
 			self._send("%xt%s%j#js%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + login_key + "%en%")
 			packet = self._packet()
-			if packet[2] == "js":
+			if packet and packet[2] == "js":
 				if self.log:
 					print "Joined server."
 				return packet, True
@@ -205,8 +205,7 @@ class Client:
 					self._send("%xt%s%b#ba%" + str(self.internal_room_id) + "%" + str(id) + "%")
 			elif op == "bf":
 				room = int(packet[4])
-				id = int(packet[6])
-				if self.followed and id == self.followed["id"]:
+				if self.followed:
 					self.room(room)
 			elif op == "upc":
 				id = int(packet[4])
