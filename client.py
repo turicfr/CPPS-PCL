@@ -52,7 +52,11 @@ class Client:
 	def _send(self, data):
 		if self.log:
 			print "# SEND: " + str(data)
-		self.sock.send(data + chr(0))
+		try:
+			self.sock.send(data + chr(0))
+		except:
+			if self.log:
+				print "Connection lost"
 
 	def _receive(self):
 		try:
@@ -61,11 +65,11 @@ class Client:
 		except:
 			return None
 		i = self.buf.index(chr(0)) + 1
-		message = self.buf[:i]
+		msg = self.buf[:i]
 		self.buf = self.buf[i:]
 		if self.log:
-			print "# RECEIVE: " + str(message)
-		return message
+			print "# RECEIVE: " + str(msg)
+		return msg
 
 	def _packet(self):
 		buf = self._receive()
@@ -83,7 +87,10 @@ class Client:
 		with open(filename) as file:
 			data = json.load(file)
 		code = int(packet[4])
-		print "Error #" + str(code) + ": " + data[str(code)]
+		msg = "Error #" + str(code) + ": " + data[str(code)]
+		if self.followed and self.followed["commands"]:
+			self.say(msg)
+		print msg
 
 	def _ver_check(self, ver = 153):
 		if self.log:
@@ -295,14 +302,20 @@ class Client:
 					self.snowball(x, y)
 			elif op == "sm":
 				id = int(packet[4])
-				message = packet[5]
+				msg = packet[5]
 				if self.followed and id == self.followed["id"]:
-					self.say(message, False)
+					if self.followed["commands"] and msg.startswith('!'):
+						cmd = msg.split(' ')
+						name = cmd[0][1:]
+						params = cmd[1:]
+						self._command(name, params)
+					else:
+						self.say(msg, False)
 			elif op == "ss":
 				id = int(packet[4])
-				message = packet[5]
+				msg = packet[5]
 				if self.followed and id == self.followed["id"]:
-					self.say(message, True)
+					self.say(msg, True)
 			elif op == "sj":
 				id = int(packet[4])
 				joke = int(packet[5])
@@ -318,7 +331,10 @@ class Client:
 				coins = int(packet[5])
 				cost = self.coins - coins
 				self.coins = coins
-				print "Added item " + str(id) + " (cost " + str(cost) + " coins)"
+				msg = "Added item " + str(id) + " (cost " + str(cost) + " coins)"
+				if self.followed and self.followed["commands"]:
+					self.say(msg)
+				print msg
 			elif self.log:
 				print "# UNKNOWN OPCODE: " + op
 				
@@ -326,11 +342,20 @@ class Client:
 		threading.Timer(600, self._heartbeat)
 		self._send("%xt%s%u#h%" + str(self.internal_room_id) + "%")
 
+	def _command(self, name, params):
+		if name == "ai":
+			self.add_item(int(params[0]))
+		elif name == "ping":
+			self.say("pong")
+
 	def connect(self, user, password, encrypted = False, ver = 153):
 		if self.log:
 			print "Connecting to " + self.ip + ":" + str(self.login_port) + "..."
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.sock.connect((self.ip, self.login_port))
+		try:
+			self.sock.connect((self.ip, self.login_port))
+		except:
+			return 1
 			
 		packet, ok = self._login(user, password, encrypted, ver)
 		if not ok:
@@ -341,7 +366,10 @@ class Client:
 		if self.log:
 			print "Connecting to " + self.ip + ":" + str(self.game_port) + "..."
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.sock.connect((self.ip, self.game_port))
+		try:
+			self.sock.connect((self.ip, self.game_port))
+		except:
+			return 1
 		
 		packet, ok = self._join_server(user, login_key, ver)
 		if not ok:
@@ -444,13 +472,13 @@ class Client:
 			print "Throwing snowball to (" + str(x) + ", " + str(y) + ")..."
 		self._send("%xt%s%u#sb%" + str(self.internal_room_id) + "%" + str(x) + "%" + str(y) + "%")
 
-	def say(self, message, safe = False):
+	def say(self, msg, safe = False):
 		if self.log:
-			print "Saying '" + message + "'..."
+			print "Saying '" + msg + "'..."
 		if safe:
-			self._send("%xt%s%u#ss%" + str(self.internal_room_id) + "%" + message + "%")
+			self._send("%xt%s%u#ss%" + str(self.internal_room_id) + "%" + msg + "%")
 		else:
-			self._send("%xt%s%m#sm%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + message + "%")
+			self._send("%xt%s%m#sm%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + msg + "%")
 
 	def joke(self, joke):
 		if self.log:
@@ -472,13 +500,13 @@ class Client:
 			print "Sending buddy request to " + str(id) + "..."
 		self._send("%xt%s%b#br%" + str(self.internal_room_id) + "%" + str(id) + "%")
 
-	def follow(self, name, offset_x = 0, offset_y = 0):
+	def follow(self, name, offset_x = 0, offset_y = 0, commands = False):
 		if self.log:
 			print "Following " + name + "..."
 		id = self._get_id(name)
 		if id:
 			self.buddy(id)
-			self.followed = {"id": id, "x": offset_x, "y": offset_y}
+			self.followed = {"id": id, "x": offset_x, "y": offset_y, "commands": commands}
 			penguin = self.penguins[id]
 			self.walk(penguin.x + offset_x, penguin.y + offset_y)
 

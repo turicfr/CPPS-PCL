@@ -8,70 +8,70 @@ def help(clients, params):
 	print """HELP"""
 
 def room(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.room(params[0])
 	else:
 		print "An argument is required"
 
 def color(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_color(params[0])
 	else:
 		print "An argument is required"
 
 def head(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_head(params[0])
 	else:
 		print "An argument is required"
 
 def face(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_face(params[0])
 	else:
 		print "An argument is required"
 
 def neck(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_neck(params[0])
 	else:
 		print "An argument is required"
 
 def body(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_body(params[0])
 	else:
 		print "An argument is required"
 
 def hand(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_hand(params[0])
 	else:
 		print "An argument is required"
 
 def feet(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_feet(params[0])
 	else:
 		print "An argument is required"
 
 def pin(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_pin(params[0])
 	else:
 		print "An argument is required"
 
 def background(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.update_background(params[0])
 	else:
@@ -95,7 +95,7 @@ def wave(clients, params):
 		client.wave()
 
 def sit(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.sit(params[0])
 	else:
@@ -110,7 +110,7 @@ def snowball(clients, params):
 			client.snowball(params[0], params[1])
 
 def say(clients, params):
-	if len(params):
+	if params:
 		message = ' '.join(params)
 		for client in clients:
 			client.say(message)
@@ -118,33 +118,33 @@ def say(clients, params):
 		print "An argument is required"
 
 def joke(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.joke(params[0])
 	else:
 		print "An argument is required"
 
 def emote(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.emote(params[0])
 	else:
 		print "An argument is required"
 
 def buy(clients, params):
-	if len(params):
+	if params:
 		for client in clients:
 			client.add_item(params[0])
 	else:
 		print "An argument is required"
 
 def follow(clients, params):
-	if len(params):
+	if params:
 		name = ' '.join(params)
 		for i in range(len(clients)):
 			client = clients[i]
 			offset = shape["offsets"][i]
-			client.follow(name, int(offset["x"]), int(offset["y"]))
+			client.follow(name, int(offset["x"]), int(offset["y"]), True)
 	else:
 		print "An argument is required"
 
@@ -193,8 +193,11 @@ if __name__ == "__main__":
 		for user, password in data[cpps].items():
 			error = clients[count - 1].connect(user, password, True)
 			if error:
+				print "Username: " + user
 				if error == 603:
 					del data[cpps][user]
+					with open(filename, "w") as file:
+						json.dump(data, file)
 			else:
 				count -= 1
 				if count == 0:
@@ -202,8 +205,6 @@ if __name__ == "__main__":
 					break
 				else:
 					print "Connected! (" + str(count) + " left)"
-		with open(filename, "w") as file:
-			json.dump(data, file)
 	
 	i = 0
 	while i < count:

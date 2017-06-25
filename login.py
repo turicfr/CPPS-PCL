@@ -68,61 +68,61 @@ def coins(client, params):
 	print "Current coins: " + str(client.coins)
 
 def room(client, params):
-	if len(params):
+	if params:
 		client.room(params[0])
 	else:
 		print "Current room: " + str(client.current_room)
 	
 def color(client, params):
-	if len(params):
+	if params:
 		client.update_color(params[0])
 	else:
 		print "Current color: " + str(client.penguins[client.id].clothes["color"])
 
 def head(client, params):
-	if len(params):
+	if params:
 		client.update_head(params[0])
 	else:
 		print "Current head item: " + str(client.penguins[client.id].clothes["head"])
 
 def face(client, params):
-	if len(params):
+	if params:
 		client.update_face(params[0])
 	else:
 		print "Current face item: " + str(client.penguins[client.id].clothes["face"])
 
 def neck(client, params):
-	if len(params):
+	if params:
 		client.update_neck(params[0])
 	else:
 		print "Current neck item: " + str(client.penguins[client.id].clothes["neck"])
 
 def body(client, params):
-	if len(params):
+	if params:
 		client.update_body(params[0])
 	else:
 		print "Current body item: " + str(client.penguins[client.id].clothes["body"])
 
 def hand(client, params):
-	if len(params):
+	if params:
 		client.update_hand(params[0])
 	else:
 		print "Current hand item: " + str(client.penguins[client.id].clothes["hand"])
 
 def feet(client, params):
-	if len(params):
+	if params:
 		client.update_feet(params[0])
 	else:
 		print "Current feet item: " + str(client.penguins[client.id].clothes["feet"])
 
 def pin(client, params):
-	if len(params):
+	if params:
 		client.update_pin(params[0])
 	else:
 		print "Current pin: " + str(client.penguins[client.id].clothes["pin"])
 
 def background(client, params):
-	if len(params):
+	if params:
 		client.update_background(params[0])
 	else:
 		print "Current background: " + str(client.penguins[client.id].clothes["background"])
@@ -140,7 +140,7 @@ def wave(client, params):
 	client.wave()
 
 def sit(client, params):
-	if len(params):
+	if params:
 		client.sit(params[0])
 	else:
 		client.sit()
@@ -152,31 +152,31 @@ def snowball(client, params):
 		client.snowball(params[0], params[1])
 
 def say(client, params):
-	if len(params):
+	if params:
 		client.say(' '.join(params))
 	else:
 		print "An argument is required"
 
 def joke(client, params):
-	if len(params):
+	if params:
 		client.joke(params[0])
 	else:
 		print "An argument is required"
 
 def emote(client, params):
-	if len(params):
+	if params:
 		client.emote(params[0])
 	else:
 		print "An argument is required"
 
 def buy(client, params):
-	if len(params):
+	if params:
 		client.add_item(params[0])
 	else:
 		print "An argument is required"
 
 def follow(client, params):
-	if len(params):
+	if params:
 		client.follow(' '.join(params))
 	elif client.followed:
 		print "Currently following " + client.penguins[client.followed.id].name
