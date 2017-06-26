@@ -153,13 +153,13 @@ class Client:
 					print "Joined server."
 				return packet, True
 		return packet, False
-		
-	def _get_id(self, name):
+
+	def get_id(self, name):
 		for penguin in self.penguins.values():
 			if penguin.name == name:
 				return penguin.id
 		return 0
-		
+
 	def _game(self):
 		thread = threading.Thread(target = self._heartbeat)
 		thread.start()
@@ -503,7 +503,7 @@ class Client:
 	def follow(self, name, offset_x = 0, offset_y = 0, commands = False):
 		if self.log:
 			print "Following " + name + "..."
-		id = self._get_id(name)
+		id = self.get_id(name)
 		if id:
 			self.buddy(id)
 			self.followed = {"id": id, "x": offset_x, "y": offset_y, "commands": commands}

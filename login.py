@@ -53,16 +53,23 @@ def get_password(cpps, user, remember = True):
 
 def help(client, params):
 	print """HELP"""
-	
+
 def log(client, params):
 	client.log = not client.log
 	if client.log:
 		print "Log is on"
 	else:
 		print "Log is off"
-	
+
 def id(client, params):
-	print "id: " + str(client.id)
+	if params:
+		id = client.get_id(params[0])
+	else:
+		id = client.id
+	if id:
+		print "id: " + str(id)
+	else:
+		print "Penguin not found"
 
 def coins(client, params):
 	print "Current coins: " + str(client.coins)
@@ -72,7 +79,7 @@ def room(client, params):
 		client.room(params[0])
 	else:
 		print "Current room: " + str(client.current_room)
-	
+
 def color(client, params):
 	if params:
 		client.update_color(params[0])
