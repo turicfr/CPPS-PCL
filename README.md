@@ -35,7 +35,7 @@ A complex login with multiple penguins managed by a certain shape.
 ## Commands
 - help - prints "HELP" (will be done in the future)
 - log - toggles log on/off (single-login only)
-- id [name] - prints your id (single-login only) / prints the id of penguin [name] (single-login only)
+- id __[name]__ - prints your id (single-login only) / prints the id of penguin named __[name]__ (single-login only)
 - coins - prints current coins (single-login only)
 - room __[id/name]__ - goes to room with id __[id]__ _or_ goes to room named __[name]__ / prints current room (single-login only)
 - color __[id]__ - equips color with id __[id]__ / prints current color (single-login only)
