@@ -37,20 +37,20 @@ A complex login with multiple penguins managed by a certain shape.
 - log - toggles log on/off (single-login only)
 - id - prints your id (single-login only)
 - coins - prints current coins (single-login only)
-- room [id] - goes to room with id [id] / prints current room (single-login only)
-- color [id] - equips color with id [id] / prints current color (single-login only)
-- head [id] - equips head item with id [id] / prints current head item (single-login only)
-- face [id] - equips face item with id [id] / prints current face item (single-login only)
-- neck [id] - equips neck item with id [id] / prints current neck item (single-login only)
-- body [id] - equips body item with id [id] / prints current body item (single-login only)
-- hand [id] - equips hand item with id [id] / prints current hand item (single-login only)
-- feet [id] - equips feet item with id [id] / prints current feet item (single-login only)
-- pin [id] - equips pin with id [id] / prints current pin (single-login only)
-- background [id] - equips background with id [id] / prints current background (single-login only)
-- walk [x] [y] - walks to ([x], [y])
+- room __[id/name]__ - goes to room with id __[id]__ _or_ goes to room named __[name]__ / prints current room (single-login only)
+- color __[id]__ - equips color with id __[id]__ / prints current color (single-login only)
+- head __[id]__ - equips head item with id __[id]__ / prints current head item (single-login only)
+- face __[id]__ - equips face item with id __[id]__ / prints current face item (single-login only)
+- neck __[id]__ - equips neck item with id __[id]__ / prints current neck item (single-login only)
+- body __[id]__ - equips body item with id __[id]__ / prints current body item (single-login only)
+- hand __[id]__ - equips hand item with id __[id]__ / prints current hand item (single-login only)
+- feet __[id]__ - equips feet item with id __[id]__ / prints current feet item (single-login only)
+- pin __[id]__ - equips pin with id __[id]__ / prints current pin (single-login only)
+- background __[id]__ - equips background with id __[id]__ / prints current background (single-login only)
+- walk __[x]__ __[y]__ - walks to (__[x]__, __[y]__)
 - dance - dances
 - wave - waves
-- sit [dir] - sits in direction [dir], where [dir] is one of the following:
+- sit __[dir]__ - sits in direction __[dir]__, where __[dir]__ is one of the following:
   - se - south east
   - e - east
   - ne - north east
@@ -59,12 +59,12 @@ A complex login with multiple penguins managed by a certain shape.
   - w - west
   - sw - south west
   - s - south (default)
-- snowball [x] [y] - throws a snowball to ([x], [y])
-- say [message] - says [message]
-- joke [id] - says joke with id [id]
-- emote [id] - says an emote with id [id]
-- buy [id] - buys item with id [id]
-- follow [name] - follows a penguin named [name] / prints currently followed penguin
+- snowball __[x]__ __[y]__ - throws a snowball to (__[x]__, __[y]__)
+- say __[msg]__ - says __[msg]__
+- joke __[id]__ - says joke with id __[id]__
+- emote __[id]__ - says an emote with id __[id]__
+- buy __[id]__ - buys item with id __[id]__
+- follow __[name]__ - follows a penguin named __[name]__ / prints currently followed penguin
 - unfollow - disables follow
 - logout - logouts from the game
 

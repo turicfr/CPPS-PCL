@@ -63,7 +63,7 @@ def log(client, params):
 
 def id(client, params):
 	if params:
-		id = client.get_id(params[0])
+		id = client.get_penguin_id(params[0])
 	else:
 		id = client.id
 	if id:
@@ -76,7 +76,7 @@ def coins(client, params):
 
 def room(client, params):
 	if params:
-		client.room(params[0])
+		client.go_to_room(params[0])
 	else:
 		print "Current room: " + str(client.current_room)
 

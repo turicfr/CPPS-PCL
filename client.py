@@ -154,11 +154,28 @@ class Client:
 				return packet, True
 		return packet, False
 
-	def get_id(self, name):
+	def get_penguin_id(self, name):
 		for penguin in self.penguins.values():
 			if penguin.name == name:
 				return penguin.id
 		return 0
+
+	@staticmethod
+	def get_room_id(name):
+		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
+		with open(filename) as file:
+			data = json.load(file)
+		for id in data:
+			if data[id] == name:
+				return int(id)
+		return 0
+
+	@staticmethod
+	def get_room_name(id):
+		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
+		with open(filename) as file:
+			data = json.load(file)
+		return data[str(id)]
 
 	def _game(self):
 		thread = threading.Thread(target = self._heartbeat)
@@ -334,7 +351,8 @@ class Client:
 				msg = "Added item " + str(id) + " (cost " + str(cost) + " coins)"
 				if self.followed and self.followed["commands"]:
 					self.say(msg)
-				print msg
+				if self.log:
+					print msg
 			elif self.log:
 				print "# UNKNOWN OPCODE: " + op
 				
@@ -378,9 +396,19 @@ class Client:
 		thread.start()
 		return 0
 
-	def room(self, id, x = 0, y = 0):
+	def go_to_room(self, id, x = 0, y = 0):
+		try:
+			id = int(id)
+			name = self.get_room_name(id)
+		except ValueError:
+			name = id
+			id = self.get_room_id(name)
+			if not id:
+				if self.log:
+					print "Room not found"
+				return
 		if self.log:
-			print "Going to room " + str(id) + "..."
+			print "Going to " + name + "..."
 		self._send("%xt%s%j#jr%" + str(self.internal_room_id) + "%" + str(id) + "%" + str(x) + "%" + str(y) + "%")
 		
 	def update_color(self, id):
@@ -503,12 +531,13 @@ class Client:
 	def follow(self, name, offset_x = 0, offset_y = 0, commands = False):
 		if self.log:
 			print "Following " + name + "..."
-		id = self.get_id(name)
+		id = self.get_penguin_id(name)
 		if id:
 			self.buddy(id)
 			self.followed = {"id": id, "x": offset_x, "y": offset_y, "commands": commands}
 			penguin = self.penguins[id]
 			self.walk(penguin.x + offset_x, penguin.y + offset_y)
+			# TODO clothes
 
 	def unfollow(self):
 		if self.log:

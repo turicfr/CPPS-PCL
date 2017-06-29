@@ -10,7 +10,7 @@ def help(clients, params):
 def room(clients, params):
 	if params:
 		for client in clients:
-			client.room(params[0])
+			client.go_to_room(params[0])
 	else:
 		print "An argument is required"
 
