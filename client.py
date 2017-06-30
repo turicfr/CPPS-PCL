@@ -160,23 +160,6 @@ class Client:
 				return penguin.id
 		return 0
 
-	@staticmethod
-	def get_room_id(name):
-		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
-		with open(filename) as file:
-			data = json.load(file)
-		for id in data:
-			if data[id] == name:
-				return int(id)
-		return 0
-
-	@staticmethod
-	def get_room_name(id):
-		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
-		with open(filename) as file:
-			data = json.load(file)
-		return data[str(id)]
-
 	def _game(self):
 		thread = threading.Thread(target = self._heartbeat)
 		thread.start()
@@ -357,7 +340,7 @@ class Client:
 				coins = int(packet[4])
 				earn = coins - self.coins
 				self.coins = coins
-				msg = "Earned " + str(earn) + "coins"
+				msg = "Earned " + str(earn) + " coins"
 				if self.followed and self.followed["commands"]:
 					self.say(msg)
 				if self.log:
@@ -408,18 +391,8 @@ class Client:
 		return 0
 
 	def go_to_room(self, id, x = 0, y = 0):
-		try:
-			id = int(id)
-			name = self.get_room_name(id)
-		except ValueError:
-			name = id
-			id = self.get_room_id(name)
-			if not id:
-				if self.log:
-					print "Room not found"
-				return
 		if self.log:
-			print "Going to " + name + "..."
+			print "Going to room " + str(id) + "..."
 		self._send("%xt%s%j#jr%" + str(self.internal_room_id) + "%" + str(id) + "%" + str(x) + "%" + str(y) + "%")
 		
 	def update_color(self, id):
@@ -539,7 +512,7 @@ class Client:
 			print "Adding " + str(coins) + " coins..."
 		room = self.room_id
 		self.go_to_room(912)
-		self._send("%xt%z%zo%82%" + str(coins) + "%")
+		self._send("%xt%z%zo%" + str(self.internal_room_id) + "%" + str(coins) + "%")
 		self.go_to_room(room)
 
 	def buddy(self, id):

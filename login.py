@@ -51,6 +51,21 @@ def get_password(cpps, user, remember = True):
 			json.dump(data, file)
 	return password, False
 
+def get_room_id(name):
+	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
+	with open(filename) as file:
+		data = json.load(file)
+	for id in data:
+		if data[id] == name:
+			return int(id)
+	return 0
+
+def get_room_name(id):
+	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
+	with open(filename) as file:
+		data = json.load(file)
+	return data[str(id)]
+
 def help(client, params):
 	print """HELP"""
 
@@ -73,9 +88,16 @@ def id(client, params):
 
 def room(client, params):
 	if params:
-		client.go_to_room(params[0])
+		try:
+			id = int(params[0])
+		except ValueError:
+			id = get_room_id(params[0])
+			if not id:
+				print "Room not found"
+				return
+		client.go_to_room(id)
 	else:
-		print "Current room: " + str(client.room_id)
+		print "Current room: " + get_room_name(client.room_id)
 
 def color(client, params):
 	if params:
@@ -215,7 +237,7 @@ def logout(client, params):
 if __name__ == "__main__":
 	cpps = "cpr"
 	data = get_server(cpps)
-	user = raw_input("Username: ")
+	user = raw_input("Username: ").lower()
 	password, encrypted = get_password(cpps, user)
 	server = raw_input("Server: ").lower()
 	
@@ -237,7 +259,6 @@ if __name__ == "__main__":
 		"help": help,
 		"log": log,
 		"id": id,
-		"coins": coins,
 		"room": room,
 		"color": color,
 		"head": head,
@@ -257,6 +278,7 @@ if __name__ == "__main__":
 		"joke": joke,
 		"emote": emote,
 		"buy": buy,
+		"coins": coins,
 		"follow": follow,
 		"unfollow": unfollow,
 		"logout": logout

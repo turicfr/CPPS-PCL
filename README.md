@@ -20,13 +20,15 @@ A complex login with multiple penguins managed by a certain shape.
 ## Usage
 
 ### Single-Login
-1. Run login.py
+1. Run login.py:
+	python login.py
 2. Enter your username and password
 3. Choose a server
 4. Waddle on!
 
 ### Multi-Login
-1. Run multi.py
+1. Run multi.py:
+	python multi.py
 2. Choose a server
 3. Choose a shape (defined in json/shapes.json)
 4. Enter your usernames and passwords (as many as needed for the shape)

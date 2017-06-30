@@ -208,7 +208,7 @@ if __name__ == "__main__":
 	
 	i = 0
 	while i < count:
-		user = raw_input("Username: ")
+		user = raw_input("Username: ").lower()
 		password, encrypted = login.get_password(cpps, user)
 		print "Connecting..."
 		error = clients[i].connect(user, password)
