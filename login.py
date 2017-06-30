@@ -71,14 +71,11 @@ def id(client, params):
 	else:
 		print "Penguin not found"
 
-def coins(client, params):
-	print "Current coins: " + str(client.coins)
-
 def room(client, params):
 	if params:
 		client.go_to_room(params[0])
 	else:
-		print "Current room: " + str(client.current_room)
+		print "Current room: " + str(client.room_id)
 
 def color(client, params):
 	if params:
@@ -182,9 +179,27 @@ def buy(client, params):
 	else:
 		print "An argument is required"
 
+def coins(client, params):
+	if params:
+		client.add_coins(params[0])
+	else:
+		print "Current coins: " + str(client.coins)
+
 def follow(client, params):
 	if params:
-		client.follow(' '.join(params))
+		if len(params) > 2:
+			try:
+				dx = int(params[-2])
+				dy = int(params[-1])
+				offset = True
+			except ValueError:
+				offset = False
+			if offset:
+				client.follow(' '.join(params[:-2]), dx, dy)
+			else:
+				client.follow(' '.join(params))
+		else:
+			client.follow(' '.join(params))
 	elif client.followed:
 		print "Currently following " + client.penguins[client.followed.id].name
 	else:

@@ -20,10 +20,10 @@ class Penguin:
 		name = player[1]
 		clothes = {}
 		# ??? = player[2]
-		info = ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"]
-		for i in range(len(info)):
+		types = ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"]
+		for i in range(len(types)):
 			if player[i + 3]:
-				clothes[info[i]] = int(player[i + 3])
+				clothes[types[i]] = int(player[i + 3])
 		x = int(player[12])
 		y = int(player[13])
 		return cls(id, name, clothes, x, y)
@@ -38,7 +38,7 @@ class Client:
 		self.internal_room_id = -1
 		self.id = -1
 		self.coins = -1
-		self.current_room = -1
+		self.room_id = -1
 		self.penguins = {}
 		self.followed = None
 
@@ -212,8 +212,8 @@ class Client:
 				self.penguins[penguin.id] = penguin
 			elif op == "jr":
 				self.internal_room_id = int(packet[3])
+				self.room_id = int(packet[4])
 				self.penguins.clear()
-				self.current_room = int(packet[4])
 				for i in packet[5:-1]:
 					penguin = Penguin.from_player(i)
 					self.penguins[penguin.id] = penguin
@@ -230,7 +230,7 @@ class Client:
 			elif op == "bf":
 				room = int(packet[4])
 				if self.followed:
-					self.room(room)
+					self.go_to_room(room)
 			elif op == "upc":
 				id = int(packet[4])
 				penguin = self.penguins[id]
@@ -300,7 +300,7 @@ class Client:
 				penguin.x = int(packet[5])
 				penguin.y = int(packet[6])
 				if self.followed and id == self.followed["id"]:
-					self.walk(penguin.x + self.followed["x"], penguin.y + self.followed["y"])
+					self.walk(penguin.x + self.followed["dx"], penguin.y + self.followed["dy"])
 			elif op == "sa":
 				id = int(packet[4])
 				action = int(packet[5])
@@ -353,6 +353,15 @@ class Client:
 					self.say(msg)
 				if self.log:
 					print msg
+			elif op == "zo":
+				coins = int(packet[4])
+				earn = coins - self.coins
+				self.coins = coins
+				msg = "Earned " + str(earn) + "coins"
+				if self.followed and self.followed["commands"]:
+					self.say(msg)
+				if self.log:
+					print msg
 			elif self.log:
 				print "# UNKNOWN OPCODE: " + op
 				
@@ -363,6 +372,8 @@ class Client:
 	def _command(self, name, params):
 		if name == "ai":
 			self.add_item(int(params[0]))
+		elif name == "ac":
+			self.add_coins(int(params[0]))
 		elif name == "ping":
 			self.say("pong")
 
@@ -522,22 +533,38 @@ class Client:
 		if self.log:
 			print "Adding item " + str(id) + "..."
 		self._send("%xt%s%i#ai%" + str(self.internal_room_id) + "%" + str(id) + "%")
-		
+
+	def add_coins(self, coins):
+		if self.log:
+			print "Adding " + str(coins) + " coins..."
+		room = self.room_id
+		self.go_to_room(912)
+		self._send("%xt%z%zo%82%" + str(coins) + "%")
+		self.go_to_room(room)
+
 	def buddy(self, id):
 		if self.log:
 			print "Sending buddy request to " + str(id) + "..."
 		self._send("%xt%s%b#br%" + str(self.internal_room_id) + "%" + str(id) + "%")
 
-	def follow(self, name, offset_x = 0, offset_y = 0, commands = False):
+	def follow(self, name, dx = 0, dy = 0, commands = False):
 		if self.log:
 			print "Following " + name + "..."
 		id = self.get_penguin_id(name)
 		if id:
 			self.buddy(id)
-			self.followed = {"id": id, "x": offset_x, "y": offset_y, "commands": commands}
+			self.followed = {"id": id, "dx": dx, "dy": dy, "commands": commands}
 			penguin = self.penguins[id]
-			self.walk(penguin.x + offset_x, penguin.y + offset_y)
-			# TODO clothes
+			self.walk(penguin.x + dx, penguin.y + dy)
+			self.update_color(penguin.clothes["color"])
+			self.update_head(penguin.clothes["head"])
+			self.update_face(penguin.clothes["face"])
+			self.update_neck(penguin.clothes["neck"])
+			self.update_body(penguin.clothes["body"])
+			self.update_hand(penguin.clothes["hand"])
+			self.update_feet(penguin.clothes["feet"])
+			self.update_pin(penguin.clothes["pin"])
+			self.update_background(penguin.clothes["background"])
 
 	def unfollow(self):
 		if self.log:

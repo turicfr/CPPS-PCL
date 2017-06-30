@@ -36,7 +36,6 @@ A complex login with multiple penguins managed by a certain shape.
 - help - prints "HELP" (will be done in the future)
 - log - toggles log on/off (single-login only)
 - id __[name]__ - prints your id (single-login only) / prints the id of penguin named __[name]__ (single-login only)
-- coins - prints current coins (single-login only)
 - room __[id/name]__ - goes to room with id __[id]__ _or_ goes to room named __[name]__ / prints current room (single-login only)
 - color __[id]__ - equips color with id __[id]__ / prints current color (single-login only)
 - head __[id]__ - equips head item with id __[id]__ / prints current head item (single-login only)
@@ -64,10 +63,17 @@ A complex login with multiple penguins managed by a certain shape.
 - joke __[id]__ - says joke with id __[id]__
 - emote __[id]__ - says an emote with id __[id]__
 - buy __[id]__ - buys item with id __[id]__
-- follow __[name]__ - follows a penguin named __[name]__ / prints currently followed penguin
+- coins __[amount]__ - earns __[amount]__ coins / prints current coins (single-login only)
+- follow __[name]__ __[dx]__ __[dy]__ - follows a penguin named __[name]__ with offset (__[dx]__, __[dy]__) / follows a penguin named __[name]__ with no offset / prints currently followed penguin
 - unfollow - disables follow
 - logout - logouts from the game
 
 ## Tips and Tricks
 - Edit json/servers.json in order to define more CPPSs and servers (ports can be found using a packet sniffer)
 - Define more shapes in json/shapes.json
+- While using multi-login, the main penguin can command the bots by saying messages starting with "!".
+
+### Direct Commands
+- !ai __[id]__ - like buy command
+- !ac __[amount]__ - like coins command
+- !ping - response "pong"
