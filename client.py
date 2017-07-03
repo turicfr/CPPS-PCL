@@ -58,6 +58,16 @@ class Client:
 			if self.log:
 				print "Connection lost"
 
+	def _send_packet(self, ext, cmd, *arr):
+		packet = "%xt%" + ext + "%" + cmd + "%"
+		i = 1
+		if not arr or arr[0]:
+			packet += str(self.internal_room_id) + "%"
+			i = 0
+		for i in arr[i:]:
+			packet += str(i) + "%"
+		self._send(packet)
+
 	def _receive(self):
 		try:
 			while not chr(0) in self.buf:
@@ -71,7 +81,7 @@ class Client:
 			print "# RECEIVE: " + str(msg)
 		return msg
 
-	def _packet(self):
+	def _receive_packet(self):
 		buf = self._receive()
 		if not buf:
 			return None
@@ -126,11 +136,11 @@ class Client:
 		rndk = self._key()
 		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + "Y(02.>'H}t\":E1")
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
-		packet = self._packet()
+		packet = self._receive_packet()
 		if not packet or packet[2] == "e":
 			return packet, False
 		while packet[2] != "l":
-			packet = self._packet()
+			packet = self._receive_packet()
 			if not packet or packet[2] == "e":
 				return packet, False
 		if self.log:
@@ -144,10 +154,10 @@ class Client:
 		rndk = self._key()
 		hash = self.swapped_md5(login_key + rndk) + login_key
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
-		packet = self._packet()
+		packet = self._receive_packet()
 		if packet and packet[2] == "l":
-			self._send("%xt%s%j#js%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + login_key + "%en%")
-			packet = self._packet()
+			self._send_packet("s", "j#js", self.id, login_key, "en")
+			packet = self._receive_packet()
 			if packet and packet[2] == "js":
 				if self.log:
 					print "Joined server."
@@ -164,7 +174,7 @@ class Client:
 		thread = threading.Thread(target = self._heartbeat)
 		thread.start()
 		while True:
-			packet = self._packet()
+			packet = self._receive_packet()
 			if not packet:
 				break
 			op = packet[2]
@@ -204,12 +214,12 @@ class Client:
 				id = int(packet[4])
 				penguin = self.penguins.pop(id)
 				if self.followed and id == self.followed["id"]:
-					self._send("%xt%s%b#bf%" + str(self.internal_room_id) + "%" + str(id) + "%")
+					self._send_packet("s", "b#bf", id)
 			elif op == "br":
 				id = int(packet[4])
 				name = packet[5]
 				if raw_input("Buddy with " + name + "? [y/n]") == "y":
-					self._send("%xt%s%b#ba%" + str(self.internal_room_id) + "%" + str(id) + "%")
+					self._send_packet("s", "b#ba", id)
 			elif op == "bf":
 				room = int(packet[4])
 				if self.followed:
@@ -304,8 +314,9 @@ class Client:
 				id = int(packet[4])
 				msg = packet[5]
 				if self.followed and id == self.followed["id"]:
-					if self.followed["commands"] and msg.startswith('!'):
+					if self.followed["commands"] and msg.startswith('a'):
 						cmd = msg.split(' ')
+						print cmd
 						name = cmd[0][1:]
 						params = cmd[1:]
 						self._command(name, params)
@@ -326,6 +337,17 @@ class Client:
 				emote = int(packet[5])
 				if self.followed and id == self.followed["id"]:
 					self.emote(emote)
+			elif op == "ms":
+				coins = int(packet[4])
+				cost = self.coins - coins
+				self.coins = coins
+				sent = packet[5]
+				if sent == "0":
+					print "Maximum postcards reached"
+				elif sent == "1":
+					print "Sent postcard successfully (cost " + str(cost) + " coins)"
+				elif sent == "2":
+					print "Not enough coins"
 			elif op == "ai":
 				id = int(packet[4])
 				coins = int(packet[5])
@@ -350,13 +372,16 @@ class Client:
 				
 	def _heartbeat(self):
 		threading.Timer(600, self._heartbeat)
-		self._send("%xt%s%u#h%" + str(self.internal_room_id) + "%")
+		self._send_packet("s", "u#h")
 
 	def _command(self, name, params):
+		print params
 		if name == "ai":
-			self.add_item(int(params[0]))
+			if params:
+				self.add_item(params[0])
 		elif name == "ac":
-			self.add_coins(int(params[0]))
+			if params:
+				self.add_coins(params[0])
 		elif name == "ping":
 			self.say("pong")
 
@@ -393,63 +418,63 @@ class Client:
 	def go_to_room(self, id, x = 0, y = 0):
 		if self.log:
 			print "Going to room " + str(id) + "..."
-		self._send("%xt%s%j#jr%" + str(self.internal_room_id) + "%" + str(id) + "%" + str(x) + "%" + str(y) + "%")
+		self._send_packet("s", "j#jr", id, x, y)
 		
 	def update_color(self, id):
 		if self.log:
 			print "Changing color to " + str(id) + "..."
-		self._send("%xt%s%s#upc%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upc", id)
 
 	def update_head(self, id):
 		if self.log:
 			print "Changing head item to " + str(id) + "..."
-		self._send("%xt%s%s#uph%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#uph", id)
 
 	def update_face(self, id):
 		if self.log:
 			print "Changing face item to " + str(id) + "..."
-		self._send("%xt%s%s#upf%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upf", id)
 
 	def update_neck(self, id):
 		if self.log:
 			print "Changing neck item to " + str(id) + "..."
-		self._send("%xt%s%s#upn%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upn", id)
 
 	def update_body(self, id):
 		if self.log:
 			print "Changing body item to " + str(id) + "..."
-		self._send("%xt%s%s#upb%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upb", id)
 
 	def update_hand(self, id):
 		if self.log:
 			print "Changing hand item to " + str(id) + "..."
-		self._send("%xt%s%s#upa%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upa", id)
 
 	def update_feet(self, id):
 		if self.log:
 			print "Changing feet item to " + str(id) + "..."
-		self._send("%xt%s%s#upe%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upe", id)
 
 	def update_pin(self, id):
 		if self.log:
 			print "Changing pin to " + str(id) + "..."
-		self._send("%xt%s%s#upl%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upl", id)
 
 	def update_background(self, id):
 		if self.log:
 			print "Changing background to " + str(id) + "..."
-		self._send("%xt%s%s#upp%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "s#upp", id)
 		
 	def walk(self, x, y):
 		if self.log:
 			print "Walking to (" + str(x) + ", " + str(y) + ")..."
-		self._send("%xt%s%u#sp%" + str(self.id) + "%" + str(x) + "%" + str(y) + "%")
+		self._send_packet("s", "u#sp", False, self.id, x, y)
 		
 	def _action(self, id):
-		self._send("%xt%s%u#sa%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "u#sa", id)
 		
 	def _frame(self, id):
-		self._send("%xt%s%u#sf%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "u#sf", id)
 		
 	def dance(self):
 		if self.log:
@@ -482,43 +507,48 @@ class Client:
 	def snowball(self, x, y):
 		if self.log:
 			print "Throwing snowball to (" + str(x) + ", " + str(y) + ")..."
-		self._send("%xt%s%u#sb%" + str(self.internal_room_id) + "%" + str(x) + "%" + str(y) + "%")
+		self._send_packet("s", "u#sb", x, y)
 
 	def say(self, msg, safe = False):
 		if self.log:
 			print "Saying '" + msg + "'..."
 		if safe:
-			self._send("%xt%s%u#ss%" + str(self.internal_room_id) + "%" + msg + "%")
+			self._send_packet("s", "u#ss", msg)
 		else:
-			self._send("%xt%s%m#sm%" + str(self.internal_room_id) + "%" + str(self.id) + "%" + msg + "%")
+			self._send_packet("s", "m#sm", self.id, msg)
 
 	def joke(self, joke):
 		if self.log:
 			print "Saying joke " + str(joke) + "..."
-		self._send("%xt%s%u#sj%" + str(self.id) + "%" + str(joke) + "%")
+		self._send_packet("s", "u#sj", False, self.id, joke)
 		
 	def emote(self, emote):
 		if self.log:
-			print "Saying emote " + str(emote) + "..."
-		self._send("%xt%s%u#se%" + str(self.internal_room_id) + "%" + str(emote) + "%")
-		
+			print "Reacting emote " + str(emote) + "..."
+		self._send_packet("s", "u#se", emote)
+
+	def mail(self, id, postcard):
+		if self.log:
+			print "Sending postcard #" + str(id) + "..."
+		self._send_packet("s", "l#ms", id, postcard)
+
 	def add_item(self, id):
 		if self.log:
 			print "Adding item " + str(id) + "..."
-		self._send("%xt%s%i#ai%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "i#ai", id)
 
 	def add_coins(self, coins):
 		if self.log:
 			print "Adding " + str(coins) + " coins..."
 		room = self.room_id
 		self.go_to_room(912)
-		self._send("%xt%z%zo%" + str(self.internal_room_id) + "%" + str(coins) + "%")
+		self._send_packet("z", "zo", coins)
 		self.go_to_room(room)
 
 	def buddy(self, id):
 		if self.log:
 			print "Sending buddy request to " + str(id) + "..."
-		self._send("%xt%s%b#br%" + str(self.internal_room_id) + "%" + str(id) + "%")
+		self._send_packet("s", "b#br", id)
 
 	def follow(self, name, dx = 0, dy = 0, commands = False):
 		if self.log:

@@ -195,6 +195,12 @@ def emote(client, params):
 	else:
 		print "An argument is required"
 
+def mail(client, params):
+	if len(params) < 2:
+		print "2 arguments are required"
+	else:
+		client.mail(params[0], params[1])
+
 def buy(client, params):
 	if params:
 		client.add_item(params[0])
@@ -277,6 +283,7 @@ if __name__ == "__main__":
 		"say": say,
 		"joke": joke,
 		"emote": emote,
+		"mail": mail,
 		"buy": buy,
 		"coins": coins,
 		"follow": follow,
