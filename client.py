@@ -6,10 +6,11 @@ import json
 import threading
 
 class Penguin:
-	def __init__(self, id, name, clothes, x, y):
+	def __init__(self, id, name, clothes, frame, x, y):
 		self.id = id
 		self.name = name
 		self.clothes = clothes
+		self.frame = frame
 		self.x = x
 		self.y = y
 	
@@ -19,14 +20,14 @@ class Penguin:
 		id = int(player[0])
 		name = player[1]
 		clothes = {}
-		# ??? = player[2]
+		frame = player[2]
 		types = ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"]
 		for i in range(len(types)):
 			if player[i + 3]:
 				clothes[types[i]] = int(player[i + 3])
 		x = int(player[12])
 		y = int(player[13])
-		return cls(id, name, clothes, x, y)
+		return cls(id, name, clothes, frame, x, y)
 
 class Client:
 	def __init__(self, ip, login_port, game_port, log = False):
@@ -55,13 +56,13 @@ class Client:
 		try:
 			self.sock.send(data + chr(0))
 		except:
-			if self.log:
-				print "Connection lost"
+			print "Connection lost"
 
 	def _send_packet(self, ext, cmd, *arr):
 		packet = "%xt%" + ext + "%" + cmd + "%"
-		i = 1
-		if not arr or arr[0]:
+		if arr and arr[0] is None:
+			i = 1
+		else:
 			packet += str(self.internal_room_id) + "%"
 			i = 0
 		for i in arr[i:]:
@@ -97,7 +98,9 @@ class Client:
 		with open(filename) as file:
 			data = json.load(file)
 		code = int(packet[4])
-		msg = "Error #" + str(code) + ": " + data[str(code)]
+		msg = "Error #" + str(code)
+		if str(code) in data:
+			msg += ": " + data[str(code)]
 		if self.followed and self.followed["commands"]:
 			self.say(msg)
 		print msg
@@ -109,11 +112,11 @@ class Client:
 		buf = self._receive()
 		if 'apiOK' in buf:
 			if self.log:
-				print "Received 'apiOK' response."
+				print "Received 'apiOK' response"
 			return True
 		if 'apiKO' in buf:
 			if self.log:
-				print "Received 'apiKO' response."
+				print "Received 'apiKO' response"
 			return False
 		raise Exception("Invalid response")
 
@@ -301,9 +304,10 @@ class Client:
 					self._action(action)
 			elif op == "sf":
 				id = int(packet[4])
-				frame = int(packet[5])
+				penguin = self.penguins[id]
+				penguin.frame = int(packet[5])
 				if self.followed and id == self.followed["id"]:
-					self._frame(frame)
+					self._frame(penguin.frame)
 			elif op == "sb":
 				id = int(packet[4])
 				x = int(packet[5])
@@ -393,7 +397,7 @@ class Client:
 			self.sock.connect((self.ip, self.login_port))
 		except:
 			return 1
-			
+		
 		packet, ok = self._login(user, password, encrypted, ver)
 		if not ok:
 			return int(packet[4])
@@ -468,7 +472,7 @@ class Client:
 	def walk(self, x, y):
 		if self.log:
 			print "Walking to (" + str(x) + ", " + str(y) + ")..."
-		self._send_packet("s", "u#sp", False, self.id, x, y)
+		self._send_packet("s", "u#sp", None, self.id, x, y)
 		
 	def _action(self, id):
 		self._send_packet("s", "u#sa", id)
@@ -520,7 +524,7 @@ class Client:
 	def joke(self, joke):
 		if self.log:
 			print "Saying joke " + str(joke) + "..."
-		self._send_packet("s", "u#sj", False, self.id, joke)
+		self._send_packet("s", "u#sj", None, self.id, joke)
 		
 	def emote(self, emote):
 		if self.log:
@@ -549,6 +553,16 @@ class Client:
 		if self.log:
 			print "Sending buddy request to " + str(id) + "..."
 		self._send_packet("s", "b#br", id)
+
+	def igloo(self, id):
+		if self.log:
+			print "Going to " + str(id)+ "'s igloo..."
+		self._send_packet("s", "j#jp", None, self.id, int(id) + 1000)
+
+	def music(self, id):
+		if self.log:
+			print "Setting music to #" + str(id) + "..."
+		self._send_packet("s", "g#um", None, self.id, id)
 
 	def follow(self, name, dx = 0, dy = 0, commands = False):
 		if self.log:

@@ -64,7 +64,9 @@ def get_room_name(id):
 	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
 	with open(filename) as file:
 		data = json.load(file)
-	return data[str(id)]
+	if str(id) in data:
+		return data[str(id)]
+	return "Unknown"
 
 def help(client, params):
 	print """HELP"""
@@ -75,6 +77,9 @@ def log(client, params):
 		print "Log is on"
 	else:
 		print "Log is off"
+
+def internal(client, params):
+	print "Current: internal room id: " + client.internal_room_id
 
 def id(client, params):
 	if params:
@@ -213,6 +218,24 @@ def coins(client, params):
 	else:
 		print "Current coins: " + str(client.coins)
 
+def buddy(client, params):
+	if params:
+		client.buddy(params[0])
+	else:
+		print "An argument is required"
+
+def igloo(client, params):
+	if params:
+		client.igloo(params[0])
+	else:
+		client.igloo(client.id)
+
+def music(client, params):
+	if params:
+		client.music(params[0])
+	else:
+		print "An argument is required"
+
 def follow(client, params):
 	if params:
 		if len(params) > 2:
@@ -254,7 +277,7 @@ if __name__ == "__main__":
 		sys.exit("Server not found")
 	game_port = game_port[server]
 	
-	client = client.Client(ip, login_port, game_port)
+	client = client.Client(ip, login_port, game_port, True)
 	if not client.log:
 		print "Connecting..."
 	error = client.connect(user, password, encrypted)
@@ -264,6 +287,7 @@ if __name__ == "__main__":
 	commands = {
 		"help": help,
 		"log": log,
+		"internal": internal,
 		"id": id,
 		"room": room,
 		"color": color,
@@ -286,6 +310,9 @@ if __name__ == "__main__":
 		"mail": mail,
 		"buy": buy,
 		"coins": coins,
+		"buddy": buddy,
+		"igloo": igloo,
+		"music": music,
 		"follow": follow,
 		"unfollow": unfollow,
 		"logout": logout

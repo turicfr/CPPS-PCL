@@ -1,7 +1,8 @@
 {
 	"cpr": {
-		"ip": "167.114.182.63",
+		"ip": "server.clubpenguinrewritten.pw",
 		"login": 6112,
+		"register": "create.clubpenguinrewritten.pw",
 		"servers": {
 			"blizzard": 6113,
 			"sleet": 6119,
