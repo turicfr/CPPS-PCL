@@ -215,7 +215,7 @@ class Client:
 					self.penguins[penguin.id] = penguin
 			elif op == "rp":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins.pop(id)
 				if self.followed and id == self.followed["id"]:
 					self._send_packet("s", "b#bf", id)
@@ -230,7 +230,7 @@ class Client:
 					self.go_to_room(room)
 			elif op == "upc":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					color = int(packet[5])
 					penguin.clothes["color"] = color
@@ -238,7 +238,7 @@ class Client:
 						self.update_color(color)
 			elif op == "uph":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					head = int(packet[5])
 					penguin.clothes["head"] = head
@@ -246,7 +246,7 @@ class Client:
 						self.update_head(head)
 			elif op == "upf":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					face = int(packet[5])
 					penguin.clothes["face"] = face
@@ -254,7 +254,7 @@ class Client:
 						self.update_face(face)
 			elif op == "upn":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					neck = int(packet[5])
 					penguin.clothes["neck"] = neck
@@ -262,7 +262,7 @@ class Client:
 						self.update_neck(neck)
 			elif op == "upb":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					body = int(packet[5])
 					penguin.clothes["body"] = body
@@ -270,7 +270,7 @@ class Client:
 						self.update_body(body)
 			elif op == "upa":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					hand = int(packet[5])
 					penguin.clothes["hand"] = hand
@@ -278,7 +278,7 @@ class Client:
 						self.update_hand(hand)
 			elif op == "upe":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					feet = int(packet[5])
 					penguin.clothes["feet"] = feet
@@ -286,7 +286,7 @@ class Client:
 						self.update_feet(feet)
 			elif op == "upl":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					pin = int(packet[5])
 					penguin.clothes["pin"] = pin
@@ -294,7 +294,7 @@ class Client:
 						self.update_pin(pin)
 			elif op == "upp":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					background = int(packet[5])
 					penguin.clothes["background"] = background
@@ -302,7 +302,7 @@ class Client:
 						self.update_background(background)
 			elif op == "sp":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					penguin.x = int(packet[5])
 					penguin.y = int(packet[6])
@@ -310,13 +310,13 @@ class Client:
 						self.walk(penguin.x + self.followed["dx"], penguin.y + self.followed["dy"])
 			elif op == "sa":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					action = int(packet[5])
 					if self.followed and id == self.followed["id"]:
 						self._action(action)
 			elif op == "sf":
 				id = int(packet[4])
-				if id in penguins:
+				if id in self.penguins:
 					penguin = self.penguins[id]
 					penguin.frame = int(packet[5])
 					if self.followed and id == self.followed["id"]:
