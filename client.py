@@ -215,7 +215,8 @@ class Client:
 					self.penguins[penguin.id] = penguin
 			elif op == "rp":
 				id = int(packet[4])
-				penguin = self.penguins.pop(id)
+				if id in penguins:
+					penguin = self.penguins.pop(id)
 				if self.followed and id == self.followed["id"]:
 					self._send_packet("s", "b#bf", id)
 			elif op == "br":
@@ -229,85 +230,97 @@ class Client:
 					self.go_to_room(room)
 			elif op == "upc":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				color = int(packet[5])
-				penguin.clothes["color"] = color
-				if self.followed and id == self.followed["id"]:
-					self.update_color(color)
+				if id in penguins:
+					penguin = self.penguins[id]
+					color = int(packet[5])
+					penguin.clothes["color"] = color
+					if self.followed and id == self.followed["id"]:
+						self.update_color(color)
 			elif op == "uph":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				head = int(packet[5])
-				penguin.clothes["head"] = head
-				if self.followed and id == self.followed["id"]:
-					self.update_head(head)
+				if id in penguins:
+					penguin = self.penguins[id]
+					head = int(packet[5])
+					penguin.clothes["head"] = head
+					if self.followed and id == self.followed["id"]:
+						self.update_head(head)
 			elif op == "upf":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				face = int(packet[5])
-				penguin.clothes["face"] = face
-				if self.followed and id == self.followed["id"]:
-					self.update_face(face)
+				if id in penguins:
+					penguin = self.penguins[id]
+					face = int(packet[5])
+					penguin.clothes["face"] = face
+					if self.followed and id == self.followed["id"]:
+						self.update_face(face)
 			elif op == "upn":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				neck = int(packet[5])
-				penguin.clothes["neck"] = neck
-				if self.followed and id == self.followed["id"]:
-					self.update_neck(neck)
+				if id in penguins:
+					penguin = self.penguins[id]
+					neck = int(packet[5])
+					penguin.clothes["neck"] = neck
+					if self.followed and id == self.followed["id"]:
+						self.update_neck(neck)
 			elif op == "upb":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				body = int(packet[5])
-				penguin.clothes["body"] = body
-				if self.followed and id == self.followed["id"]:
-					self.update_body(body)
+				if id in penguins:
+					penguin = self.penguins[id]
+					body = int(packet[5])
+					penguin.clothes["body"] = body
+					if self.followed and id == self.followed["id"]:
+						self.update_body(body)
 			elif op == "upa":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				hand = int(packet[5])
-				penguin.clothes["hand"] = hand
-				if self.followed and id == self.followed["id"]:
-					self.update_hand(hand)
+				if id in penguins:
+					penguin = self.penguins[id]
+					hand = int(packet[5])
+					penguin.clothes["hand"] = hand
+					if self.followed and id == self.followed["id"]:
+						self.update_hand(hand)
 			elif op == "upe":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				feet = int(packet[5])
-				penguin.clothes["feet"] = feet
-				if self.followed and id == self.followed["id"]:
-					self.update_feet(feet)
+				if id in penguins:
+					penguin = self.penguins[id]
+					feet = int(packet[5])
+					penguin.clothes["feet"] = feet
+					if self.followed and id == self.followed["id"]:
+						self.update_feet(feet)
 			elif op == "upl":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				pin = int(packet[5])
-				penguin.clothes["pin"] = pin
-				if self.followed and id == self.followed["id"]:
-					self.update_pin(pin)
+				if id in penguins:
+					penguin = self.penguins[id]
+					pin = int(packet[5])
+					penguin.clothes["pin"] = pin
+					if self.followed and id == self.followed["id"]:
+						self.update_pin(pin)
 			elif op == "upp":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				background = int(packet[5])
-				penguin.clothes["background"] = background
-				if self.followed and id == self.followed["id"]:
-					self.update_background(background)
+				if id in penguins:
+					penguin = self.penguins[id]
+					background = int(packet[5])
+					penguin.clothes["background"] = background
+					if self.followed and id == self.followed["id"]:
+						self.update_background(background)
 			elif op == "sp":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				penguin.x = int(packet[5])
-				penguin.y = int(packet[6])
-				if self.followed and id == self.followed["id"]:
-					self.walk(penguin.x + self.followed["dx"], penguin.y + self.followed["dy"])
+				if id in penguins:
+					penguin = self.penguins[id]
+					penguin.x = int(packet[5])
+					penguin.y = int(packet[6])
+					if self.followed and id == self.followed["id"]:
+						self.walk(penguin.x + self.followed["dx"], penguin.y + self.followed["dy"])
 			elif op == "sa":
 				id = int(packet[4])
-				action = int(packet[5])
-				if self.followed and id == self.followed["id"]:
-					self._action(action)
+				if id in penguins:
+					action = int(packet[5])
+					if self.followed and id == self.followed["id"]:
+						self._action(action)
 			elif op == "sf":
 				id = int(packet[4])
-				penguin = self.penguins[id]
-				penguin.frame = int(packet[5])
-				if self.followed and id == self.followed["id"]:
-					self._frame(penguin.frame)
+				if id in penguins:
+					penguin = self.penguins[id]
+					penguin.frame = int(packet[5])
+					if self.followed and id == self.followed["id"]:
+						self._frame(penguin.frame)
 			elif op == "sb":
 				id = int(packet[4])
 				x = int(packet[5])
@@ -423,7 +436,12 @@ class Client:
 		if self.log:
 			print "Going to room " + str(id) + "..."
 		self._send_packet("s", "j#jr", id, x, y)
-		
+
+	def go_to_igloo(self, id):
+		if self.log:
+			print "Going to " + str(id)+ "'s igloo..."
+		self._send_packet("s", "j#jp", None, self.id, int(id) + 1000)
+
 	def update_color(self, id):
 		if self.log:
 			print "Changing color to " + str(id) + "..."
@@ -554,11 +572,6 @@ class Client:
 			print "Sending buddy request to " + str(id) + "..."
 		self._send_packet("s", "b#br", id)
 
-	def igloo(self, id):
-		if self.log:
-			print "Going to " + str(id)+ "'s igloo..."
-		self._send_packet("s", "j#jp", None, self.id, int(id) + 1000)
-
 	def music(self, id):
 		if self.log:
 			print "Setting music to #" + str(id) + "..."
@@ -591,5 +604,6 @@ class Client:
 	def logout(self):
 		if self.log:
 			print "Logging out..."
+		self.go_to_room(811)
 		self.sock.shutdown(socket.SHUT_RDWR)
 		self.sock.close()

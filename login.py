@@ -104,6 +104,19 @@ def room(client, params):
 	else:
 		print "Current room: " + get_room_name(client.room_id)
 
+def igloo(client, params):
+	if params:
+		try:
+			id = int(params[0])
+		except ValueError:
+			id = client.get_penguin_id(params[0])
+			if not id:
+				print "Penguin not found"
+				return
+	else:
+		id = client.id
+	client.go_to_igloo(client.id)
+
 def color(client, params):
 	if params:
 		client.update_color(params[0])
@@ -224,12 +237,6 @@ def buddy(client, params):
 	else:
 		print "An argument is required"
 
-def igloo(client, params):
-	if params:
-		client.igloo(params[0])
-	else:
-		client.igloo(client.id)
-
 def music(client, params):
 	if params:
 		client.music(params[0])
@@ -290,6 +297,7 @@ if __name__ == "__main__":
 		"internal": internal,
 		"id": id,
 		"room": room,
+		"igloo": igloo,
 		"color": color,
 		"head": head,
 		"face": face,
@@ -311,7 +319,6 @@ if __name__ == "__main__":
 		"buy": buy,
 		"coins": coins,
 		"buddy": buddy,
-		"igloo": igloo,
 		"music": music,
 		"follow": follow,
 		"unfollow": unfollow,

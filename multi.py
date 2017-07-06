@@ -9,8 +9,15 @@ def help(clients, params):
 
 def room(clients, params):
 	if params:
+		try:
+			id = int(params[0])
+		except ValueError:
+			id = login.get_room_id(params[0])
+			if not id:
+				print "Room not found"
+				return
 		for client in clients:
-			client.go_to_room(params[0])
+			client.go_to_room(id)
 	else:
 		print "An argument is required"
 
