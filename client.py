@@ -227,7 +227,7 @@ class Client:
 			elif op == "bf":
 				room = int(packet[4])
 				if self.followed:
-					self.go_to_room(room)
+					self.join_room(room)
 			elif op == "upc":
 				id = int(packet[4])
 				if id in self.penguins:
@@ -432,14 +432,14 @@ class Client:
 		thread.start()
 		return 0
 
-	def go_to_room(self, id, x = 0, y = 0):
+	def join_room(self, id, x = 0, y = 0):
 		if self.log:
-			print "Going to room " + str(id) + "..."
+			print "Joining room " + str(id) + "..."
 		self._send_packet("s", "j#jr", id, x, y)
 
-	def go_to_igloo(self, id):
+	def join_igloo(self, id):
 		if self.log:
-			print "Going to " + str(id)+ "'s igloo..."
+			print "Joining " + str(id)+ "'s igloo..."
 		self._send_packet("s", "j#jp", None, self.id, int(id) + 1000)
 
 	def update_color(self, id):
@@ -563,9 +563,9 @@ class Client:
 		if self.log:
 			print "Adding " + str(coins) + " coins..."
 		room = self.room_id
-		self.go_to_room(912)
+		self.join_room(912)
 		self._send_packet("z", "zo", coins)
-		self.go_to_room(room)
+		self.join_room(room)
 
 	def buddy(self, id):
 		if self.log:
@@ -604,6 +604,6 @@ class Client:
 	def logout(self):
 		if self.log:
 			print "Logging out..."
-		self.go_to_room(811)
+		self.join_room(811)
 		self.sock.shutdown(socket.SHUT_RDWR)
 		self.sock.close()

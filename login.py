@@ -100,7 +100,7 @@ def room(client, params):
 			if not id:
 				print "Room not found"
 				return
-		client.go_to_room(id)
+		client.join_room(id)
 	else:
 		print "Current room: " + get_room_name(client.room_id)
 
@@ -115,7 +115,7 @@ def igloo(client, params):
 				return
 	else:
 		id = client.id
-	client.go_to_igloo(client.id)
+	client.join_igloo(id)
 
 def color(client, params):
 	if params:

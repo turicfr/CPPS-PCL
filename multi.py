@@ -17,7 +17,21 @@ def room(clients, params):
 				print "Room not found"
 				return
 		for client in clients:
-			client.go_to_room(id)
+			client.join_room(id)
+	else:
+		print "An argument is required"
+
+def igloo(client, params):
+	if params:
+		try:
+			id = int(params[0])
+		except ValueError:
+			id = client.get_penguin_id(params[0])
+			if not id:
+				print "Penguin not found"
+				return
+		for client in clients:
+			client.join_igloo(id)
 	else:
 		print "An argument is required"
 
@@ -229,6 +243,7 @@ if __name__ == "__main__":
 	commands = {
 		"help": help,
 		"room": room,
+		"igloo": igloo,
 		"color": color,
 		"head": head,
 		"face": face,
