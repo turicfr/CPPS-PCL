@@ -76,11 +76,11 @@ class Client:
 		except:
 			return None
 		i = self.buf.index(chr(0)) + 1
-		msg = self.buf[:i]
+		data = self.buf[:i]
 		self.buf = self.buf[i:]
 		if self.log:
-			print "# RECEIVE: " + str(msg)
-		return msg
+			print "# RECEIVE: " + str(data)
+		return data
 
 	def _receive_packet(self):
 		buf = self._receive()

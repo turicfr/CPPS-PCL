@@ -159,6 +159,13 @@ def buy(clients, params):
 	else:
 		print "An argument is required"
 
+def coins(clients, params):
+	if params:
+		for client in clients:
+			client.add_coins(params[0])
+	else:
+		print "An argument is required"
+
 def follow(clients, params):
 	if params:
 		name = ' '.join(params)
@@ -240,6 +247,17 @@ if __name__ == "__main__":
 			else:
 				print "All connected!"
 	
+	for client in clients:
+		client.update_color(shape["color"])
+		client.update_head(shape["head"])
+		client.update_face(shape["face"])
+		client.update_neck(shape["neck"])
+		client.update_body(shape["body"])
+		client.update_hand(shape["hand"])
+		client.update_feet(shape["feet"])
+		client.update_pin(shape["pin"])
+		client.update_background(shape["background"])
+	
 	commands = {
 		"help": help,
 		"room": room,
@@ -262,6 +280,7 @@ if __name__ == "__main__":
 		"joke": joke,
 		"emote": emote,
 		"buy": buy,
+		"coins": coins,
 		"follow": follow,
 		"unfollow": unfollow,
 		"logout": logout
