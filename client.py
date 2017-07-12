@@ -183,7 +183,7 @@ class Client:
 			op = packet[2]
 			if op == "e":
 				pass
-			if op == "h":
+			elif op == "h":
 				pass
 			elif op == "lp":
 				penguin = Penguin.from_player(packet[4])
@@ -409,7 +409,7 @@ class Client:
 		try:
 			self.sock.connect((self.ip, self.login_port))
 		except:
-			return 1
+			return -1
 		
 		packet, ok = self._login(user, password, encrypted, ver)
 		if not ok:
@@ -423,7 +423,7 @@ class Client:
 		try:
 			self.sock.connect((self.ip, self.game_port))
 		except:
-			return 1
+			return -2
 		
 		packet, ok = self._join_server(user, login_key, ver)
 		if not ok:
