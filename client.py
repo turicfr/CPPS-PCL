@@ -83,11 +83,11 @@ class Client:
 		return data
 
 	def _receive_packet(self):
-		buf = self._receive()
-		if not buf:
+		data = self._receive()
+		if not data:
 			return None
-		if buf.startswith("%"):
-			packet = buf.split('%')
+		if data.startswith("%"):
+			packet = data.split('%')
 			if packet[2] == "e":
 				self._error(packet)
 			return packet
@@ -109,12 +109,14 @@ class Client:
 		if self.log:
 			print "Sending 'verChk' request..."
 		self._send('<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>')
-		buf = self._receive()
-		if 'apiOK' in buf:
+		data = self._receive()
+		if not data:
+			return False
+		if 'apiOK' in data:
 			if self.log:
 				print "Received 'apiOK' response"
 			return True
-		if 'apiKO' in buf:
+		if 'apiKO' in data:
 			if self.log:
 				print "Received 'apiKO' response"
 			return False
@@ -124,9 +126,11 @@ class Client:
 		if self.log:
 			print "Sending rndK request..."
 		self._send('<msg t="sys"><body action="rndK" r="-1"></body></msg>')
-		buf = self._receive()
-		if 'rndK' in buf:
-			key = re.search("<k>(<!\[CDATA\[)?(.*?)(\]\]>)?<\/k>", buf).group(2)
+		data = self._receive()
+		if not data:
+			return None
+		if 'rndK' in data:
+			key = re.search("<k>(<!\[CDATA\[)?(.*?)(\]\]>)?<\/k>", data).group(2)
 			if self.log:
 				print "Received key: " + key
 			return key
@@ -135,8 +139,11 @@ class Client:
 	def _login(self, user, password, encrypted, ver):
 		if self.log:
 			print "Logging in..."
-		self._ver_check(ver)
+		if not self._ver_check(ver):
+			return None, False
 		rndk = self._key()
+		if not rndk:
+			return None, False
 		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + "Y(02.>'H}t\":E1")
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._receive_packet()
@@ -153,8 +160,11 @@ class Client:
 	def _join_server(self, user, login_key, ver):
 		if self.log:
 			print "Joining server..."
-		self._ver_check(ver)
+		if not self._ver_check(ver):
+			return None, False
 		rndk = self._key()
+		if not rndk:
+			return None, False
 		hash = self.swapped_md5(login_key + rndk) + login_key
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._receive_packet()
@@ -566,6 +576,11 @@ class Client:
 		self.join_room(912)
 		self._send_packet("z", "zo", coins)
 		self.join_room(room)
+		
+	def add_igloo(self, id):
+		if self.log:
+			print "Adding igloo " + str(id) + "..."
+		self._send_packet("s", "g#au", None, self.id, id)
 
 	def buddy(self, id):
 		if self.log:
@@ -575,6 +590,7 @@ class Client:
 	def music(self, id):
 		if self.log:
 			print "Setting music to #" + str(id) + "..."
+		self._send_packet("s", "g#go", None, self.id)
 		self._send_packet("s", "g#um", None, self.id, id)
 
 	def follow(self, name, dx = 0, dy = 0, commands = False):

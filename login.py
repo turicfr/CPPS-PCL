@@ -231,6 +231,12 @@ def coins(client, params):
 	else:
 		print "Current coins: " + str(client.coins)
 
+def add_igloo(client, params):
+	if params:
+		client.add_igloo(params[0])
+	else:
+		print "An argument is required"
+
 def buddy(client, params):
 	if params:
 		client.buddy(params[0])
@@ -318,6 +324,7 @@ if __name__ == "__main__":
 		"mail": mail,
 		"buy": buy,
 		"coins": coins,
+		"add_igloo": add_igloo,
 		"buddy": buddy,
 		"music": music,
 		"follow": follow,
