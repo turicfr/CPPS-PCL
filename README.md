@@ -66,6 +66,7 @@ A complex login with multiple penguins managed by a certain shape.
 - emote __[id]__ - says an emote with id __[id]__
 - buy __[id]__ - buys item with id __[id]__
 - coins __[amount]__ - earns __[amount]__ coins / prints current coins (single-login only)
+- add_igloo __[id]__ - buys igloo with id __[id]__
 - follow __[name]__ __[dx]__ __[dy]__ - follows a penguin named __[name]__ with offset (__[dx]__, __[dy]__) / follows a penguin named __[name]__ with no offset / prints currently followed penguin
 - unfollow - disables follow
 - logout - logouts from the game
