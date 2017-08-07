@@ -84,5 +84,3 @@ python multi.py
 - !ai __[id]__ - like buy command
 - !ac __[amount]__ - like coins command
 - !ping - response "pong"
-
-(Proof to Satan that I'm nagi123#5847)
