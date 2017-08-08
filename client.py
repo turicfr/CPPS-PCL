@@ -103,7 +103,8 @@ class Client:
 			msg += ": " + data[str(code)]
 		if self.followed and self.followed["commands"]:
 			self.say(msg)
-		print msg
+		if self.log:
+			print msg
 
 	def _ver_check(self, ver = 153):
 		if self.log:
@@ -576,22 +577,32 @@ class Client:
 		self.join_room(912)
 		self._send_packet("z", "zo", coins)
 		self.join_room(room)
-		
+
+	def add_stamp(self, id):
+		if self.log:
+			print "Adding stamp " + str(id) + "..."
+		self._send_packet("s", "st#sse", id)
+	
 	def add_igloo(self, id):
 		if self.log:
 			print "Adding igloo " + str(id) + "..."
 		self._send_packet("s", "g#au", None, self.id, id)
-
-	def buddy(self, id):
-		if self.log:
-			print "Sending buddy request to " + str(id) + "..."
-		self._send_packet("s", "b#br", id)
 
 	def music(self, id):
 		if self.log:
 			print "Setting music to #" + str(id) + "..."
 		self._send_packet("s", "g#go", None, self.id)
 		self._send_packet("s", "g#um", None, self.id, id)
+
+	def add_furniture(self, id):
+		if self.log:
+			print "Adding furniture " + str(id) + "..."
+		self._send_packet("s", "g#af", id)
+
+	def buddy(self, id):
+		if self.log:
+			print "Sending buddy request to " + str(id) + "..."
+		self._send_packet("s", "b#br", id)
 
 	def follow(self, name, dx = 0, dy = 0, commands = False):
 		if self.log:
