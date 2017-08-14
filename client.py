@@ -424,7 +424,9 @@ class Client:
 		
 		packet, ok = self._login(user, password, encrypted, ver)
 		if not ok:
-			return int(packet[4])
+			if packet:
+				return int(packet[4])
+			return -1
 		self.id = int(packet[4])
 		login_key = packet[5]
 		
@@ -438,7 +440,9 @@ class Client:
 		
 		packet, ok = self._join_server(user, login_key, ver)
 		if not ok:
-			return int(packet[4])
+			if packet:
+				return int(packet[4])
+			return -2
 		thread = threading.Thread(target = self._game)
 		thread.start()
 		return 0

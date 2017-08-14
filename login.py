@@ -302,7 +302,7 @@ if __name__ == "__main__":
 		sys.exit("Server not found")
 	game_port = game_port[server]
 	
-	client = client.Client(ip, login_port, game_port)
+	client = client.Client(ip, login_port, game_port, True)
 	if not client.log:
 		print "Connecting..."
 	error = client.connect(user, password, encrypted)
