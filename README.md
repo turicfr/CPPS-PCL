@@ -3,6 +3,8 @@ An intercative Penguin Client Library for Club Penguin Private Servers written i
 
 **Warning:** High ban risk - Do not use with your own main penguin.
 
+**Note:** This PCL does NOT work for Club Penguin Rewritten on purpose, and any request to change it will not be accepted.
+
 This PCL contains 2 modes:
 
 ### 1. Single-Login

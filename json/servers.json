@@ -1,31 +1,24 @@
 {
-	"cpr": {
-		"ip": "server.clubpenguinrewritten.pw",
-		"login": 6112,
-		"register": "create.clubpenguinrewritten.pw",
-		"servers": {
-			"blizzard": 6113,
-			"sleet": 6119,
-			"marshmallow": 7000,
-			"zipline": 7001,
-			"deep freeze": 7002,
-			"snow avalanche": 6114,
-			"antarctic": 7003,
-			"abominable": 7004,
-			"alaska": 7005,
-			"alpine": 7006,
-			"arctic": 7007,
-			"ascent": 7008,
-			"aurora": 7009,
-			"avalanche": 7010,
-			"beanie": 7011
-		}
-	},
 	"cpg": {
 		"ip": "91.121.7.60",
 		"login": 3111,
 		"servers": {
 			"blizzard": 3112
+		}
+	},
+	"vp": {
+		"ip": "172.93.52.2",
+		"login": 6112,
+		"servers": {
+			"blizzard": 9875,
+			"beanie": 9876
+		}
+	},
+	"cpb": {
+		"ip": "45.32.236.156",
+		"login": 2,
+		"servers": {
+			"uk": 3
 		}
 	}
 }
