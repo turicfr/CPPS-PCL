@@ -289,7 +289,7 @@ def logout(client, params):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	cpps = "cpr"
+	cpps = "cpg"
 	data = get_server(cpps)
 	user = raw_input("Username: ").lower()
 	password, encrypted = get_password(cpps, user)
@@ -301,8 +301,12 @@ if __name__ == "__main__":
 	if not server in game_port:
 		sys.exit("Server not found")
 	game_port = game_port[server]
+	if "magic" in data:
+		magic = data["magic"]
+	else:
+		magic = None
 	
-	client = client.Client(ip, login_port, game_port, True)
+	client = client.Client(ip, login_port, game_port, True, magic)
 	if not client.log:
 		print "Connecting..."
 	error = client.connect(user, password, encrypted)

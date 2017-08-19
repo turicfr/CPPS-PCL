@@ -1,6 +1,6 @@
 {
 	"cpg": {
-		"ip": "91.121.7.60",
+		"ip": "198.251.90.116",
 		"login": 3111,
 		"servers": {
 			"blizzard": 3112
@@ -9,6 +9,7 @@
 	"vp": {
 		"ip": "172.93.52.2",
 		"login": 6112,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
 			"blizzard": 9875,
 			"beanie": 9876
@@ -17,6 +18,7 @@
 	"cpb": {
 		"ip": "45.32.236.156",
 		"login": 2,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
 			"uk": 3
 		}

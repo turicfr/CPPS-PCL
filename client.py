@@ -30,11 +30,12 @@ class Penguin:
 		return cls(id, name, clothes, frame, x, y)
 
 class Client:
-	def __init__(self, ip, login_port, game_port, log = False):
+	def __init__(self, ip, login_port, game_port, log = False, magic = None):
 		self.ip = ip
 		self.login_port = login_port
 		self.game_port = game_port
 		self.log = log
+		self.magic = magic or "Y(02.>'H}t\":E1"
 		self.buf = ""
 		self.internal_room_id = -1
 		self.id = -1
@@ -145,7 +146,7 @@ class Client:
 		rndk = self._key()
 		if not rndk:
 			return None, False
-		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + "Y(02.>'H}t\":E1")
+		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + self.magic)
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._receive_packet()
 		if not packet or packet[2] == "e":
@@ -158,7 +159,7 @@ class Client:
 			print "Logged in."
 		return packet, True
 
-	def _join_server(self, user, login_key, ver):
+	def _join_server(self, user, login_key, confirmation, ver):
 		if self.log:
 			print "Joining server..."
 		if not self._ver_check(ver):
@@ -167,22 +168,25 @@ class Client:
 		if not rndk:
 			return None, False
 		hash = self.swapped_md5(login_key + rndk) + login_key
+		if confirmation:
+			hash += '#' + confirmation
 		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
 		packet = self._receive_packet()
-		if packet and packet[2] == "l":
-			self._send_packet("s", "j#js", self.id, login_key, "en")
+		if not packet or packet[4] == "e":
+			return packet, False
+		while packet[2] != "l":
 			packet = self._receive_packet()
-			if packet and packet[2] == "js":
-				if self.log:
-					print "Joined server."
-				return packet, True
-		return packet, False
-
-	def get_penguin_id(self, name):
-		for penguin in self.penguins.values():
-			if penguin.name == name:
-				return penguin.id
-		return 0
+			if not packet or packet[4] == "e":
+				return packet, False
+		self._send_packet("s", "j#js", self.id, login_key, "en")
+		if not confirmation:
+			while packet[2] != "js":
+				packet = self._receive_packet()
+				if not packet or packet[4] == "e":
+					return packet, False
+		if self.log:
+			print "Joined server."
+		return packet, True
 
 	def _game(self):
 		thread = threading.Thread(target = self._heartbeat)
@@ -427,8 +431,28 @@ class Client:
 			if packet:
 				return int(packet[4])
 			return -1
-		self.id = int(packet[4])
-		login_key = packet[5]
+		
+		if '|' in packet[4]:
+			user = packet[4]
+			data = packet[4].split('|')
+			self.id = int(data[0])
+			# swid = data[1]
+			# user = data[2]
+			login_key = data[3]
+			# ??? = data[4]
+			# language_approved = int(data[5])
+			# language_rejected = int(data[6])
+			# ??? = data[7] == "true"
+			# ??? = data[8] == "true"
+			# ??? = int(data[9])
+			confirmation = packet[5]
+			# friends_login_key = packet[6]
+			# ??? = packet[7]
+			# email = packet[8]
+		else:
+			self.id = int(packet[4])
+			login_key = packet[5]
+			confirmation = None
 		
 		if self.log:
 			print "Connecting to " + self.ip + ":" + str(self.game_port) + "..."
@@ -438,13 +462,20 @@ class Client:
 		except:
 			return -2
 		
-		packet, ok = self._join_server(user, login_key, ver)
+		packet, ok = self._join_server(user, login_key, confirmation, ver)
 		if not ok:
 			if packet:
 				return int(packet[4])
 			return -2
+		
 		thread = threading.Thread(target = self._game)
 		thread.start()
+		return 0
+
+	def get_penguin_id(self, name):
+		for penguin in self.penguins.values():
+			if penguin.name == name:
+				return penguin.id
 		return 0
 
 	def join_room(self, id, x = 0, y = 0):
