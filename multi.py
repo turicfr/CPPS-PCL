@@ -186,7 +186,7 @@ def logout(clients, params):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	cpps = "cpr"
+	cpps = "cpg"
 	data = login.get_server(cpps)
 	server = raw_input("Server: ").lower()
 	ip = data["ip"]
@@ -223,9 +223,7 @@ if __name__ == "__main__":
 			if error:
 				print "Username: " + user
 				if error == 603:
-					del data[cpps][user]
-					with open(filename, "w") as file:
-						json.dump(data, file)
+					login.remove_penguin(cpps, user, data)
 			else:
 				count -= 1
 				if count == 0:

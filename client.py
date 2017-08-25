@@ -1,3 +1,7 @@
+# hide
+	print "test"
+# endhide
+
 import socket
 import hashlib
 import re

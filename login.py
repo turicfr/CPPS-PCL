@@ -42,7 +42,7 @@ def get_password(cpps, user, remember = True):
 			sys.stdout.write('*')
 			password += c
 	print ""
-	
+
 	if remember and raw_input("Remember? [y/n] ") == "y":
 		if not cpps in data:
 			data[cpps] = {}
@@ -50,6 +50,22 @@ def get_password(cpps, user, remember = True):
 		with open(filename, "w") as file:
 			json.dump(data, file)
 	return password, False
+
+def remove_penguin(cpps, user, data = None):
+	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
+	if not data:
+		try:
+			with open(filename) as file:
+				data = json.load(file)
+		except:
+			return False
+	if cpps in data and user in data[cpps]:
+		   print "Removing " + user + "..."
+		del data[cpps][user]
+		with open(filename, "w") as file:
+			json.dump(data, file)
+		return True
+	return False
 
 def get_room_id(name):
 	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
@@ -311,6 +327,8 @@ if __name__ == "__main__":
 		print "Connecting..."
 	error = client.connect(user, password, encrypted)
 	if error:
+		if error == 603:
+			remove_penguin(cpps, user)
 		sys.exit("Failed to connect")
 	print "Connected!"
 	commands = {
