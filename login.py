@@ -60,7 +60,7 @@ def remove_penguin(cpps, user, data = None):
 		except:
 			return False
 	if cpps in data and user in data[cpps]:
-		   print "Removing " + user + "..."
+		print "Removing " + user + "..."
 		del data[cpps][user]
 		with open(filename, "w") as file:
 			json.dump(data, file)

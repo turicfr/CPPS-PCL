@@ -114,11 +114,11 @@ class Client:
 		data = self._receive()
 		if not data:
 			return False
-		if 'apiOK' in data:
+		if "apiOK" in data:
 			if self.log:
 				print "Received 'apiOK' response"
 			return True
-		if 'apiKO' in data:
+		if "apiKO" in data:
 			if self.log:
 				print "Received 'apiKO' response"
 			return False
@@ -132,7 +132,7 @@ class Client:
 		if not data:
 			return None
 		if 'rndK' in data:
-			key = re.search("<k>(<!\[CDATA\[)?(.*?)(\]\]>)?<\/k>", data).group(2)
+			key = re.search("<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", data).group(1)
 			if self.log:
 				print "Received key: " + key
 			return key
@@ -666,6 +666,5 @@ class Client:
 	def logout(self):
 		if self.log:
 			print "Logging out..."
-		self.join_room(811)
 		self.sock.shutdown(socket.SHUT_RDWR)
 		self.sock.close()
