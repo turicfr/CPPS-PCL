@@ -43,7 +43,7 @@ def get_password(cpps, user, remember = True):
 			password += c
 	print ""
 
-	if remember and raw_input("Remember? [y/n] ") == "y":
+	if remember and raw_input("Remember? [y/N] ") == "y":
 		if not cpps in data:
 			data[cpps] = {}
 		data[cpps][user] = hashlib.md5(password).hexdigest()
@@ -305,7 +305,7 @@ def logout(client, params):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	cpps = "cpg"
+	cpps = raw_input("CPPS: ").lower()
 	data = get_server(cpps)
 	user = raw_input("Username: ").lower()
 	password, encrypted = get_password(cpps, user)
@@ -313,16 +313,16 @@ if __name__ == "__main__":
 	
 	ip = data["ip"]
 	login_port = data["login"]
-	game_port = data["servers"]
-	if not server in game_port:
-		sys.exit("Server not found")
-	game_port = game_port[server]
 	if "magic" in data:
 		magic = data["magic"]
 	else:
 		magic = None
+	data = data["servers"]
+	if not server in data:
+		sys.exit("Server not found")
+	game_port = data[server]
 	
-	client = client.Client(ip, login_port, game_port, True, magic)
+	client = client.Client(ip, login_port, game_port, magic)
 	if not client.log:
 		print "Connecting..."
 	error = client.connect(user, password, encrypted)

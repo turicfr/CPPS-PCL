@@ -186,15 +186,20 @@ def logout(clients, params):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	cpps = "cpg"
+	cpps = raw_input("CPPS: ").lower()
 	data = login.get_server(cpps)
 	server = raw_input("Server: ").lower()
+	
 	ip = data["ip"]
 	login_port = data["login"]
-	game_port = data["servers"]
-	if not server in game_port:
+	if "magic" in data:
+		magic = data["magic"]
+	else:
+		magic = None
+	data = data["servers"]
+	if not server in data:
 		sys.exit("Server not found")
-	game_port = game_port[server]
+	game_port = data[server]
 	
 	filename = os.path.join(os.path.dirname(__file__), "json/shapes.json")
 	with open(filename) as file:
@@ -207,7 +212,7 @@ if __name__ == "__main__":
 	count = len(shape["offsets"])
 	clients = []
 	for i in range(count):
-		clients.append(client.Client(ip, login_port, game_port))
+		clients.append(client.Client(ip, login_port, game_port, magic))
 	
 	print "Logins with " + str(count) + " penguin(s)..."
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")

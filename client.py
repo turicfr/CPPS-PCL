@@ -30,7 +30,7 @@ class Penguin:
 		return cls(id, name, clothes, frame, x, y)
 
 class Client:
-	def __init__(self, ip, login_port, game_port, log = False, magic = None):
+	def __init__(self, ip, login_port, game_port, magic = None, log = False):
 		self.ip = ip
 		self.login_port = login_port
 		self.game_port = game_port
@@ -104,8 +104,7 @@ class Client:
 			msg += ": " + data[str(code)]
 		if self.followed and self.followed["commands"]:
 			self.say(msg)
-		if self.log:
-			print msg
+		print msg
 
 	def _ver_check(self, ver = 153):
 		if self.log:
@@ -346,9 +345,8 @@ class Client:
 				id = int(packet[4])
 				msg = packet[5]
 				if self.followed and id == self.followed["id"]:
-					if self.followed["commands"] and msg.startswith('a'):
+					if self.followed["commands"] and msg.startswith('!'):
 						cmd = msg.split(' ')
-						print cmd
 						name = cmd[0][1:]
 						params = cmd[1:]
 						self._command(name, params)
@@ -407,7 +405,6 @@ class Client:
 		self._send_packet("s", "u#h")
 
 	def _command(self, name, params):
-		print params
 		if name == "ai":
 			if params:
 				self.add_item(params[0])
