@@ -310,19 +310,21 @@ if __name__ == "__main__":
 	user = raw_input("Username: ").lower()
 	password, encrypted = get_password(cpps, user)
 	server = raw_input("Server: ").lower()
-	
-	ip = data["ip"]
-	login_port = data["login"]
-	if "magic" in data:
-		magic = data["magic"]
-	else:
-		magic = None
-	data = data["servers"]
-	if not server in data:
+	if not server in data["servers"]:
 		sys.exit("Server not found")
-	game_port = data[server]
 	
-	client = client.Client(ip, login_port, game_port, magic)
+	if "ip" in data:
+		login_ip = game_ip = data["ip"]
+		login_port = data["login"]
+		game_port = data["servers"][server]
+	else:
+		login_ip, login_port = data["login"].split(':')
+		login_port = int(login_port)
+		game_ip, game_port = data["servers"][server].split(':')
+		game_port = int(game_port)
+	magic = data["magic"] if "magic" in data else None
+	
+	client = client.Client(login_ip, login_port, game_ip, game_port, magic, True)
 	if not client.log:
 		print "Connecting..."
 	error = client.connect(user, password, encrypted)

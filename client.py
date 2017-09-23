@@ -30,9 +30,10 @@ class Penguin:
 		return cls(id, name, clothes, frame, x, y)
 
 class Client:
-	def __init__(self, ip, login_port, game_port, magic = None, log = False):
-		self.ip = ip
+	def __init__(self, login_ip, login_port, game_ip, game_port, magic=None, log=False):
+		self.login_ip = login_ip
 		self.login_port = login_port
+		self.game_ip = game_ip
 		self.game_port = game_port
 		self.log = log
 		self.magic = magic or "Y(02.>'H}t\":E1"
@@ -45,7 +46,7 @@ class Client:
 		self.followed = None
 
 	@staticmethod
-	def swapped_md5(password, encrypted = False):
+	def swapped_md5(password, encrypted=False):
 		if not encrypted:
 			password = hashlib.md5(password).hexdigest()
 		password = password[16:32] + password[0:16]
@@ -56,28 +57,30 @@ class Client:
 			print "# SEND: " + str(data)
 		try:
 			self.sock.send(data + chr(0))
+			return True
 		except:
 			print "Connection lost"
+			return False
 
-	def _send_packet(self, ext, cmd, *arr):
+	def _send_packet(self, ext, cmd, *args):
 		packet = "%xt%" + ext + "%" + cmd + "%"
-		if arr and arr[0] is None:
-			i = 1
+		if args and args[0] is None:
+			args = args[1:]
 		else:
-			packet += str(self.internal_room_id) + "%"
-			i = 0
-		for i in arr[i:]:
-			packet += str(i) + "%"
-		self._send(packet)
+			args = (self.internal_room_id,) + args
+		packet += "%".join(str(arg) for arg in args) + "%"
+		return self._send(packet)
 
 	def _receive(self):
+		data = ""
 		try:
 			while not chr(0) in self.buf:
-				self.buf += self.sock.recv(4096)
+				data += self.buf
+				self.buf = self.sock.recv(4096)
 		except:
 			return None
 		i = self.buf.index(chr(0)) + 1
-		data = self.buf[:i]
+		data += self.buf[:i]
 		self.buf = self.buf[i:]
 		if self.log:
 			print "# RECEIVE: " + str(data)
@@ -106,10 +109,12 @@ class Client:
 			self.say(msg)
 		print msg
 
-	def _ver_check(self, ver = 153):
+	def _ver_check(self, ver):
 		if self.log:
 			print "Sending 'verChk' request..."
-		self._send('<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>')
+		if not self._send('<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>'):
+		# if not self._send("<msg t='sys'><body action='verChk' r='0'><ver v='" + str(ver) + "' /></body></msg>"):
+			return False
 		data = self._receive()
 		if not data:
 			return False
@@ -126,7 +131,9 @@ class Client:
 	def _key(self):
 		if self.log:
 			print "Sending rndK request..."
-		self._send('<msg t="sys"><body action="rndK" r="-1"></body></msg>')
+		if not self._send('<msg t="sys"><body action="rndK" r="-1"></body></msg>'):
+		# if not self._send("<msg t='sys'><body action='rndK' r='-1'></body></msg>"):
+			return None
 		data = self._receive()
 		if not data:
 			return None
@@ -146,7 +153,9 @@ class Client:
 		if not rndk:
 			return None, False
 		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + self.magic)
-		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
+		if not self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'):
+		# if not self._send("<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"):
+			return None, False
 		packet = self._receive_packet()
 		if not packet or packet[2] == "e":
 			return packet, False
@@ -155,7 +164,7 @@ class Client:
 			if not packet or packet[2] == "e":
 				return packet, False
 		if self.log:
-			print "Logged in."
+			print "Logged in"
 		return packet, True
 
 	def _join_server(self, user, login_key, confirmation, ver):
@@ -169,7 +178,9 @@ class Client:
 		hash = self.swapped_md5(login_key + rndk) + login_key
 		if confirmation:
 			hash += '#' + confirmation
-		self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>')
+		if not self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'):
+		# if not self._send("<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"):
+			return None, False
 		packet = self._receive_packet()
 		if not packet or packet[4] == "e":
 			return packet, False
@@ -177,14 +188,15 @@ class Client:
 			packet = self._receive_packet()
 			if not packet or packet[4] == "e":
 				return packet, False
-		self._send_packet("s", "j#js", self.id, login_key, "en")
+		if not self._send_packet("s", "j#js", self.id, login_key, "en"):
+			return None, False
 		if not confirmation:
 			while packet[2] != "js":
 				packet = self._receive_packet()
 				if not packet or packet[4] == "e":
 					return packet, False
 		if self.log:
-			print "Joined server."
+			print "Joined server"
 		return packet, True
 
 	def _game(self):
@@ -414,12 +426,12 @@ class Client:
 		elif name == "ping":
 			self.say("pong")
 
-	def connect(self, user, password, encrypted = False, ver = 153):
+	def connect(self, user, password, encrypted=False, ver=153):
 		if self.log:
-			print "Connecting to " + self.ip + ":" + str(self.login_port) + "..."
+			print "Connecting to login server at " + self.login_ip + ":" + str(self.login_port) + "..."
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.sock.connect((self.ip, self.login_port))
+			self.sock.connect((self.login_ip, self.login_port))
 		except:
 			return -1
 		
@@ -452,10 +464,10 @@ class Client:
 			confirmation = None
 		
 		if self.log:
-			print "Connecting to " + self.ip + ":" + str(self.game_port) + "..."
+			print "Connecting to game server at " + self.game_ip + ":" + str(self.game_port) + "..."
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.sock.connect((self.ip, self.game_port))
+			self.sock.connect((self.game_ip, self.game_port))
 		except:
 			return -2
 		
@@ -465,7 +477,7 @@ class Client:
 				return int(packet[4])
 			return -2
 		
-		thread = threading.Thread(target = self._game)
+		thread = threading.Thread(target=self._game)
 		thread.start()
 		return 0
 
@@ -596,7 +608,7 @@ class Client:
 		if self.log:
 			print "Sending postcard #" + str(postcard) + "..."
 		self._send_packet("s", "l#ms", id, postcard)
-
+	
 	def add_item(self, id):
 		if self.log:
 			print "Adding item " + str(id) + "..."
