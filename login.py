@@ -5,13 +5,31 @@ import os
 import json
 import client
 
-def get_server(cpps):
+def get_info(cpps, server):
 	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
 	with open(filename) as file:
 		data = json.load(file)
 	if not cpps in data:
 		sys.exit("CPPS not found")
-	return data[cpps]
+	if not server in data[cpps]["servers"]:
+		sys.exit("Server not found")
+
+	if "ip" in data[cpps]:
+		login_ip = game_ip = data[cpps]["ip"]
+		login_port = data[cpps]["login"]
+		game_port = data[cpps]["servers"][server]
+	else:
+		login_ip, login_port = data[cpps]["login"].split(':')
+		login_port = int(login_port)
+		game_ip, game_port = data[cpps]["servers"][server].split(':')
+		game_port = int(game_port)
+	magic = data[cpps]["magic"] if "magic" in data[cpps] else None
+	
+	return login_ip, login_port, game_ip, game_port, magic
+
+def get_client(cpps, server):
+	login_ip, login_port, game_ip, game_port, magic = get_info(cpps, server)
+	return client.Client(login_ip, login_port, game_ip, game_port, magic, True)
 
 def get_password(cpps, user, remember = True):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
@@ -67,6 +85,22 @@ def remove_penguin(cpps, user, data = None):
 		return True
 	return False
 
+def login():
+	cpps = raw_input("CPPS: ").lower()
+	user = raw_input("Username: ").lower()
+	password, encrypted = get_password(cpps, user)
+	server = raw_input("Server: ").lower()
+	client = get_client(cpps, server)
+	if not client.log:
+		print "Connecting..."
+	error = client.connect(user, password, encrypted)
+	if error:
+		if error == 603:
+			remove_penguin(cpps, user)
+		sys.exit("Failed to connect")
+	print "Connected!"
+	return client
+
 def get_room_id(name):
 	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
 	with open(filename) as file:
@@ -87,6 +121,7 @@ def get_room_name(id):
 def help(client, params):
 	print """HELP"""
 
+# TODO filters
 def log(client, params):
 	client.log = not client.log
 	if client.log:
@@ -305,34 +340,7 @@ def logout(client, params):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	cpps = raw_input("CPPS: ").lower()
-	data = get_server(cpps)
-	user = raw_input("Username: ").lower()
-	password, encrypted = get_password(cpps, user)
-	server = raw_input("Server: ").lower()
-	if not server in data["servers"]:
-		sys.exit("Server not found")
-	
-	if "ip" in data:
-		login_ip = game_ip = data["ip"]
-		login_port = data["login"]
-		game_port = data["servers"][server]
-	else:
-		login_ip, login_port = data["login"].split(':')
-		login_port = int(login_port)
-		game_ip, game_port = data["servers"][server].split(':')
-		game_port = int(game_port)
-	magic = data["magic"] if "magic" in data else None
-	
-	client = client.Client(login_ip, login_port, game_ip, game_port, magic, True)
-	if not client.log:
-		print "Connecting..."
-	error = client.connect(user, password, encrypted)
-	if error:
-		if error == 603:
-			remove_penguin(cpps, user)
-		sys.exit("Failed to connect")
-	print "Connected!"
+	client = login()
 	commands = {
 		"help": help,
 		"log": log,
@@ -376,5 +384,5 @@ if __name__ == "__main__":
 		params = cmd[1:]
 		if name in commands:
 			commands[name](client, params)
-		else:
+		elif name:
 			print "command '" + name + "' doesn't exist"
