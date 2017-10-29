@@ -6,5 +6,20 @@
 		"servers": {
 			"uk": 3
 		}
+	},
+	"blizzardcp": {
+		"ip": "45.32.168.137",
+		"login": 6112,
+		"servers": {
+			"blizzard": 6113
+		}
+	},
+	"cprewrote": {
+		"ip": "158.69.219.220",
+		"login": 2100,
+		"servers": {
+			"blizzard": 3100,
+			"yeti": 7784
+		}
 	}
 }

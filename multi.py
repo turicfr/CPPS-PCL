@@ -4,139 +4,95 @@ import json
 import client
 import login
 
-def help(clients, params):
-	print """HELP"""
+def help(clients):
+	return """HELP"""
 
-def room(clients, params):
-	if params:
-		try:
-			id = int(params[0])
-		except ValueError:
-			id = login.get_room_id(params[0])
-			if not id:
-				print "Room not found"
-				return
-		for client in clients:
-			client.join_room(id)
-	else:
-		print "An argument is required"
+def room(client, id):
+	try:
+		id = int(id)
+	except ValueError:
+		name = id
+		id = client.Client.get_room_id(name)
+		if not id:
+			return "Room '" + name + "' not found"
+	for client in clients:
+		client.room = id
 
-def igloo(client, params):
-	if params:
-		try:
-			id = int(params[0])
-		except ValueError:
-			id = client.get_penguin_id(params[0])
-			if not id:
-				print "Penguin not found"
-				return
-		for client in clients:
-			client.join_igloo(id)
-	else:
-		print "An argument is required"
+def igloo(client, id):
+	try:
+		id = int(id)
+	except ValueError:
+		name = id
+		id = client.get_id(name)
+		if not id:
+			return "Penguin '" + name + "' not found"
+	for client in clients:
+		client.igloo = id
 
-def color(clients, params):
-	if params:
-		for client in clients:
-			client.update_color(params[0])
-	else:
-		print "An argument is required"
+def color(clients, id):
+	for client in clients:
+		client.color = id
 
-def head(clients, params):
-	if params:
-		for client in clients:
-			client.update_head(params[0])
-	else:
-		print "An argument is required"
+def head(clients, id):
+	for client in clients:
+		client.head = id
 
-def face(clients, params):
-	if params:
-		for client in clients:
-			client.update_face(params[0])
-	else:
-		print "An argument is required"
+def face(clients, id):
+	for client in clients:
+		client.face = id
 
-def neck(clients, params):
-	if params:
-		for client in clients:
-			client.update_neck(params[0])
-	else:
-		print "An argument is required"
+def neck(clients, id):
+	for client in clients:
+		client.neck = id
 
-def body(clients, params):
-	if params:
-		for client in clients:
-			client.update_body(params[0])
-	else:
-		print "An argument is required"
+def body(clients, id):
+	for client in clients:
+		client.body = id
 
-def hand(clients, params):
-	if params:
-		for client in clients:
-			client.update_hand(params[0])
-	else:
-		print "An argument is required"
+def hand(clients, id):
+	for client in clients:
+		client.hand = id
 
-def feet(clients, params):
-	if params:
-		for client in clients:
-			client.update_feet(params[0])
-	else:
-		print "An argument is required"
+def feet(clients, id):
+	for client in clients:
+		client.feet = id
 
-def pin(clients, params):
-	if params:
-		for client in clients:
-			client.update_pin(params[0])
-	else:
-		print "An argument is required"
+def pin(clients, id):
+	for client in clients:
+		client.pin = id
 
-def background(clients, params):
-	if params:
-		for client in clients:
-			client.update_background(params[0])
-	else:
-		print "An argument is required"
+def background(clients, id):
+	for client in clients:
+		client.background = id
 
-def walk(clients, params):
-	if len(params) < 2:
-		print "2 arguments are required"
-	else:
-		for i in range(len(clients)):
-			client = clients[i]
-			offset = shape["offsets"][i]
-			client.walk(int(params[0]) + int(offset["x"]), int(params[1]) + int(offset["y"]))
+def walk(clients, x, y):
+	for client, offset in zip(cliets, shape["offsets"]):
+		client.walk(int(x) + int(offset["x"]), int(y) + int(offset["y"]))
 
-def dance(clients, params):
+def dance(clients):
 	for client in clients:
 		client.dance()
 
-def wave(clients, params):
+def wave(clients):
 	for client in clients:
 		client.wave()
 
-def sit(clients, params):
-	if params:
-		for client in clients:
-			client.sit(params[0])
-	else:
+def sit(clients, dir=None):
+	if dir is None:
 		for client in clients:
 			client.sit()
-
-def snowball(clients, params):
-	if len(params) < 2:
-		print "2 arguments are required"
 	else:
 		for client in clients:
-			client.snowball(params[0], params[1])
+			client.sit(dir)
 
-def say(clients, params):
-	if params:
-		message = ' '.join(params)
-		for client in clients:
-			client.say(message)
-	else:
-		print "An argument is required"
+def snowball(clients, x, y):
+	for client in clients:
+		client.snowball(x, y)
+
+def say(clients, *params):
+	message = ' '.join(params)
+	for client in clients:
+		client.say(message)
 
 def joke(clients, params):
 	if params:
@@ -145,42 +101,28 @@ def joke(clients, params):
 	else:
 		print "An argument is required"
 
-def emote(clients, params):
-	if params:
-		for client in clients:
-			client.emote(params[0])
-	else:
-		print "An argument is required"
+def emote(clients, id):
+	for client in clients:
+		client.emote(id)
 
-def buy(clients, params):
-	if params:
-		for client in clients:
-			client.add_item(params[0])
-	else:
-		print "An argument is required"
+def buy(clients, id):
+	for client in clients:
+		client.add_item(id)
 
-def coins(clients, params):
-	if params:
-		for client in clients:
-			client.add_coins(params[0])
-	else:
-		print "An argument is required"
+def coins(clients, amount):
+	for client in clients:
+		client.add_item(amount)
 
-def follow(clients, params):
-	if params:
-		name = ' '.join(params)
-		for i in range(len(clients)):
-			client = clients[i]
-			offset = shape["offsets"][i]
-			client.follow(name, int(offset["x"]), int(offset["y"]), True)
-	else:
-		print "An argument is required"
+def follow(clients, *params):
+	name = ' '.join(params)
+	for client, offset in zip(clients, shape["offsets"]):
+		client.follow(name, int(offset["x"]), int(offset["y"]))
 
-def unfollow(clients, params):
+def unfollow(clients):
 	for client in clients:
 		client.unfollow()
 
-def logout(clients, params):
+def logout(clients):
 	for client in clients:
 		client.logout()
 	sys.exit(0)
@@ -240,15 +182,15 @@ if __name__ == "__main__":
 				print "All connected!"
 	
 	for client in clients:
-		client.update_color(shape["color"])
-		client.update_head(shape["head"])
-		client.update_face(shape["face"])
-		client.update_neck(shape["neck"])
-		client.update_body(shape["body"])
-		client.update_hand(shape["hand"])
-		client.update_feet(shape["feet"])
-		client.update_pin(shape["pin"])
-		client.update_background(shape["background"])
+		client.color = shape["color"]
+		client.head = shape["head"]
+		client.face = shape["face"]
+		client.neck = shape["neck"]
+		client.body = shape["body"]
+		client.hand = shape["hand"]
+		client.feet = shape["feet"]
+		client.pin = shape["pin"]
+		client.background = shape["background"]
 	
 	commands = {
 		"help": help,
@@ -275,7 +217,9 @@ if __name__ == "__main__":
 		"coins": coins,
 		"follow": follow,
 		"unfollow": unfollow,
-		"logout": logout
+		"logout": logout,
+		"exit": logout,
+		"quit": logout
 	}
 	while True:
 		print ">>>",
@@ -283,6 +227,9 @@ if __name__ == "__main__":
 		name = cmd[0]
 		params = cmd[1:]
 		if name in commands:
-			commands[name](clients, params)
-		else:
+			try:
+				print commands[name](clients, *params)
+			except TypeError as e:
+				print e.message
+		elif name:
 			print "command '" + name + "' doesn't exist"

@@ -3,9 +3,10 @@ import msvcrt
 import hashlib
 import os
 import json
+import logging
 import client
 
-def get_info(cpps, server):
+def get_server(cpps, server):
 	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
 	with open(filename) as file:
 		data = json.load(file)
@@ -28,8 +29,12 @@ def get_info(cpps, server):
 	return login_ip, login_port, game_ip, game_port, magic
 
 def get_client(cpps, server):
-	login_ip, login_port, game_ip, game_port, magic = get_info(cpps, server)
-	return client.Client(login_ip, login_port, game_ip, game_port, magic, True)
+	login_ip, login_port, game_ip, game_port, magic = get_server(cpps, server)
+	logger = logging.getLogger()
+	logger.setLevel(logging.NOTSET)
+	handler = logging.StreamHandler(sys.stdout)
+	logger.addHandler(handler)
+	return client.Client(login_ip, login_port, game_ip, game_port, magic, logger)
 
 def get_password(cpps, user, remember = True):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
@@ -69,7 +74,7 @@ def get_password(cpps, user, remember = True):
 			json.dump(data, file)
 	return password, False
 
-def remove_penguin(cpps, user, data = None):
+def remove_penguin(cpps, user, data=None):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
 	if not data:
 		try:
@@ -91,8 +96,6 @@ def login():
 	password, encrypted = get_password(cpps, user)
 	server = raw_input("Server: ").lower()
 	client = get_client(cpps, server)
-	if not client.log:
-		print "Connecting..."
 	error = client.connect(user, password, encrypted)
 	if error:
 		if error == 603:
@@ -101,241 +104,192 @@ def login():
 	print "Connected!"
 	return client
 
-def get_room_id(name):
-	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
-	with open(filename) as file:
-		data = json.load(file)
-	for id in data:
-		if data[id] == name:
-			return int(id)
-	return 0
+def help(client):
+	return """HELP"""
 
-def get_room_name(id):
-	filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
-	with open(filename) as file:
-		data = json.load(file)
-	if str(id) in data:
-		return data[str(id)]
-	return "Unknown"
-
-def help(client, params):
-	print """HELP"""
-
-# TODO filters
-def log(client, params):
-	client.log = not client.log
-	if client.log:
-		print "Log is on"
+def log(client, level=None):
+	if level is None:
+		if client.logger.level:
+			msg = "all"
+			level = logging.NOTSET
+		else:
+			msg = "error"
+			level = logging.ERROR
 	else:
-		print "Log is off"
+		msg = level
+		if level == "all":
+			level = logging.NOTSET
+		if level == "debug":
+			level = logging.DEBUG
+		elif level == "info":
+			level = logging.INFO
+		elif level == "warning":
+			level = logging.WARNING
+		elif level == "error":
+			level = logging.ERROR
+		elif level == "cricital":
+			level = logging.CRICITAL
+		else:
+			return "Unknown logging level '" + level + "'"
+	client.logger.setLevel(level)
+	return "Logging " + msg + " messages"
 
-def internal(client, params):
-	print "Current: internal room id: " + client.internal_room_id
+def internal(client):
+	return "Current internal room id: " + str(client.internal_room_id)
 
-def id(client, params):
-	if params:
-		id = client.get_penguin_id(params[0])
-	else:
+def id(client, name=None):
+	if name is None:
 		id = client.id
-	if id:
-		print "id: " + str(id)
 	else:
-		print "Penguin not found"
+		id = client.get_id(name)
+		if not id:
+			return "Penguin '" + name + "' not found"
+	return "ID: " + str(id)
 
-def room(client, params):
-	if params:
-		try:
-			id = int(params[0])
-		except ValueError:
-			id = get_room_id(params[0])
-			if not id:
-				print "Room not found"
-				return
-		client.join_room(id)
+def name(client, id=None):
+	if id is None:
+		name = client.name
+	elif id in client.penguins:
+		name = client.penguins[id].name
 	else:
-		print "Current room: " + get_room_name(client.room_id)
+		return "Penguin #" + str(id) + " not found"
+	return "Name: " + name
 
-def igloo(client, params):
-	if params:
-		try:
-			id = int(params[0])
-		except ValueError:
-			id = client.get_penguin_id(params[0])
-			if not id:
-				print "Penguin not found"
-				return
-	else:
+def room(client, id=None):
+	if id is None:
+		return "Current room: " + client.get_room_name(client.room)
+	try:
+		id = int(id)
+	except ValueError:
+		name = id
+		id = client.get_room_id(name)
+		if not id:
+			return "Room '" + name + "' not found"
+	client.room = id
+
+def igloo(client, id=None):
+	if id is None:
 		id = client.id
-	client.join_igloo(id)
+	else:
+		try:
+			id = int(id)
+		except ValueError:
+			name = id
+			id = client.get_id(name)
+			if not id:
+				return "Penguin '" + name + "' not found"
+	client.igloo = id
 
-def color(client, params):
+def penguins(client):
+	return '\n'.join(client.penguins)
+
+def color(client, id=None):
+	if id is None:
+		return "Current color: " + str(client.color)
+	else:
+		client.color = id
+
+def head(client, id=None):
+	if id is None:
+		return "Current head item: " + str(client.head)
+	else:
+		client.head = id
+
+def face(client, id=None):
+	if id is None:
+		return "Current face item: " + str(client.face)
+	else:
+		client.face = id
+
+def neck(client, id=None):
+	if id is None:
+		return "Current neck item: " + str(client.neck)
+	else:
+		client.neck = id
+
+def body(client, id=None):
+	if id is None:
+		return "Current body item: " + str(client.body)
+	else:
+		client.body = id
+
+def hand(client, id=None):
+	if id is None:
+		return "Current hand item: " + str(client.hand)
+	else:
+		client.hand = id
+
+def feet(client, id=None):
+	if id is None:
+		return "Current feet item: " + str(client.feet)
+	else:
+		client.feet = id
+
+def pin(client, id=None):
+	if id is None:
+		return "Current pin: " + str(client.pin)
+	else:
+		client.pin = id
+
+def background(client, id=None):
+	if id is None:
+		return "Current background: " + str(client.background)
+	else:
+		client.background = id
+
+def inventory(client):
+	return ', '.join(client.inventory)
+
+def say(client, *params):
+	client.say(' '.join(params))
+
+def mail(client, *params):
+	if len(params) > 1:
+		postcard = params[0]
+		name = ' '.join(params[1:])
+		id = client.get_id(name)
+		if not id:
+			return "Penguin '" + name + "' not found"
+		client.mail(id, postcard)
+
+def coins(client, amount=None):
+	if amount is None:
+		return "Current coins: " + str(client.coins)
+	else:
+		client.add_coins(amount)
+
+def buddy(client, *params):
+	name = ' '.join(params)
+	id = client.get_id(name)
+	if not id:
+		return "Penguin '" + name + "' not found"
+	client.buddy(id)
+
+def follow(client, *params):
 	if params:
-		client.update_color(params[0])
-	else:
-		print "Current color: " + str(client.penguins[client.id].clothes["color"])
-
-def head(client, params):
-	if params:
-		client.update_head(params[0])
-	else:
-		print "Current head item: " + str(client.penguins[client.id].clothes["head"])
-
-def face(client, params):
-	if params:
-		client.update_face(params[0])
-	else:
-		print "Current face item: " + str(client.penguins[client.id].clothes["face"])
-
-def neck(client, params):
-	if params:
-		client.update_neck(params[0])
-	else:
-		print "Current neck item: " + str(client.penguins[client.id].clothes["neck"])
-
-def body(client, params):
-	if params:
-		client.update_body(params[0])
-	else:
-		print "Current body item: " + str(client.penguins[client.id].clothes["body"])
-
-def hand(client, params):
-	if params:
-		client.update_hand(params[0])
-	else:
-		print "Current hand item: " + str(client.penguins[client.id].clothes["hand"])
-
-def feet(client, params):
-	if params:
-		client.update_feet(params[0])
-	else:
-		print "Current feet item: " + str(client.penguins[client.id].clothes["feet"])
-
-def pin(client, params):
-	if params:
-		client.update_pin(params[0])
-	else:
-		print "Current pin: " + str(client.penguins[client.id].clothes["pin"])
-
-def background(client, params):
-	if params:
-		client.update_background(params[0])
-	else:
-		print "Current background: " + str(client.penguins[client.id].clothes["background"])
-
-def walk(client, params):
-	if len(params) < 2:
-		print "2 arguments are required"
-	else:
-		client.walk(params[0], params[1])
-
-def dance(client, params):
-	client.dance()
-
-def wave(client, params):
-	client.wave()
-
-def sit(client, params):
-	if params:
-		client.sit(params[0])
-	else:
-		client.sit()
-
-def snowball(client, params):
-	if len(params) < 2:
-		print "2 arguments are required"
-	else:
-		client.snowball(params[0], params[1])
-
-def say(client, params):
-	if params:
-		client.say(' '.join(params))
-	else:
-		print "An argument is required"
-
-def joke(client, params):
-	if params:
-		client.joke(params[0])
-	else:
-		print "An argument is required"
-
-def emote(client, params):
-	if params:
-		client.emote(params[0])
-	else:
-		print "An argument is required"
-
-def mail(client, params):
-	if len(params) < 2:
-		print "2 arguments are required"
-	else:
-		client.mail(params[0], params[1])
-
-def buy(client, params):
-	if params:
-		client.add_item(params[0])
-	else:
-		print "An argument is required"
-
-def coins(client, params):
-	if params:
-		client.add_coins(params[0])
-	else:
-		print "Current coins: " + str(client.coins)
-
-def add_stamp(client, params):
-	if params:
-		client.add_stamp(params[0])
-	else:
-		print "An argument is required"
-
-def add_igloo(client, params):
-	if params:
-		client.add_igloo(params[0])
-	else:
-		print "An argument is required"
-
-def add_furniture(client, params):
-	if params:
-		client.add_furniture(params[0])
-	else:
-		print "An argument is required"
-
-def buddy(client, params):
-	if params:
-		client.buddy(params[0])
-	else:
-		print "An argument is required"
-
-def music(client, params):
-	if params:
-		client.music(params[0])
-	else:
-		print "An argument is required"
-
-def follow(client, params):
-	if params:
+		offset = False
 		if len(params) > 2:
 			try:
 				dx = int(params[-2])
 				dy = int(params[-1])
+				params = params[:-2]
 				offset = True
 			except ValueError:
-				offset = False
-			if offset:
-				client.follow(' '.join(params[:-2]), dx, dy)
-			else:
-				client.follow(' '.join(params))
+				pass
+		name = ' '.join(params)
+		id = client.get_id(name)
+		if not id:
+			return "Penguin '" + name + "' not found"
+		if offset:
+			client.follow(id, dx, dy)
 		else:
-			client.follow(' '.join(params))
-	elif client.followed:
-		print "Currently following " + client.penguins[client.followed.id].name
-	else:
-		print "Currently not following"
+			client.follow(id)
+		return None
+	elif client._follow:
+		return "Currently following '" + client.penguins[client._follow[0]].name + "'"
+	return "Currently not following"
 
-def unfollow(client, params):
-	client.unfollow()
-
-def logout(client, params):
+def logout(client):
 	client.logout()
 	sys.exit(0)
 
@@ -346,8 +300,10 @@ if __name__ == "__main__":
 		"log": log,
 		"internal": internal,
 		"id": id,
+		"name": name,
 		"room": room,
 		"igloo": igloo,
+		"penguins": penguins,
 		"color": color,
 		"head": head,
 		"face": face,
@@ -357,25 +313,30 @@ if __name__ == "__main__":
 		"feet": feet,
 		"pin": pin,
 		"background": background,
-		"walk": walk,
-		"dance": dance,
-		"wave": wave,
-		"sit": sit,
-		"snowball": snowball,
+		"inventory": inventory,
+		"walk": client.walk,
+		"dance": client.dance,
+		"wave": client.wave,
+		"sit": client.sit,
+		"snowball": client.snowball,
 		"say": say,
-		"joke": joke,
-		"emote": emote,
+		"joke": client.joke,
+		"emote": client.emote,
 		"mail": mail,
-		"buy": buy,
+		"buy": client.add_item,
+		"ai": client.add_item,
 		"coins": coins,
-		"stamp": add_stamp,
-		"add_igloo": add_igloo,
-		"furniture": add_furniture,
+		"ac": client.add_coins,
+		"stamp": client.add_stamp,
+		"igloo": client.add_igloo,
+		"furniture": client.add_furniture,
+		"music": client.igloo_music,
 		"buddy": buddy,
-		"music": music,
 		"follow": follow,
-		"unfollow": unfollow,
-		"logout": logout
+		"unfollow": client.unfollow,
+		"logout": logout,
+		"exit": logout,
+		"quit": logout
 	}
 	while True:
 		print ">>>",
@@ -383,6 +344,17 @@ if __name__ == "__main__":
 		name = cmd[0]
 		params = cmd[1:]
 		if name in commands:
-			commands[name](client, params)
+			function = commands[name]
+			try:
+				if hasattr(function, "__self__"):
+					function(*params)
+				else:
+					msg = function(client, *params)
+					if msg:
+						print msg
+			except TypeError as e:
+				if function.__name__ + "() takes" not in e.message:
+					raise
+				print e.message
 		elif name:
 			print "command '" + name + "' doesn't exist"

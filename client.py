@@ -4,62 +4,119 @@ import re
 import os
 import json
 import threading
+import Queue
+from penguin import Penguin
 
-class Penguin:
-	def __init__(self, id, name, clothes, frame, x, y):
-		self.id = id
-		self.name = name
-		self.clothes = clothes
-		self.frame = frame
-		self.x = x
-		self.y = y
-	
-	@classmethod
-	def from_player(cls, player):
-		player = player.split('|')
-		id = int(player[0])
-		name = player[1]
-		clothes = {}
-		frame = player[2]
-		types = ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"]
-		for i in range(len(types)):
-			if player[i + 3]:
-				clothes[types[i]] = int(player[i + 3])
-		x = int(player[12])
-		y = int(player[13])
-		return cls(id, name, clothes, frame, x, y)
+class _Handler(object):
+	def __init__(self, handlers, predicate):
+		self._handlers = handlers
+		self._predicate = predicate
 
-class Client:
-	def __init__(self, login_ip, login_port, game_ip, game_port, magic=None, log=False):
-		self.login_ip = login_ip
-		self.login_port = login_port
-		self.game_ip = game_ip
-		self.game_port = game_port
-		self.log = log
-		self.magic = magic or "Y(02.>'H}t\":E1"
-		self.buf = ""
-		self.internal_room_id = -1
-		self.id = -1
-		self.coins = -1
-		self.room_id = -1
-		self.penguins = {}
-		self.followed = None
+	def handle(self, packet):
+		return (self._predicate is None or self._predicate(packet)) and self.inner_handle(packet)
+
+class _CallbackHandler(_Handler):
+	def __init__(self, handlers, predicate, callback):
+		super(_CallbackHandler, self).__init__(handlers, predicate)
+		self._callback = callback
+
+	def inner_handle(self, packet):
+		if self._callback is not None:
+			self._callback(packet)
+		return True
+
+	def __del__(self):
+		self._handlers.remove(self)
+
+class _OneTimeHandler(_Handler):
+	def __init__(self, handlers, cmd, predicate, timeout):
+		super(_OneTimeHandler, self).__init__(handlers, predicate)
+		self._cmd = cmd
+		self._timeout = timeout
+		self._queue = Queue.Queue(1)
+
+	def inner_handle(self, packet):
+		if self._cmd is None or packet[2] == self._cmd:
+			self._queue.put(packet)
+			self._handlers.remove(self)
+			return True
+		return False
+
+	@property
+	def packet(self):
+		try:
+			return self._queue.get(timeout=self._timeout)
+		except Queue.Empty:
+			self._handlers.remove(self)
+			return None
+
+class Client(object):
+	def __init__(self, login_ip, login_port, game_ip, game_port, magic=None, logger=None):
+		self._login_ip = login_ip
+		self._login_port = login_port
+		self._game_ip = game_ip
+		self._game_port = game_port
+		self._logger = logger
+		self._magic = magic or "Y(02.>'H}t\":E1"
+		self._connected = False
+		self._buffer = ""
+		self._handlers = {}
+		self._nexts = []
+		self._internal_room_id = -1
+		self._id = -1
+		self._coins = -1
+		self._room = -1
+		self._penguins = {}
+		self._follow = None
+
+	def __iter__(self):
+		return self
+
+	def __exit__(self):
+		self.logout()
 
 	@staticmethod
-	def swapped_md5(password, encrypted=False):
+	def _swapped_md5(password, encrypted=False):
 		if not encrypted:
 			password = hashlib.md5(password).hexdigest()
 		password = password[16:32] + password[0:16]
 		return password
 
+	def _debug(self, msg):
+		if self._logger is not None:
+			self._logger.debug(msg)
+
+	def _info(self, msg):
+		if self._logger is not None:
+			self._logger.info(msg)
+
+	def _warning(self, msg):
+		if self._logger is not None:
+			self._logger.warning(msg)
+
+	def _error(self, msg):
+		if self._logger is not None:
+			if isinstance(msg, list):
+				filename = os.path.join(os.path.dirname(__file__), "json/errors.json")
+				with open(filename) as file:
+					data = json.load(file)
+				code = int(msg[4])
+				msg = "Error #" + str(code)
+				if str(code) in data:
+					msg += ": " + data[str(code)]
+			self._logger.error(msg)
+
+	def _cricital(self, msg):
+		if self._logger is not None:
+			self._logger.cricital(msg)
+
 	def _send(self, data):
-		if self.log:
-			print "# SEND: " + str(data)
+		self._debug("# SEND: " + str(data))
 		try:
 			self.sock.send(data + chr(0))
 			return True
 		except:
-			print "Connection lost"
+			self._cricital("Connection lost")
 			return False
 
 	def _send_packet(self, ext, cmd, *args):
@@ -67,28 +124,27 @@ class Client:
 		if args and args[0] is None:
 			args = args[1:]
 		else:
-			args = (self.internal_room_id,) + args
+			args = (self._internal_room_id,) + args
 		packet += "%".join(str(arg) for arg in args) + "%"
 		return self._send(packet)
 
 	def _receive(self):
 		data = ""
 		try:
-			while not chr(0) in self.buf:
-				data += self.buf
-				self.buf = self.sock.recv(4096)
+			while not chr(0) in self._buffer:
+				data += self._buffer
+				self._buffer = self.sock.recv(4096)
 		except:
 			return None
-		i = self.buf.index(chr(0)) + 1
-		data += self.buf[:i]
-		self.buf = self.buf[i:]
-		if self.log:
-			print "# RECEIVE: " + str(data)
+		i = self._buffer.index(chr(0)) + 1
+		data += self._buffer[:i]
+		self._buffer = self._buffer[i:]
+		self._debug("# RECEIVE: " + str(data))
 		return data
 
 	def _receive_packet(self):
 		data = self._receive()
-		if not data:
+		if data is None:
 			return None
 		if data.startswith("%"):
 			packet = data.split('%')
@@ -97,354 +153,332 @@ class Client:
 			return packet
 		raise Exception("Invalid packet")
 
-	def _error(self, packet):
-		filename = os.path.join(os.path.dirname(__file__), "json/errors.json")
-		with open(filename) as file:
-			data = json.load(file)
-		code = int(packet[4])
-		msg = "Error #" + str(code)
-		if str(code) in data:
-			msg += ": " + data[str(code)]
-		if self.followed and self.followed["commands"]:
-			self.say(msg)
-		print msg
-
 	def _ver_check(self, ver):
-		if self.log:
-			print "Sending 'verChk' request..."
+		self._info("Sending 'verChk' request...")
 		if not self._send('<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>'):
 		# if not self._send("<msg t='sys'><body action='verChk' r='0'><ver v='" + str(ver) + "' /></body></msg>"):
 			return False
 		data = self._receive()
-		if not data:
+		if data is None:
 			return False
 		if "apiOK" in data:
-			if self.log:
-				print "Received 'apiOK' response"
+			self._info("Received 'apiOK' response")
 			return True
 		if "apiKO" in data:
-			if self.log:
-				print "Received 'apiKO' response"
+			self._info("Received 'apiKO' response")
 			return False
 		raise Exception("Invalid response")
 
-	def _key(self):
-		if self.log:
-			print "Sending rndK request..."
+	def _rndk(self):
+		self._info("Sending rndK request...")
 		if not self._send('<msg t="sys"><body action="rndK" r="-1"></body></msg>'):
 		# if not self._send("<msg t='sys'><body action='rndK' r='-1'></body></msg>"):
 			return None
 		data = self._receive()
-		if not data:
+		if data is None:
 			return None
-		if 'rndK' in data:
+		if "rndK" in data:
 			key = re.search("<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", data).group(1)
-			if self.log:
-				print "Received key: " + key
+			self._info("Received key: " + key)
 			return key
 		raise Exception("Invalid response")
 
 	def _login(self, user, password, encrypted, ver):
-		if self.log:
-			print "Logging in..."
+		self._info("Logging in...")
 		if not self._ver_check(ver):
 			return None, False
-		rndk = self._key()
-		if not rndk:
+		rndk = self._rndk()
+		if rndk is None:
 			return None, False
-		hash = self.swapped_md5(self.swapped_md5(password, encrypted).upper() + rndk + self.magic)
+		hash = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
 		if not self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'):
 		# if not self._send("<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"):
 			return None, False
 		packet = self._receive_packet()
-		if not packet or packet[2] == "e":
+		if packet is None or packet[2] == "e":
 			return packet, False
 		while packet[2] != "l":
 			packet = self._receive_packet()
-			if not packet or packet[2] == "e":
+			if packet is None or packet[2] == "e":
 				return packet, False
-		if self.log:
-			print "Logged in"
+		self._info("Logged in")
 		return packet, True
 
 	def _join_server(self, user, login_key, confirmation, ver):
-		if self.log:
-			print "Joining server..."
+		self._info("Joining server...")
 		if not self._ver_check(ver):
 			return None, False
-		rndk = self._key()
-		if not rndk:
+		rndk = self._rndk()
+		if rndk is None:
 			return None, False
-		hash = self.swapped_md5(login_key + rndk) + login_key
-		if confirmation:
+		hash = self._swapped_md5(login_key + rndk) + login_key
+		if confirmation is not None:
 			hash += '#' + confirmation
 		if not self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'):
 		# if not self._send("<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"):
 			return None, False
 		packet = self._receive_packet()
-		if not packet or packet[4] == "e":
+		if packet is None or packet[4] == "e":
 			return packet, False
 		while packet[2] != "l":
 			packet = self._receive_packet()
-			if not packet or packet[4] == "e":
+			if packet is None or packet[4] == "e":
 				return packet, False
-		if not self._send_packet("s", "j#js", self.id, login_key, "en"):
+		if not self._send_packet("s", "j#js", self._id, login_key, "en"):
 			return None, False
-		if not confirmation:
+		if confirmation is None:
 			while packet[2] != "js":
 				packet = self._receive_packet()
-				if not packet or packet[4] == "e":
+				if packet is None or packet[4] == "e":
 					return packet, False
-		if self.log:
-			print "Joined server"
+		self._info("Joined server")
 		return packet, True
 
-	def _game(self):
-		thread = threading.Thread(target = self._heartbeat)
-		thread.start()
-		while True:
-			packet = self._receive_packet()
-			if not packet:
-				break
-			op = packet[2]
-			if op == "e":
-				pass
-			elif op == "h":
-				pass
-			elif op == "lp":
-				penguin = Penguin.from_player(packet[4])
-				self.penguins[penguin.id] = penguin
-				self.coins = int(packet[5])
-				safemode = packet[6] == '1'
-				# egg_timer = int(packet[7])
-				login_time = long(packet[8])
-				age = int(packet[9])
-				# banned_age = int(packet[10])
-				play_time = int(packet[11])
-				if packet[12]:
-					member_left = int(packet[12])
-				else:
-					member_left = 0
-				timezone = int(packet[13])
-				# opened_playcard = packet[14] == '1'
-				# saved_map_category = int(packet[15])
-				# status_field = int(packet[16])
-			elif op == "ap":
-				penguin = Penguin.from_player(packet[4])
-				self.penguins[penguin.id] = penguin
-			elif op == "jr":
-				self.internal_room_id = int(packet[3])
-				self.room_id = int(packet[4])
-				self.penguins.clear()
-				for i in packet[5:-1]:
-					penguin = Penguin.from_player(i)
-					self.penguins[penguin.id] = penguin
-			elif op == "rp":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins.pop(id)
-				if self.followed and id == self.followed["id"]:
-					self._send_packet("s", "b#bf", id)
-			elif op == "br":
-				id = int(packet[4])
-				name = packet[5]
-				if raw_input("Buddy with " + name + "? [y/n]") == "y":
-					self._send_packet("s", "b#ba", id)
-			elif op == "bf":
-				room = int(packet[4])
-				if self.followed:
-					self.join_room(room)
-			elif op == "upc":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					color = int(packet[5])
-					penguin.clothes["color"] = color
-					if self.followed and id == self.followed["id"]:
-						self.update_color(color)
-			elif op == "uph":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					head = int(packet[5])
-					penguin.clothes["head"] = head
-					if self.followed and id == self.followed["id"]:
-						self.update_head(head)
-			elif op == "upf":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					face = int(packet[5])
-					penguin.clothes["face"] = face
-					if self.followed and id == self.followed["id"]:
-						self.update_face(face)
-			elif op == "upn":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					neck = int(packet[5])
-					penguin.clothes["neck"] = neck
-					if self.followed and id == self.followed["id"]:
-						self.update_neck(neck)
-			elif op == "upb":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					body = int(packet[5])
-					penguin.clothes["body"] = body
-					if self.followed and id == self.followed["id"]:
-						self.update_body(body)
-			elif op == "upa":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					hand = int(packet[5])
-					penguin.clothes["hand"] = hand
-					if self.followed and id == self.followed["id"]:
-						self.update_hand(hand)
-			elif op == "upe":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					feet = int(packet[5])
-					penguin.clothes["feet"] = feet
-					if self.followed and id == self.followed["id"]:
-						self.update_feet(feet)
-			elif op == "upl":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					pin = int(packet[5])
-					penguin.clothes["pin"] = pin
-					if self.followed and id == self.followed["id"]:
-						self.update_pin(pin)
-			elif op == "upp":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					background = int(packet[5])
-					penguin.clothes["background"] = background
-					if self.followed and id == self.followed["id"]:
-						self.update_background(background)
-			elif op == "sp":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					penguin.x = int(packet[5])
-					penguin.y = int(packet[6])
-					if self.followed and id == self.followed["id"]:
-						self.walk(penguin.x + self.followed["dx"], penguin.y + self.followed["dy"])
-			elif op == "sa":
-				id = int(packet[4])
-				if id in self.penguins:
-					action = int(packet[5])
-					if self.followed and id == self.followed["id"]:
-						self._action(action)
-			elif op == "sf":
-				id = int(packet[4])
-				if id in self.penguins:
-					penguin = self.penguins[id]
-					penguin.frame = int(packet[5])
-					if self.followed and id == self.followed["id"]:
-						self._frame(penguin.frame)
-			elif op == "sb":
-				id = int(packet[4])
-				x = int(packet[5])
-				y = int(packet[6])
-				if self.followed and id == self.followed["id"]:
-					self.snowball(x, y)
-			elif op == "sm":
-				id = int(packet[4])
-				msg = packet[5]
-				if self.followed and id == self.followed["id"]:
-					if self.followed["commands"] and msg.startswith('!'):
-						cmd = msg.split(' ')
-						name = cmd[0][1:]
-						params = cmd[1:]
-						self._command(name, params)
-					else:
-						self.say(msg, False)
-			elif op == "ss":
-				id = int(packet[4])
-				msg = packet[5]
-				if self.followed and id == self.followed["id"]:
-					self.say(msg, True)
-			elif op == "sj":
-				id = int(packet[4])
-				joke = int(packet[5])
-				if self.followed and id == self.followed["id"]:
-					self.joke(joke)
-			elif op == "se":
-				id = int(packet[4])
-				emote = int(packet[5])
-				if self.followed and id == self.followed["id"]:
-					self.emote(emote)
-			elif op == "ms":
-				coins = int(packet[4])
-				cost = self.coins - coins
-				self.coins = coins
-				sent = packet[5]
-				if sent == "0":
-					print "Maximum postcards reached"
-				elif sent == "1":
-					print "Sent postcard successfully (cost " + str(cost) + " coins)"
-				elif sent == "2":
-					print "Not enough coins"
-			elif op == "ai":
-				id = int(packet[4])
-				coins = int(packet[5])
-				cost = self.coins - coins
-				self.coins = coins
-				msg = "Added item " + str(id) + " (cost " + str(cost) + " coins)"
-				if self.followed and self.followed["commands"]:
-					self.say(msg)
-				if self.log:
-					print msg
-			elif op == "zo":
-				coins = int(packet[4])
-				earn = coins - self.coins
-				self.coins = coins
-				msg = "Earned " + str(earn) + " coins"
-				if self.followed and self.followed["commands"]:
-					self.say(msg)
-				if self.log:
-					print msg
-			elif self.log:
-				print "# UNKNOWN OPCODE: " + op
-				
-	def _heartbeat(self):
-		threading.Timer(600, self._heartbeat)
-		self._send_packet("s", "u#h")
+	def _lp(self, packet):
+		del self._handlers["lp"]
+		penguin = Penguin.from_player(packet[4])
+		self._penguins[penguin.id] = penguin
+		self._coins = int(packet[5])
+		safemode = packet[6] == '1'
+		# egg_timer = int(packet[7])
+		login_time = long(packet[8])
+		age = int(packet[9])
+		# banned_age = int(packet[10])
+		play_time = int(packet[11])
+		if packet[12]:
+			member_left = int(packet[12])
+		else:
+			member_left = 0
+		timezone = int(packet[13])
+		# opened_playcard = packet[14] == '1'
+		# saved_map_category = int(packet[15])
+		# status_field = int(packet[16])
 
-	def _command(self, name, params):
-		if name == "ai":
-			if params:
-				self.add_item(params[0])
-		elif name == "ac":
-			if params:
-				self.add_coins(params[0])
-		elif name == "ping":
-			self.say("pong")
+	def _ap(self, packet):
+		penguin = Penguin.from_player(packet[4])
+		self._penguins[penguin.id] = penguin
+
+	def _rp(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins.pop(id)
+		if self._follow is not None and id == self._follow[0]:
+			self._send_packet("s", "b#bf", id)
+			packet = self.next("bf")
+			if packet is None:
+				return
+			room = int(packet[4])
+			self.room = room
+
+	def _jr(self, packet):
+		self._internal_room_id = int(packet[3])
+		self._room = int(packet[4])
+		self._penguins.clear()
+		for i in packet[5:-1]:
+			penguin = Penguin.from_player(i)
+			self._penguins[penguin.id] = penguin
+
+	def _br(self, packet):
+		id = int(packet[4])
+		name = packet[5]
+		self._send_packet("s", "b#ba", id)
+
+	def _upc(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			color = int(packet[5])
+			penguin.color = color
+			if self._follow is not None and id == self._follow[0]:
+				self.color = color
+
+	def _uph(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			head = int(packet[5])
+			penguin.head = head
+			if self._follow is not None and id == self._follow[0]:
+				self.head = head
+
+	def _upf(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			face = int(packet[5])
+			penguin.face = face
+			if self._follow is not None and id == self._follow[0]:
+				self.face = face
+
+	def _upn(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			neck = int(packet[5])
+			penguin.neck = neck
+			if self._follow is not None and id == self._follow[0]:
+				self.neck = neck
+
+	def _upb(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			body = int(packet[5])
+			penguin.body = body
+			if self._follow is not None and id == self._follow[0]:
+				self.body = body
+
+	def _upa(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			hand = int(packet[5])
+			penguin.hand = hand
+			if self._follow is not None and id == self._follow[0]:
+				self.hand = hand
+
+	def _upe(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			feet = int(packet[5])
+			penguin.feet = feet
+			if self._follow is not None and id == self._follow[0]:
+				self.feet = feet
+
+	def _upl(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			pin = int(packet[5])
+			penguin.pin = pin
+			if self._follow is not None and id == self._follow[0]:
+				self.pin = pin
+
+	def _upp(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			background = int(packet[5])
+			penguin.background = background
+			if self._follow is not None and id == self._follow[0]:
+				self.background = background
+
+	def _sp(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			penguin.x = int(packet[5])
+			penguin.y = int(packet[6])
+			if self._follow is not None and id == self._follow[0]:
+				self.walk(penguin.x + self._follow[1], penguin.y + self._follow[2])
+
+	def _sa(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			action = int(packet[5])
+			if self._follow is not None and id == self._follow[0]:
+				self.action(action)
+
+	def _sf(self, packet):
+		id = int(packet[4])
+		if id in self._penguins:
+			penguin = self._penguins[id]
+			penguin.frame = int(packet[5])
+			if self._follow is not None and id == self._follow[0]:
+				self.frame = penguin.frame
+
+	def _sb(self, packet):
+		id = int(packet[4])
+		x = int(packet[5])
+		y = int(packet[6])
+		if self._follow is not None and id == self._follow[0]:
+			self.snowball(x, y)
+
+	def _sm(self, packet):
+		id = int(packet[4])
+		msg = packet[5]
+		if self._follow is not None and id == self._follow[0]:
+			self.say(msg)
+
+	def _ss(self, packet):
+		id = int(packet[4])
+		msg = packet[5]
+		if self._follow is not None and id == self._follow[0]:
+			self.say(msg, True)
+
+	def _sj(self, packet):
+		id = int(packet[4])
+		joke = int(packet[5])
+		if self._follow is not None and id == self._follow[0]:
+			self.joke(joke)
+
+	def _se(self, packet):
+		id = int(packet[4])
+		emote = int(packet[5])
+		if self._follow is not None and id == self._follow[0]:
+			self.emote(emote)
+
+	def _game(self):
+		thread = threading.Thread(target=self._heartbeat)
+		thread.start()
+		self.handle("h")
+		self.handle("lp", self._lp)
+		self.handle("ap", self._ap)
+		self.handle("rp", self._rp)
+		self.handle("jr", self._jr)
+		self.handle("upc", self._upc)
+		self.handle("uph", self._uph)
+		self.handle("upf", self._upf)
+		self.handle("upn", self._upn)
+		self.handle("upb", self._upb)
+		self.handle("upa", self._upa)
+		self.handle("upe", self._upe)
+		self.handle("upl", self._upl)
+		self.handle("upp", self._upp)
+		self.handle("sp", self._sp)
+		self.handle("sa", self._sa)
+		self.handle("sf", self._sf)
+		self.handle("sb", self._sb)
+		self.handle("sm", self._sm)
+		self.handle("ss", self._ss)
+		self.handle("sj", self._sj)
+		self.handle("se", self._se)
+		while self._connected:
+			packet = self._receive_packet()
+			if not self._connected or packet is None:
+				break
+			cmd = packet[2]
+			handled = False
+			if cmd in self._handlers:
+				for handler in self._handlers[cmd]:
+					if handler.handle(packet):
+						handled = True
+			for handler in self._nexts:
+				if handler.handle(packet):
+					handled = True
+					break
+			if not handled:
+				self._warning("# UNHANDLED PACKET: " + '%'.join(packet))
 
 	def connect(self, user, password, encrypted=False, ver=153):
-		if self.log:
-			print "Connecting to login server at " + self.login_ip + ":" + str(self.login_port) + "..."
+		self._info("Connecting to login server at " + self._login_ip + ":" + str(self._login_port) + "...")
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.sock.connect((self.login_ip, self.login_port))
+			self.sock.connect((self._login_ip, self._login_port))
 		except:
 			return -1
-		
+
 		packet, ok = self._login(user, password, encrypted, ver)
 		if not ok:
-			if packet:
-				return int(packet[4])
-			return -1
-		
+			if packet is None:
+				return -1
+			return int(packet[4])
+
 		if '|' in packet[4]:
 			user = packet[4]
 			data = packet[4].split('|')
-			self.id = int(data[0])
+			self._id = int(data[0])
 			# swid = data[1]
 			# user = data[2]
 			login_key = data[3]
@@ -459,113 +493,312 @@ class Client:
 			# ??? = packet[7]
 			# email = packet[8]
 		else:
-			self.id = int(packet[4])
+			self._id = int(packet[4])
 			login_key = packet[5]
 			confirmation = None
-		
-		if self.log:
-			print "Connecting to game server at " + self.game_ip + ":" + str(self.game_port) + "..."
+
+		self._info("Connecting to game server at " + self._game_ip + ":" + str(self._game_port) + "...")
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.sock.connect((self.game_ip, self.game_port))
+			self.sock.connect((self._game_ip, self._game_port))
 		except:
 			return -2
-		
+
 		packet, ok = self._join_server(user, login_key, confirmation, ver)
 		if not ok:
-			if packet:
-				return int(packet[4])
-			return -2
+			if packet is None:
+				return -2
+			return int(packet[4])
 		
+		self._connected = True
 		thread = threading.Thread(target=self._game)
 		thread.start()
 		return 0
 
-	def get_penguin_id(self, name):
-		for penguin in self.penguins.values():
+	def handle(self, cmd, callback=None, predicate=None):
+		if cmd not in self._handlers or not self._handlers[cmd]:
+			self._handlers[cmd] = set()
+		handler = _CallbackHandler(self._handlers[cmd], predicate, callback)
+		self._handlers[cmd].add(handler)
+		return handler
+
+	def next(self, cmd=None, timeout=0, predicate=None):
+		handler = _OneTimeHandler(self._nexts, cmd, predicate, timeout)
+		self._nexts.append(handler)
+		return handler.packet
+
+	@property
+	def login_ip(self):
+		return self._login_ip
+
+	@property
+	def login_port(self):
+		return self._login_port
+
+	@property
+	def game_ip(self):
+		return self._game_ip
+
+	@property
+	def game_port(self):
+		return self._game_port
+
+	@property
+	def logger(self):
+		return self._logger
+
+	@property
+	def connected(self):
+		return self._connected
+
+	@property
+	def internal_room_id(self):
+		return self._internal_room_id
+
+	@property
+	def id(self):
+		return self._id
+
+	def get_id(self, name):
+		for penguin in self._penguins.values():
 			if penguin.name == name:
 				return penguin.id
 		return 0
 
-	def join_room(self, id, x = 0, y = 0):
-		if self.log:
-			print "Joining room " + str(id) + "..."
+	@property
+	def name(self):
+		return self._penguins[self._id].name
+
+	@property
+	def coins(self):
+		return self._coins
+
+	@property
+	def room(self):
+		return self._room
+
+	@room.setter
+	def room(self, id, x=0, y=0):
+		self._info("Joining room " + str(id) + "...")
 		self._send_packet("s", "j#jr", id, x, y)
+		packet = self.next("jr")
+		if packet is None:
+			return
+		self._info("Joined room " + str(id))
 
-	def join_igloo(self, id):
-		if self.log:
-			print "Joining " + str(id)+ "'s igloo..."
-		self._send_packet("s", "j#jp", None, self.id, int(id) + 1000)
+	@staticmethod
+	def get_room_id(name):
+		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
+		with open(filename) as file:
+			data = json.load(file)
+		for id in data:
+			if data[id] == name:
+				return int(id)
+		return 0
 
-	def update_color(self, id):
-		if self.log:
-			print "Changing color to " + str(id) + "..."
+	@staticmethod
+	def get_room_name(id):
+		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
+		with open(filename) as file:
+			data = json.load(file)
+		if str(id) in data:
+			return data[str(id)]
+		return "Unknown"
+
+	@property
+	def igloo(self):
+		if self._room > 1000:
+			return self._room - 1000
+
+	@igloo.setter
+	def igloo(self, id):
+		name = self._penguins[id].name if id in self._penguins else "Penguin " + str(id)
+		self._info("Joining " + name + "'s igloo...")
+		self._send_packet("s", "j#jp", None, self._id, int(id) + 1000)
+		packet = self.next("jr")
+		if packet is None:
+			return
+		self._info("Joined " + name + "'s igloo")
+
+	@property
+	def penguins(self):
+		return self._penguins
+
+	@property
+	def color(self):
+		return self._penguins[self._id].color
+
+	@color.setter
+	def color(self, id):
+		self._info("Changing color to " + str(id) + "...")
 		self._send_packet("s", "s#upc", id)
+		packet = self.next("upc")
+		if packet is None:
+			return
+		self._info("Changed color to " + str(id) + "...")
 
-	def update_head(self, id):
-		if self.log:
-			print "Changing head item to " + str(id) + "..."
+	@property
+	def head(self):
+		return self._penguins[self._id].head
+
+	@head.setter
+	def head(self, id):
+		self._info("Changing head item to " + str(id) + "...")
 		self._send_packet("s", "s#uph", id)
+		packet = self.next("uph")
+		if packet is None:
+			return
+		self._info("Changed head item to " + str(id) + "...")
 
-	def update_face(self, id):
-		if self.log:
-			print "Changing face item to " + str(id) + "..."
+	@property
+	def face(self):
+		return self._penguins[self._id].face
+
+	@face.setter
+	def face(self, id):
+		self._info("Changing face item to " + str(id) + "...")
 		self._send_packet("s", "s#upf", id)
+		packet = self.next("upf")
+		if packet is None:
+			return
+		self._info("Changed face item to " + str(id) + "...")
 
-	def update_neck(self, id):
-		if self.log:
-			print "Changing neck item to " + str(id) + "..."
+	@property
+	def neck(self):
+		return self._penguins[self._id].neck
+
+	@neck.setter
+	def neck(self, id):
+		self._info("Changing neck item to " + str(id) + "...")
 		self._send_packet("s", "s#upn", id)
+		packet = self.next("upn")
+		if packet is None:
+			return
+		self._info("Changed neck item to " + str(id) + "...")
 
-	def update_body(self, id):
-		if self.log:
-			print "Changing body item to " + str(id) + "..."
+	@property
+	def body(self):
+		return self._penguins[self._id].body
+
+	@body.setter
+	def body(self, id):
+		self._info("Changing body item to " + str(id) + "...")
 		self._send_packet("s", "s#upb", id)
+		packet = self.next("upb")
+		if packet is None:
+			return
+		self._info("Changed body item to " + str(id) + "...")
 
-	def update_hand(self, id):
-		if self.log:
-			print "Changing hand item to " + str(id) + "..."
+	@property
+	def hand(self):
+		return self._penguins[self._id].hand
+
+	@hand.setter
+	def hand(self, id):
+		self._info("Changing hand item to " + str(id) + "...")
 		self._send_packet("s", "s#upa", id)
+		packet = self.next("upa")
+		if packet is None:
+			return
+		self._info("Changed hand item to " + str(id) + "...")
 
-	def update_feet(self, id):
-		if self.log:
-			print "Changing feet item to " + str(id) + "..."
+	@property
+	def feet(self):
+		return self._penguins[self._id].feet
+
+	@feet.setter
+	def feet(self, id):
+		self._info("Changing feet item to " + str(id) + "...")
 		self._send_packet("s", "s#upe", id)
+		packet = self.next("upe")
+		if packet is None:
+			return
+		self._info("Changed feet item to " + str(id) + "...")
 
-	def update_pin(self, id):
-		if self.log:
-			print "Changing pin to " + str(id) + "..."
+	@property
+	def pin(self):
+		return self._penguins[self._id].pin
+
+	@pin.setter
+	def pin(self, id):
+		self._info("Changing pin to " + str(id) + "...")
 		self._send_packet("s", "s#upl", id)
+		packet = self.next("upl")
+		if packet is None:
+			return
+		self._info("Changed pin to " + str(id) + "...")
 
-	def update_background(self, id):
-		if self.log:
-			print "Changing background to " + str(id) + "..."
+	@property
+	def background(self):
+		return self._penguins[self._id].background
+
+	@background.setter
+	def background(self, id):
+		self._info("Changing background to " + str(id) + "...")
 		self._send_packet("s", "s#upp", id)
-		
+		packet = self.next("upp")
+		if packet is None:
+			return
+		self._info("Changed background to " + str(id) + "...")
+
+	@property
+	def x(self):
+		return self._penguins[self._id].x
+
+	@property
+	def y(self):
+		return self._penguins[self._id].y
+
+	# TODO
+	@property
+	def inventory(self):
+		self._send_packet("s", "i#gi")
+		packet = self.next("gi")
+		if packet is None:
+			return
+		return packet[4:]
+
+	def _heartbeat(self):
+		threading.Timer(600, self._heartbeat)
+		self._send_packet("s", "u#h")
+
 	def walk(self, x, y):
-		if self.log:
-			print "Walking to (" + str(x) + ", " + str(y) + ")..."
-		self._send_packet("s", "u#sp", None, self.id, x, y)
-		
-	def _action(self, id):
+		self._info("Walking to (" + str(x) + ", " + str(y) + ")...")
+		self._send_packet("s", "u#sp", None, self._id, x, y)
+		packet = self.next("sp")
+		if packet is None:
+			return
+		self._info("Walked to (" + str(x) + ", " + str(y) + ")")
+
+	def action(self, id):
+		self._info("Performing action " + str(id) + "...")
 		self._send_packet("s", "u#sa", id)
-		
-	def _frame(self, id):
+		packet = self.next("sa")
+		if packet is None:
+			return
+		self._info("Performed action " + str(id))
+
+	@property
+	def frame(self):
+		return self._penguins[self._id].frame
+
+	@frame.setter
+	def frame(self, id):
+		self._info("Setting frame to " + str(id) + "...")
 		self._send_packet("s", "u#sf", id)
-		
+		packet = self.next("sf")
+		if packet is None:
+			return
+		self._info("Set frame to " + str(id))
+
 	def dance(self):
-		if self.log:
-			print "Dancing..."
-		self._frame(26)
+		self.frame = 26
 
 	def wave(self):
-		if self.log:
-			print "Waving..."
-		self._action(25)
-		
-	def sit(self, dir = "s"):
-		if self.log:
-			print "Sitting..."
+		self.action(25)
+
+	def sit(self, dir="s"):
+		self._info("Sitting in direction " + dir + "...")
 		dirs = {
 			"se": 24,
 			"e": 23,
@@ -577,103 +810,164 @@ class Client:
 			"s": 17
 		}
 		if dir in dirs:
-			self._frame(dirs[dir])
+			self.frame = dirs[dir]
 		else:
-			self._frame(dirs["s"])
+			self.frame = dirs["s"]
 
 	def snowball(self, x, y):
-		if self.log:
-			print "Throwing snowball to (" + str(x) + ", " + str(y) + ")..."
+		self._info("Throwing snowball to (" + str(x) + ", " + str(y) + ")...")
 		self._send_packet("s", "u#sb", x, y)
+		packet = self.next("sb")
+		if packet is None:
+			return
+		self._info("Threw snowball to (" + str(x) + ", " + str(y) + ")")
 
-	def say(self, msg, safe = False):
-		if self.log:
-			print "Saying '" + msg + "'..."
+	def say(self, msg, safe=False):
+		self._info("Saying '" + msg + "'...")
 		if safe:
 			self._send_packet("s", "u#ss", msg)
+			packet = self.next("ss")
+			if packet is None:
+				return
 		else:
-			self._send_packet("s", "m#sm", self.id, msg)
+			self._send_packet("s", "m#sm", self._id, msg)
+			packet = self.next("sm")
+			if packet is None:
+				return
+		self._info("Said '" + msg + "'")
 
-	def joke(self, joke):
-		if self.log:
-			print "Saying joke " + str(joke) + "..."
-		self._send_packet("s", "u#sj", None, self.id, joke)
-		
-	def emote(self, emote):
-		if self.log:
-			print "Reacting emote " + str(emote) + "..."
-		self._send_packet("s", "u#se", emote)
+	def joke(self, id):
+		self._info("Saying joke " + str(id) + "...")
+		self._send_packet("s", "u#sj", None, self._id, id)
+		packet = self.next("sj")
+		if packet is None:
+			return
+		self._info("Said joke " + str(id))
+
+	def emote(self, id):
+		self._info("Reacting emote " + str(id) + "...")
+		self._send_packet("s", "u#se", id)
+		packet = self.next("se")
+		if packet is None:
+			return
+		self._info("Reacted emote " + str(id))
 
 	def mail(self, id, postcard):
-		if self.log:
-			print "Sending postcard #" + str(postcard) + "..."
+		self._info("Sending postcard #" + str(postcard) + "...")
 		self._send_packet("s", "l#ms", id, postcard)
-	
-	def add_item(self, id):
-		if self.log:
-			print "Adding item " + str(id) + "..."
-		self._send_packet("s", "i#ai", id)
+		packet = self.next("ms")
+		if packet is None:
+			return
+		coins = int(packet[4])
+		cost = self._coins - coins
+		self._coins = coins
+		sent = packet[5]
+		if sent == "0":
+			self._error("Maximum postcards reached")
+		elif sent == "1":
+			self._info("Sent postcard #" + str(postcard))
+		elif sent == "2":
+			self._error("Not enough coins")
+		else:
+			self.error("Invalid response")
 
+	def add_item(self, id):
+		self._info("Adding item " + str(id) + "...")
+		self._send_packet("s", "i#ai", id)
+		packet = self.next("ai", lambda p: int(p[4]) == int(id))
+		if packet is None:
+			return
+		coins = int(packet[5])
+		cost = self._coins - coins
+		self._coins = coins
+		self._info("Added item " + str(id))
+
+	# TODO
 	def add_coins(self, coins):
-		if self.log:
-			print "Adding " + str(coins) + " coins..."
-		room = self.room_id
-		self.join_room(912)
-		self._send_packet("z", "zo", coins)
-		self.join_room(room)
+		self._info("Adding " + str(coins) + " coins...")
+		room = self._room
+		self._send_packet("s", "j#jr", 912, 0, 0)
+		packet = self.next("jg")
+		if packet is None:
+			return
+		self.frame = 23
+		self.frame = 21
+		self.frame = 17
+		self.frame = 23
+		self.frame = 17
+		self.frame = 19
+		self.frame = 21
+		self._send_packet("z", "zo", int(coins) * 10)
+		packet = self.next("zo")
+		if packet is None:
+			return
+		coins = int(packet[4])
+		earn = coins - self._coins
+		self._coins = coins
+		self.room = room
+		self._info("Added " + str(earn) + " coins")
 
 	def add_stamp(self, id):
-		if self.log:
-			print "Adding stamp " + str(id) + "..."
+		self._info("Adding stamp " + str(id) + "...")
 		self._send_packet("s", "st#sse", id)
-	
-	def add_igloo(self, id):
-		if self.log:
-			print "Adding igloo " + str(id) + "..."
-		self._send_packet("s", "g#au", None, self.id, id)
+		packet = self.next("sse")
+		if packet is None:
+			return
+		self._info("Added stamp " + str(id))
 
-	def music(self, id):
-		if self.log:
-			print "Setting music to #" + str(id) + "..."
-		self._send_packet("s", "g#go", None, self.id)
-		self._send_packet("s", "g#um", None, self.id, id)
+	def add_igloo(self, id):
+		self._info("Adding igloo " + str(id) + "...")
+		self._send_packet("s", "g#au", None, self._id, id)
+		packet = self.next("au")
+		if packet is None:
+			return
+		self._info("Added igloo " + str(id))
 
 	def add_furniture(self, id):
-		if self.log:
-			print "Adding furniture " + str(id) + "..."
+		self._info("Adding furniture " + str(id) + "...")
 		self._send_packet("s", "g#af", id)
+		packet = self.next("af")
+		if packet is None:
+			return
+		self._info("Added furniture " + str(id))
+
+	def igloo_music(self, id):
+		self._info("Setting music to #" + str(id) + "...")
+		self._send_packet("s", "g#go", None, self._id)
+		self._send_packet("s", "g#um", None, self._id, id)
+		self._info("Set music to #" + str(id))
 
 	def buddy(self, id):
-		if self.log:
-			print "Sending buddy request to " + str(id) + "..."
+		self._info("Sending buddy request to " + str(id) + "...")
 		self._send_packet("s", "b#br", id)
+		packet = self.next("br")
+		if packet is None:
+			return
+		self._info("Sent buddy request to " + str(id))
 
-	def follow(self, name, dx = 0, dy = 0, commands = False):
-		if self.log:
-			print "Following " + name + "..."
-		id = self.get_penguin_id(name)
-		if id:
-			self.buddy(id)
-			self.followed = {"id": id, "dx": dx, "dy": dy, "commands": commands}
-			penguin = self.penguins[id]
-			self.walk(penguin.x + dx, penguin.y + dy)
-			self.update_color(penguin.clothes["color"])
-			self.update_head(penguin.clothes["head"])
-			self.update_face(penguin.clothes["face"])
-			self.update_neck(penguin.clothes["neck"])
-			self.update_body(penguin.clothes["body"])
-			self.update_hand(penguin.clothes["hand"])
-			self.update_feet(penguin.clothes["feet"])
-			self.update_pin(penguin.clothes["pin"])
-			self.update_background(penguin.clothes["background"])
+	def follow(self, id, dx=0, dy=0):
+		if id == self._id:
+			raise ValueError("Cannot follow self")
+		self._info("Following " + str(id) + "...")
+		self.buddy(id)
+		self._follow = (id, dx, dy)
+		penguin = self._penguins[id]
+		self.walk(penguin.x + dx, penguin.y + dy)
+		self.color = penguin.color
+		self.head = penguin.head
+		self.face = penguin.face
+		self.neck = penguin.neck
+		self.body = penguin.body
+		self.hand = penguin.hand
+		self.feet = penguin.feet
+		self.pin = penguin.pin
+		self.background = penguin.background
 
 	def unfollow(self):
-		if self.log:
-			print "Unfollowing..."
-		self.followed = None
+		self._follow = None
 
 	def logout(self):
-		if self.log:
-			print "Logging out..."
+		self._info("Logging out...")
+		self._connected = False
 		self.sock.shutdown(socket.SHUT_RDWR)
 		self.sock.close()
