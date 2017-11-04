@@ -1,7 +1,7 @@
 import sys
 import os
 import json
-import client
+import client as pcl
 import login
 
 def help(clients):
@@ -143,7 +143,7 @@ if __name__ == "__main__":
 	count = len(shape["offsets"])
 	clients = []
 	for i in range(count):
-		clients.append(client.Client(login_ip, login_port, game_ip, game_port, magic, False))
+		clients.append(pcl.Client(login_ip, login_port, game_ip, game_port, magic, False))
 	
 	print "Logins with " + str(count) + " penguin(s)..."
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
@@ -154,32 +154,32 @@ if __name__ == "__main__":
 		data = {}
 	
 	if cpps in data:
-		for user, password in data[cpps].items():
-			error = clients[count - 1].connect(user, password, True)
-			if error:
+		for user, password in data[cpps].iteritems():
+			try:
+				clients[count - 1].connect(user, password, True)
+			except pcl.ClientError as e:
 				print "Username: " + user
-				if error == 603:
+				if e.code == 603:
 					login.remove_penguin(cpps, user, data)
-			else:
-				count -= 1
-				if count == 0:
-					print "All connected!"
-					break
-				else:
-					print "Connected! (" + str(count) + " left)"
+				continue
+			count -= 1
+			if count == 0:
+				break
+			print "Connected! (" + str(count) + " left)"
 	
 	i = 0
 	while i < count:
 		user = raw_input("Username: ").lower()
 		password, encrypted = login.get_password(cpps, user)
 		print "Connecting..."
-		error = clients[i].connect(user, password)
-		if not error:
-			i += 1
-			if i < count:
-				print "Connected! (" + str(count - i) + " left)"
-			else:
-				print "All connected!"
+		try:
+			clients[i].connect(user, password)
+		except pcl.ClientError as e:
+			continue
+		i += 1
+		if i < count:
+			print "Connected! (" + str(count - i) + " left)"
+	print "All connected!"
 	
 	for client in clients:
 		client.color = shape["color"]
@@ -230,6 +230,10 @@ if __name__ == "__main__":
 			try:
 				print commands[name](clients, *params)
 			except TypeError as e:
+				if function.__name__ + "() takes" not in e.message:
+					raise
+				print e.message
+			except pcl.ClientError as e:
 				print e.message
 		elif name:
 			print "command '" + name + "' doesn't exist"

@@ -4,10 +4,10 @@ import hashlib
 import os
 import json
 import logging
-import client
+import client as pcl
 
 def get_server(cpps, server):
-	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
+	filename = os.path.join(os.path.dirname(__file__), "json/.servers.json")
 	with open(filename) as file:
 		data = json.load(file)
 	if not cpps in data:
@@ -34,7 +34,7 @@ def get_client(cpps, server):
 	logger.setLevel(logging.NOTSET)
 	handler = logging.StreamHandler(sys.stdout)
 	logger.addHandler(handler)
-	return client.Client(login_ip, login_port, game_ip, game_port, magic, logger)
+	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, logger)
 
 def get_password(cpps, user, remember = True):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
@@ -96,9 +96,10 @@ def login():
 	password, encrypted = get_password(cpps, user)
 	server = raw_input("Server: ").lower()
 	client = get_client(cpps, server)
-	error = client.connect(user, password, encrypted)
-	if error:
-		if error == 603:
+	try:
+		client.connect(user, password, encrypted)
+	except client.ClientError as e:
+		if e.code == 603:
 			remove_penguin(cpps, user)
 		sys.exit("Failed to connect")
 	print "Connected!"
@@ -166,7 +167,7 @@ def room(client, id=None):
 		if not id:
 			return "Room '" + name + "' not found"
 	client.room = id
-
+	
 def igloo(client, id=None):
 	if id is None:
 		id = client.id
@@ -181,7 +182,7 @@ def igloo(client, id=None):
 	client.igloo = id
 
 def penguins(client):
-	return '\n'.join(client.penguins)
+	return '\n'.join(penguin.name for id, penguin in client.penguins.iteritems())
 
 def color(client, id=None):
 	if id is None:
@@ -238,7 +239,10 @@ def background(client, id=None):
 		client.background = id
 
 def inventory(client):
-	return ', '.join(client.inventory)
+	return '\n'.join(client.inventory)
+
+def stamps(client):
+	return '\n'.join(client.stamps)
 
 def say(client, *params):
 	client.say(' '.join(params))
@@ -314,6 +318,7 @@ if __name__ == "__main__":
 		"pin": pin,
 		"background": background,
 		"inventory": inventory,
+		"stamps": stamps,
 		"walk": client.walk,
 		"dance": client.dance,
 		"wave": client.wave,
@@ -328,8 +333,8 @@ if __name__ == "__main__":
 		"coins": coins,
 		"ac": client.add_coins,
 		"stamp": client.add_stamp,
-		"igloo": client.add_igloo,
-		"furniture": client.add_furniture,
+		"add_igloo": client.add_igloo,
+		"add_furniture": client.add_furniture,
 		"music": client.igloo_music,
 		"buddy": buddy,
 		"follow": follow,
@@ -355,6 +360,8 @@ if __name__ == "__main__":
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
 					raise
+				print e.message
+			except pcl.ClientError as e:
 				print e.message
 		elif name:
 			print "command '" + name + "' doesn't exist"

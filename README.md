@@ -63,6 +63,8 @@ python multi.py
 - feet __[id]__ - equips feet item with id __[id]__ / prints current feet item (single-login only)
 - pin __[id]__ - equips pin with id __[id]__ / prints current pin (single-login only)
 - background __[id]__ - equips background with id __[id]__ / prints current background (single-login only)
+- inventory - prints current inventory (single-login only)
+- stamps - prints current all earned stamps (single-login only)
 - walk __[x]__ __[y]__ - walks to (__[x]__, __[y]__)
 - dance - dances
 - wave - waves
