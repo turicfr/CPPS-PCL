@@ -7,7 +7,7 @@ import logging
 import client as pcl
 
 def get_server(cpps, server):
-	filename = os.path.join(os.path.dirname(__file__), "json/.servers.json")
+	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
 	with open(filename) as file:
 		data = json.load(file)
 	if not cpps in data:
@@ -167,7 +167,7 @@ def room(client, id=None):
 		if not id:
 			return "Room '" + name + "' not found"
 	client.room = id
-	
+
 def igloo(client, id=None):
 	if id is None:
 		id = client.id
