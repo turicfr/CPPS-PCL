@@ -7,7 +7,7 @@ import logging
 import client as pcl
 
 def get_server(cpps, server):
-	filename = os.path.join(os.path.dirname(__file__), "json/.servers.json")
+	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
 	with open(filename) as file:
 		data = json.load(file)
 	if not cpps in data:
@@ -98,7 +98,7 @@ def login():
 	client = get_client(cpps, server)
 	try:
 		client.connect(user, password, encrypted)
-	except client.ClientError as e:
+	except pcl.ClientError as e:
 		if e.code == 603:
 			remove_penguin(cpps, user)
 		sys.exit("Failed to connect")

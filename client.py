@@ -13,7 +13,10 @@ class _Handler(object):
 		self._predicate = predicate
 
 	def handle(self, packet):
-		return (self._predicate is None or self._predicate(packet)) and self.inner_handle(packet)
+		if self._predicate is None or self._predicate(packet):
+			self.inner_handle(packet)
+			return True
+		return False
 
 class _CallbackHandler(_Handler):
 	def __init__(self, handlers, predicate, callback):
@@ -23,24 +26,22 @@ class _CallbackHandler(_Handler):
 	def inner_handle(self, packet):
 		if self._callback is not None:
 			self._callback(packet)
-		return True
 
 	def __del__(self):
 		self._handlers.remove(self)
 
 class _OneTimeHandler(_Handler):
 	def __init__(self, handlers, cmd, predicate, timeout):
+		if cmd is not None and predicate is not None:
+			predicate = lambda p: p[2] == cmd and predicate(p)
 		super(_OneTimeHandler, self).__init__(handlers, predicate)
 		self._cmd = cmd
 		self._timeout = timeout
 		self._queue = Queue.Queue(1)
 
 	def inner_handle(self, packet):
-		if self._cmd is None or packet[2] == self._cmd:
-			self._queue.put(packet)
-			self._handlers.remove(self)
-			return True
-		return False
+		self._queue.put(packet)
+		self._handlers.remove(self)
 
 	@property
 	def packet(self):
@@ -129,7 +130,7 @@ class Client(object):
 		if args and args[0] is None:
 			args = args[1:]
 		else:
-			args = (self._internal_room_id,) + args
+			packet += str(self._internal_room_id) + "%"
 		packet += "%".join(str(arg) for arg in args) + "%"
 		return self._send(packet)
 
@@ -276,7 +277,11 @@ class Client(object):
 			self.room = room
 
 	def _jr(self, packet):
-		self._internal_room_id = int(packet[3])
+		internal_room_id = int(packet[3])
+		if self._internal_room_id < 0:
+			self._internal_room_id = internal_room_id
+		elif internal_room_id:
+			assert self._internal_room_id == internal_room_id
 		self._room = int(packet[4])
 		self._penguins.clear()
 		for i in packet[5:-1]:
@@ -522,7 +527,7 @@ class Client(object):
 		self._handlers[cmd].add(handler)
 		return handler
 
-	def next(self, cmd=None, predicate=None, timeout=0.1):
+	def next(self, cmd=None, predicate=None, timeout=1):
 		handler = _OneTimeHandler(self._nexts, cmd, predicate, timeout)
 		self._nexts.append(handler)
 		return handler.packet
@@ -893,26 +898,22 @@ class Client(object):
 	# TODO
 	def add_coins(self, coins):
 		self._info("Adding " + str(coins) + " coins...")
+		internal_room_id = self._internal_room_id
+		self._internal_room_id = -1
 		room = self._room
 		self._send_packet("s", "j#jr", 912, 0, 0)
 		packet = self.next("jg")
 		if packet is None:
-			raise ClientError("Failed to add " + str(coins) + "coins")
-		self.frame = 23
-		self.frame = 21
-		self.frame = 17
-		self.frame = 23
-		self.frame = 17
-		self.frame = 19
-		self.frame = 21
+			raise ClientError("Failed to add " + str(coins) + " coins")
 		self._send_packet("z", "zo", int(coins) * 10)
 		packet = self.next("zo")
 		if packet is None:
-			raise ClientError("Failed to add " + str(coins) + "coins")
+			raise ClientError("Failed to add " + str(coins) + " coins")
 		coins = int(packet[4])
 		earn = coins - self._coins
 		self._coins = coins
-		self.room = room
+		self._internal_room_id = internal_room_id
+		# self.room = room
 		self._info("Added " + str(earn) + " coins")
 
 	def add_stamp(self, id):

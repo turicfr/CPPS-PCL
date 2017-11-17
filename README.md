@@ -43,7 +43,7 @@ python multi.py
 4. Enter your usernames and passwords (as many as needed for the shape)
 5. Waddle on!
 
-## Commands in interactive mode
+## Interactive Commands
 - help - prints "HELP" (will be done in the future)
 - log __[level]__ - sets log level / toggles log on/off (single-login only), where __[level]__ is one of the following:
   - all - all log messages (may be really verbose).
