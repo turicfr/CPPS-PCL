@@ -167,7 +167,7 @@ def room(client, id=None):
 		if not id:
 			return "Room '" + name + "' not found"
 	client.room = id
-	
+
 def igloo(client, id=None):
 	if id is None:
 		id = client.id
