@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import logging
 import client as pcl
 import login
 
@@ -105,7 +106,7 @@ def emote(clients, id):
 	for client in clients:
 		client.emote(id)
 
-def buy(clients, id):
+def add_item(clients, id):
 	for client in clients:
 		client.add_item(id)
 
@@ -130,7 +131,7 @@ def logout(clients):
 if __name__ == "__main__":
 	cpps = raw_input("CPPS: ").lower()
 	server = raw_input("Server: ").lower()
-	login_ip, login_port, game_ip, game_port, magic = login.get_info(cpps, server)
+	login_ip, login_port, game_ip, game_port, magic, single_quotes = login.get_server(cpps, server)
 	
 	filename = os.path.join(os.path.dirname(__file__), "json/shapes.json")
 	with open(filename) as file:
@@ -140,10 +141,12 @@ if __name__ == "__main__":
 		sys.exit("Shape not found")
 	shape = data[shape]
 	
+	logger = logging.getLogger()
+	logger.addHandler(logging.NullHandler())
 	count = len(shape["offsets"])
 	clients = []
 	for i in range(count):
-		clients.append(pcl.Client(login_ip, login_port, game_ip, game_port, magic, False))
+		clients.append(pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger))
 	
 	print "Logins with " + str(count) + " penguin(s)..."
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
@@ -182,15 +185,24 @@ if __name__ == "__main__":
 	print "All connected!"
 	
 	for client in clients:
-		client.color = shape["color"]
-		client.head = shape["head"]
-		client.face = shape["face"]
-		client.neck = shape["neck"]
-		client.body = shape["body"]
-		client.hand = shape["hand"]
-		client.feet = shape["feet"]
-		client.pin = shape["pin"]
-		client.background = shape["background"]
+		if "color" in shape:
+			client.color = shape["color"]
+		if "head" in shape:
+			client.head = shape["head"]
+		if "face" in shape:
+			client.face = shape["face"]
+		if "neck" in shape:
+			client.neck = shape["neck"]
+		if "body" in shape:
+			client.body = shape["body"]
+		if "hand" in shape:
+			client.hand = shape["hand"]
+		if "feet" in shape:
+			client.feet = shape["feet"]
+		if "pin" in shape:
+			client.pin = shape["pin"]
+		if "background" in shape:
+			client.background = shape["background"]
 	
 	commands = {
 		"help": help,
@@ -213,7 +225,8 @@ if __name__ == "__main__":
 		"say": say,
 		"joke": joke,
 		"emote": emote,
-		"buy": buy,
+		"buy": add_item,
+		"ai": add_item,
 		"coins": coins,
 		"follow": follow,
 		"unfollow": unfollow,
@@ -228,7 +241,9 @@ if __name__ == "__main__":
 		params = cmd[1:]
 		if name in commands:
 			try:
-				print commands[name](clients, *params)
+				msg = commands[name](clients, *params)
+				if msg is not None:
+					print msg
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
 					raise

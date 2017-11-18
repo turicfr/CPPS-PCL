@@ -352,7 +352,7 @@ if __name__ == "__main__":
 					function(*params)
 				else:
 					msg = function(client, *params)
-					if msg:
+					if msg is not None:
 						print msg
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
