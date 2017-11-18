@@ -1,7 +1,7 @@
+import os
 import sys
 import msvcrt
 import hashlib
-import os
 import json
 import logging
 import client as pcl
@@ -24,19 +24,16 @@ def get_server(cpps, server):
 		login_port = int(login_port)
 		game_ip, game_port = data[cpps]["servers"][server].split(':')
 		game_port = int(game_port)
-	magic = data[cpps]["magic"] if "magic" in data[cpps] else None
+	magic = data[cpps].get("magic")
+	single_quotes = data[cpps].get("single_quotes")
 	
-	return login_ip, login_port, game_ip, game_port, magic
+	return login_ip, login_port, game_ip, game_port, magic, single_quotes
 
 def get_client(cpps, server):
-	login_ip, login_port, game_ip, game_port, magic = get_server(cpps, server)
-	logger = logging.getLogger()
-	logger.setLevel(logging.NOTSET)
-	handler = logging.StreamHandler(sys.stdout)
-	logger.addHandler(handler)
-	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, logger)
+	login_ip, login_port, game_ip, game_port, magic, single_quotes = get_server(cpps, server)
+	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes)
 
-def get_password(cpps, user, remember = True):
+def get_password(cpps, user, remember=True):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
 	try:
 		with open(filename) as file:

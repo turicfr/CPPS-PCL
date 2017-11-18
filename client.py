@@ -1,10 +1,12 @@
+import os
+import sys
 import socket
 import hashlib
 import re
-import os
 import json
 import threading
 import Queue
+import logging
 from penguin import Penguin
 
 class _Handler(object):
@@ -57,13 +59,19 @@ class ClientError(Exception):
 		self.code = code			
 
 class Client(object):
-	def __init__(self, login_ip, login_port, game_ip, game_port, magic=None, logger=None):
+	def __init__(self, login_ip, login_port, game_ip, game_port, magic=None, single_quotes=False, logger=None):
 		self._login_ip = login_ip
 		self._login_port = login_port
 		self._game_ip = game_ip
 		self._game_port = game_port
+		if logger is None:
+			logger = logging.getLogger()
+			logger.setLevel(logging.NOTSET)
+			handler = logging.StreamHandler(sys.stdout)
+			logger.addHandler(handler)
 		self._logger = logger
 		self._magic = magic or "Y(02.>'H}t\":E1"
+		self._single_quotes = single_quotes
 		self._connected = False
 		self._buffer = ""
 		self._handlers = {}
@@ -161,8 +169,11 @@ class Client(object):
 
 	def _ver_check(self, ver):
 		self._info("Sending 'verChk' request...")
-		if not self._send('<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>'):
-		# if not self._send("<msg t='sys'><body action='verChk' r='0'><ver v='" + str(ver) + "' /></body></msg>"):
+		if self._single_quotes:
+			msg = "<msg t='sys'><body action='verChk' r='0'><ver v='" + str(ver) + "' /></body></msg>"
+		else:
+			msg = '<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>'
+		if not self._send(msg):
 			return False
 		data = self._receive()
 		if data is None:
@@ -177,8 +188,11 @@ class Client(object):
 
 	def _rndk(self):
 		self._info("Sending rndK request...")
-		if not self._send('<msg t="sys"><body action="rndK" r="-1"></body></msg>'):
-		# if not self._send("<msg t='sys'><body action='rndK' r='-1'></body></msg>"):
+		if self._single_quotes:
+			msg = "<msg t='sys'><body action='rndK' r='-1'></body></msg>"
+		else:
+			msg = '<msg t="sys"><body action="rndK" r="-1"></body></msg>'
+		if not self._send(msg):
 			return None
 		data = self._receive()
 		if data is None:
@@ -197,8 +211,11 @@ class Client(object):
 		if rndk is None:
 			return None, False
 		hash = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
-		if not self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'):
-		# if not self._send("<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"):
+		if self._single_quotes:
+			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"
+		else:
+			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'
+		if not self._send(msg):
 			return None, False
 		packet = self._receive_packet()
 		if packet is None or packet[2] == "e":
@@ -220,8 +237,11 @@ class Client(object):
 		hash = self._swapped_md5(login_key + rndk) + login_key
 		if confirmation is not None:
 			hash += '#' + confirmation
-		if not self._send('<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'):
-		# if not self._send("<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"):
+		if self._single_quotes:
+			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"
+		else:
+			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'
+		if not self._send(msg):
 			return None, False
 		packet = self._receive_packet()
 		if packet is None or packet[4] == "e":
@@ -281,7 +301,7 @@ class Client(object):
 		if self._internal_room_id < 0:
 			self._internal_room_id = internal_room_id
 		elif internal_room_id:
-			assert self._internal_room_id == internal_room_id
+			self._internal_room_id = internal_room_id
 		self._room = int(packet[4])
 		self._penguins.clear()
 		for i in packet[5:-1]:
@@ -761,7 +781,7 @@ class Client(object):
 		packet = self.next("gi")
 		if packet is None:
 			raise ClientError("Failed to fetch inventory")
-		return packet[4:-1]
+		return [int(id) for id in packet[4:-1]]
 
 	@property
 	def stamps(self):
