@@ -33,9 +33,11 @@ class _CallbackHandler(_Handler):
 		self._handlers.remove(self)
 
 class _OneTimeHandler(_Handler):
-	def __init__(self, handlers, cmd, predicate, timeout):
-		if cmd is not None and predicate is not None:
-			predicate = lambda p: p[2] == cmd and predicate(p)
+	def __init__(self, handlers, cmd, inner_predicate, timeout):
+		if cmd is None or inner_predicate is None:
+			predicate = inner_predicate
+		else:
+			predicate = lambda p: p[2] == cmd and inner_predicate(p)
 		super(_OneTimeHandler, self).__init__(handlers, predicate)
 		self._cmd = cmd
 		self._timeout = timeout
@@ -547,7 +549,7 @@ class Client(object):
 		self._handlers[cmd].add(handler)
 		return handler
 
-	def next(self, cmd=None, predicate=None, timeout=1):
+	def next(self, cmd=None, predicate=None, timeout=5):
 		handler = _OneTimeHandler(self._nexts, cmd, predicate, timeout)
 		self._nexts.append(handler)
 		return handler.packet
