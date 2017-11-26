@@ -1,9 +1,9 @@
 import os
 import sys
-import msvcrt
 import hashlib
 import json
 import logging
+from getpass import getpass
 import client as pcl
 
 def get_server(cpps, server):
@@ -42,27 +42,7 @@ def get_password(cpps, user, remember=True):
 		data = {}
 	if cpps in data and user in data[cpps]:
 		return data[cpps][user], True
-	
-	print "Password: ",
-	password = ""
-	special = False
-	while True:
-		c = msvcrt.getch()
-		if special:
-			special = False
-		elif c == '\r' or c == '\n':
-			break
-		elif c == '\b':
-			if len(password):
-				sys.stdout.write("\b \b")
-				password = password[:-1]
-		elif c == '\xe0':
-			special = True
-		elif 32 <= ord(c) < 127:
-			sys.stdout.write('*')
-			password += c
-	print ""
-
+	password = getpass("Password: ")
 	if remember and raw_input("Remember? [y/N] ") == "y":
 		if not cpps in data:
 			data[cpps] = {}
