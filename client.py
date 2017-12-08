@@ -72,7 +72,7 @@ class Client(object):
 			handler = logging.StreamHandler(sys.stdout)
 			logger.addHandler(handler)
 		self._logger = logger
-		self._magic = magic or "Y(02.>'H}t\":E1"
+		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
 		self._single_quotes = single_quotes
 		self._connected = False
 		self._buffer = ""
@@ -152,15 +152,15 @@ class Client(object):
 				self._buffer = self.sock.recv(4096)
 		except:
 			return None
-		i = self._buffer.index(chr(0)) + 1
+		i = self._buffer.index(chr(0))
 		data += self._buffer[:i]
-		self._buffer = self._buffer[i:]
+		self._buffer = self._buffer[i + 1:]
 		self._debug("# RECEIVE: " + str(data))
 		return data
 
 	def _receive_packet(self):
 		data = self._receive()
-		if data is None:
+		if not data:
 			return None
 		if data.startswith("%"):
 			packet = data.split('%')
@@ -180,6 +180,10 @@ class Client(object):
 		data = self._receive()
 		if data is None:
 			return False
+		if "cross-domain-policy" in data:
+			data = self._receive()
+			if data is None:
+				return False
 		if "apiOK" in data:
 			self._info("Received 'apiOK' response")
 			return True
@@ -212,7 +216,10 @@ class Client(object):
 		rndk = self._rndk()
 		if rndk is None:
 			return None, False
-		hash = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
+		if self._magic:
+			hash = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
+		else:
+			hash = password
 		if self._single_quotes:
 			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"
 		else:

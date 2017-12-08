@@ -21,7 +21,7 @@ class Penguin:
 		id = int(player[0])
 		name = player[1]
 		frame = player[2]
-		color = int(player[3])
+		color = int(player[3], 0)
 		head = int(player[4])
 		face = int(player[5])
 		neck = int(player[6])

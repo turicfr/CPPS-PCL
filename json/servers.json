@@ -14,19 +14,60 @@
 			"blizzard": 6113
 		}
 	},
-	"cprewrote": {
-		"ip": "158.69.219.220",
-		"login": 2100,
-		"servers": {
-			"blizzard": 3100,
-			"yeti": 7784
-		}
-	},
 	"me": {
 		"login": "172.104.66.25:6114",
 		"servers": {
 			"1": "45.79.161.185:6113"
 		},
 		"single_quotes": true
+	},
+	"nation": {
+		"ip": "66.70.190.172",
+		"login": 6112,
+		"magic": "",
+		"servers": {
+			"artic oasis": 9875
+		}
+	},
+	"io": {
+		"ip": "64.32.1.236",
+		"login": 6112,
+		"servers": {
+			"main": 8868
+		},
+		"single_quotes": true
+	},
+	"ml": {
+		"ip": "185.62.190.22",
+		"login": 6112,
+		"servers": {
+			"blizzard": 6113
+		}
+	},
+	"brazil": {
+		"ip": "37.59.42.217",
+		"login": 9700,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"servers": {
+			"ventilador": 9875
+		}
+	},
+	"free": {
+		"ip": "176.31.100.185",
+		"login": 6112,
+		"magic": "dc3726460bc0b89b1ba952836531486bY(02.>'H}t\":E1_root",
+		"servers": {
+			"en": 6116
+		},
+		"single_quotes": true
+	},
+	"regen": {
+		"ip": "54.37.68.52",
+		"login": 3111,
+		"servers": {
+			"avalanche": 3117,
+			"blizzard": 3112,
+			"frosty": 3116
+		}
 	}
 }
