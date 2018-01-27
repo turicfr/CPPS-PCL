@@ -160,7 +160,7 @@ class Client(object):
 
 	def _receive_packet(self):
 		data = self._receive()
-		if not data:
+		if data is None:
 			return None
 		if data.startswith("%"):
 			packet = data.split('%')
@@ -253,18 +253,18 @@ class Client(object):
 		if not self._send(msg):
 			return None, False
 		packet = self._receive_packet()
-		if packet is None or packet[4] == "e":
+		if packet is None or packet[2] == "e":
 			return packet, False
 		while packet[2] != "l":
 			packet = self._receive_packet()
-			if packet is None or packet[4] == "e":
+			if packet is None or packet[2] == "e":
 				return packet, False
 		if not self._send_packet("s", "j#js", self._id, login_key, "en"):
 			return None, False
 		if confirmation is None:
 			while packet[2] != "js":
 				packet = self._receive_packet()
-				if packet is None or packet[4] == "e":
+				if packet is None or packet[2] == "e":
 					return packet, False
 		self._info("Joined server")
 		return packet, True

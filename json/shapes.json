@@ -1,4 +1,9 @@
 {
+	"dot": {
+		"offsets": [
+			{"x": 0, "y": 0}
+		]
+	},
 	"square": {
 		"color": 1,
 		"head": 0,
