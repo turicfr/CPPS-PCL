@@ -117,9 +117,9 @@ class Client(object):
 				with open(filename) as file:
 					data = json.load(file)
 				code = int(msg[4])
-				msg = "Error #" + str(code)
+				msg = "Error #{}".format(code)
 				if str(code) in data:
-					msg += ": " + data[str(code)]
+					msg += ": {}".format(data[str(code)])
 			self._logger.error(msg)
 
 	def _critical(self, msg):
@@ -127,7 +127,7 @@ class Client(object):
 			self._logger.critical(msg)
 
 	def _send(self, data):
-		self._debug("# SEND: " + str(data))
+		self._debug("# SEND: {}".format(data))
 		try:
 			self.sock.send(data + chr(0))
 			return True
@@ -136,7 +136,7 @@ class Client(object):
 			return False
 
 	def _send_packet(self, ext, cmd, *args):
-		packet = "%xt%" + ext + "%" + cmd + "%"
+		packet = "%xt%{}%{}%".format(ext, cmd)
 		if args and args[0] is None:
 			args = args[1:]
 		else:
@@ -155,7 +155,7 @@ class Client(object):
 		i = self._buffer.index(chr(0))
 		data += self._buffer[:i]
 		self._buffer = self._buffer[i + 1:]
-		self._debug("# RECEIVE: " + str(data))
+		self._debug("# RECEIVE: {}".format(data))
 		return data
 
 	def _receive_packet(self):
@@ -172,9 +172,9 @@ class Client(object):
 	def _ver_check(self, ver):
 		self._info("Sending 'verChk' request...")
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='verChk' r='0'><ver v='" + str(ver) + "' /></body></msg>"
+			msg = "<msg t='sys'><body action='verChk' r='0'><ver v='{}' /></body></msg>".format(ver)
 		else:
-			msg = '<msg t="sys"><body action="verChk" r="0"><ver v="' + str(ver) + '"/></body></msg>'
+			msg = '<msg t="sys"><body action="verChk" r="0"><ver v="{}"/></body></msg>'.format(ver)
 		if not self._send(msg):
 			return False
 		data = self._receive()
@@ -205,7 +205,7 @@ class Client(object):
 			return None
 		if "rndK" in data:
 			key = re.search("<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", data).group(1)
-			self._info("Received key: " + key)
+			self._info("Received key: {}".format(key))
 			return key
 		raise ClientError("Invalid response")
 
@@ -221,9 +221,9 @@ class Client(object):
 		else:
 			hash = password
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"
+			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
 		else:
-			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'
+			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
 		if not self._send(msg):
 			return None, False
 		packet = self._receive_packet()
@@ -247,9 +247,9 @@ class Client(object):
 		if confirmation is not None:
 			hash += '#' + confirmation
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[" + user + "]]></nick><pword><![CDATA[" + hash + "]]></pword></login></body></msg>"
+			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
 		else:
-			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[' + user + ']]></nick><pword><![CDATA[' + hash + ']]></pword></login></body></msg>'
+			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
 		if not self._send(msg):
 			return None, False
 		packet = self._receive_packet()
@@ -498,15 +498,15 @@ class Client(object):
 					handled = True
 					break
 			if not handled:
-				self._warning("# UNHANDLED PACKET: " + '%'.join(packet))
+				self._warning("# UNHANDLED PACKET: {}".format('%'.join(packet)))
 
 	def connect(self, user, password, encrypted=False, ver=153):
-		self._info("Connecting to login server at " + self._login_ip + ":" + str(self._login_port) + "...")
+		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
 			self.sock.connect((self._login_ip, self._login_port))
 		except:
-			raise ClientError("Failed to connect to login server at " + self._login_ip + ":" + str(self._login_port))
+			raise ClientError("Failed to connect to login server at {}:{}".format(self._login_ip, self._login_port))
 
 		packet, ok = self._login(user, password, encrypted, ver)
 		if not ok:
@@ -534,12 +534,12 @@ class Client(object):
 			login_key = packet[5]
 			confirmation = None
 
-		self._info("Connecting to game server at " + self._game_ip + ":" + str(self._game_port) + "...")
+		self._info("Connecting to game server at {}:{}...".format(self._game_ip, self._game_port))
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
 			self.sock.connect((self._game_ip, self._game_port))
 		except:
-			raise ClientError("Failed to connect to game server at " + self._game_ip + ":" + str(self._game_port))
+			raise ClientError("Failed to connect to game server at {}:{}".format(self._game_ip, self._game_port))
 
 		packet, ok = self._join_server(user, login_key, confirmation, ver)
 		if not ok:
@@ -613,12 +613,12 @@ class Client(object):
 
 	@room.setter
 	def room(self, id, x=0, y=0):
-		self._info("Joining room " + str(id) + "...")
+		self._info("Joining room {}...".format(id))
 		self._send_packet("s", "j#jr", id, x, y)
 		packet = self.next("jr")
 		if packet is None:
-			raise ClientError("Failed to join room " + str(id))
-		self._info("Joined room " + str(id))
+			raise ClientError("Failed to join room {}".format(id))
+		self._info("Joined room {}".format(id))
 
 	@staticmethod
 	def get_room_id(name):
@@ -646,13 +646,13 @@ class Client(object):
 
 	@igloo.setter
 	def igloo(self, id):
-		name = self._penguins[id].name if id in self._penguins else "Penguin " + str(id)
-		self._info("Joining " + name + "'s igloo...")
+		name = self._penguins[id].name if id in self._penguins else "Penguin {}".format(id)
+		self._info("Joining {}'s igloo...".format(name))
 		self._send_packet("s", "j#jp", None, self._id, int(id) + 1000)
 		packet = self.next("jr")
 		if packet is None:
-			raise ClientError("Failed to join " + name + "'s igloo")
-		self._info("Joined " + name + "'s igloo")
+			raise ClientError("Failed to join {}'s igloo".format(name))
+		self._info("Joined {}'s igloo".format(name))
 
 	@property
 	def penguins(self):
@@ -664,12 +664,12 @@ class Client(object):
 
 	@color.setter
 	def color(self, id):
-		self._info("Changing color to " + str(id) + "...")
+		self._info("Changing color to {}...".format(id))
 		self._send_packet("s", "s#upc", id)
 		packet = self.next("upc")
 		if packet is None:
-			raise ClientError("Failed to change color to " + str(id))
-		self._info("Changed color to " + str(id) + "...")
+			raise ClientError("Failed to change color to {}".format(id))
+		self._info("Changed color to {}".format(id))
 
 	@property
 	def head(self):
@@ -677,12 +677,12 @@ class Client(object):
 
 	@head.setter
 	def head(self, id):
-		self._info("Changing head item to " + str(id) + "...")
+		self._info("Changing head item to {}...".format(id))
 		self._send_packet("s", "s#uph", id)
 		packet = self.next("uph")
 		if packet is None:
-			raise ClientError("Failed to change head item to " + str(id))
-		self._info("Changed head item to " + str(id) + "...")
+			raise ClientError("Failed to change head item to {}".format(id))
+		self._info("Changed head item to {}".format(od))
 
 	@property
 	def face(self):
@@ -690,12 +690,12 @@ class Client(object):
 
 	@face.setter
 	def face(self, id):
-		self._info("Changing face item to " + str(id) + "...")
+		self._info("Changing face item to {}...".format(id))
 		self._send_packet("s", "s#upf", id)
 		packet = self.next("upf")
 		if packet is None:
-			raise ClientError("Failed to face head item to " + str(id))
-		self._info("Changed face item to " + str(id) + "...")
+			raise ClientError("Failed to face head item to {}".format(id))
+		self._info("Changed face item to {}".format(id))
 
 	@property
 	def neck(self):
@@ -703,12 +703,12 @@ class Client(object):
 
 	@neck.setter
 	def neck(self, id):
-		self._info("Changing neck item to " + str(id) + "...")
+		self._info("Changing neck item to {}...".format(id))
 		self._send_packet("s", "s#upn", id)
 		packet = self.next("upn")
 		if packet is None:
-			raise ClientError("Failed to change neck item to " + str(id))
-		self._info("Changed neck item to " + str(id) + "...")
+			raise ClientError("Failed to change neck item to {}".format(id))
+		self._info("Changed neck item to {}".format(id))
 
 	@property
 	def body(self):
@@ -716,12 +716,12 @@ class Client(object):
 
 	@body.setter
 	def body(self, id):
-		self._info("Changing body item to " + str(id) + "...")
+		self._info("Changing body item to {}...".format(id))
 		self._send_packet("s", "s#upb", id)
 		packet = self.next("upb")
 		if packet is None:
-			raise ClientError("Failed to change body item to " + str(id))
-		self._info("Changed body item to " + str(id) + "...")
+			raise ClientError("Failed to change body item to {}".format(id))
+		self._info("Changed body item to {}".format(id))
 
 	@property
 	def hand(self):
@@ -729,12 +729,12 @@ class Client(object):
 
 	@hand.setter
 	def hand(self, id):
-		self._info("Changing hand item to " + str(id) + "...")
+		self._info("Changing hand item to {}...".format(id))
 		self._send_packet("s", "s#upa", id)
 		packet = self.next("upa")
 		if packet is None:
-			raise ClientError("Failed to change hand item to " + str(id))
-		self._info("Changed hand item to " + str(id) + "...")
+			raise ClientError("Failed to change hand item to {}".format(id))
+		self._info("Changed hand item to {}".format(id))
 
 	@property
 	def feet(self):
@@ -742,12 +742,12 @@ class Client(object):
 
 	@feet.setter
 	def feet(self, id):
-		self._info("Changing feet item to " + str(id) + "...")
+		self._info("Changing feet item to {}...".format(id))
 		self._send_packet("s", "s#upe", id)
 		packet = self.next("upe")
 		if packet is None:
-			raise ClientError("Failed to change feet item to " + str(id))
-		self._info("Changed feet item to " + str(id) + "...")
+			raise ClientError("Failed to change feet item to {}".format(id))
+		self._info("Changed feet item to {}".format(id))
 
 	@property
 	def pin(self):
@@ -755,12 +755,12 @@ class Client(object):
 
 	@pin.setter
 	def pin(self, id):
-		self._info("Changing pin to " + str(id) + "...")
+		self._info("Changing pin to {}...".format(id))
 		self._send_packet("s", "s#upl", id)
 		packet = self.next("upl")
 		if packet is None:
-			raise ClientError("Failed to change pin to " + str(id))
-		self._info("Changed pin to " + str(id) + "...")
+			raise ClientError("Failed to change pin to {}".format(id))
+		self._info("Changed pin to {}".format(id))
 
 	@property
 	def background(self):
@@ -768,12 +768,12 @@ class Client(object):
 
 	@background.setter
 	def background(self, id):
-		self._info("Changing background to " + str(id) + "...")
+		self._info("Changing background to {}...".format(id))
 		self._send_packet("s", "s#upp", id)
 		packet = self.next("upp")
 		if packet is None:
-			raise ClientError("Failed to change background to " + str(id))
-		self._info("Changed background to " + str(id) + "...")
+			raise ClientError("Failed to change background to {}".format(id))
+		self._info("Changed background to {}".format(id))
 
 	@property
 	def x(self):
@@ -806,20 +806,20 @@ class Client(object):
 		self._send_packet("s", "u#h")
 
 	def walk(self, x, y):
-		self._info("Walking to (" + str(x) + ", " + str(y) + ")...")
+		self._info("Walking to ({}, {})...".format(x, y))
 		self._send_packet("s", "u#sp", None, self._id, x, y)
 		packet = self.next("sp")
 		if packet is None:
-			raise ClientError("Failed to walk to (" + str(x) + ", " + str(y) + ")")
-		self._info("Walked to (" + str(x) + ", " + str(y) + ")")
+			raise ClientError("Failed to walk to ({}, {})".format(x, y))
+		self._info("Walked to ({}, {})".format(x, y))
 
 	def action(self, id):
-		self._info("Performing action " + str(id) + "...")
+		self._info("Performing action {}...".format(id))
 		self._send_packet("s", "u#sa", id)
 		packet = self.next("sa")
 		if packet is None:
-			raise ClientError("Failed to perform action " + str(id))
-		self._info("Performed action " + str(id))
+			raise ClientError("Failed to perform action {}".format(id))
+		self._info("Performed action {}".format(id))
 
 	@property
 	def frame(self):
@@ -827,12 +827,12 @@ class Client(object):
 
 	@frame.setter
 	def frame(self, id):
-		self._info("Setting frame to " + str(id) + "...")
+		self._info("Setting frame to {}...".format(id))
 		self._send_packet("s", "u#sf", id)
 		packet = self.next("sf")
 		if packet is None:
-			raise ClientError("Failed to set frame to " + str(id))
-		self._info("Set frame to " + str(id))
+			raise ClientError("Failed to set frame to {}".format(id))
+		self._info("Set frame to {}".format(id))
 
 	def dance(self):
 		self.frame = 26
@@ -853,143 +853,143 @@ class Client(object):
 		}
 		if dir not in dirs:
 			dir = "s"
-		self._info("Sitting in direction " + dir + "...")
+		self._info("Sitting in direction {}...".format(dir))
 		self.frame = dirs[dir]
-		self._info("Sat in direction " + dir)
+		self._info("Sat in direction {}".format(dir))
 
 	def snowball(self, x, y):
-		self._info("Throwing snowball to (" + str(x) + ", " + str(y) + ")...")
+		self._info("Throwing snowball to ({}, {})...".format(x, y))
 		self._send_packet("s", "u#sb", x, y)
 		packet = self.next("sb")
 		if packet is None:
-			raise ClientError("Failed to throw snowball to (" + str(x) + ", " + str(y) + ")...")
-		self._info("Threw snowball to (" + str(x) + ", " + str(y) + ")")
+			raise ClientError("Failed to throw snowball to ({}, {})".format(x, y))
+		self._info("Threw snowball to ({}, {})".format(x, y))
 
 	def say(self, msg, safe=False):
-		self._info("Saying '" + str(msg) + "'...")
+		self._info("Saying '{}'...".format(msg))
 		if safe:
 			self._send_packet("s", "u#ss", msg)
 			packet = self.next("ss")
 			if packet is None:
-				raise ClientError("Failed to say '" + str(msg) + "'")
+				raise ClientError("Failed to say '{}'".format(msg))
 		else:
 			self._send_packet("s", "m#sm", self._id, msg)
 			packet = self.next("sm")
 			if packet is None:
-				raise ClientError("Failed to say '" + str(msg) + "'")
-		self._info("Said '" + str(msg) + "'")
+				raise ClientError("Failed to say '{}'".format(msg))
+		self._info("Said '{}'".format(msg))
 
 	def joke(self, id):
-		self._info("Telling joke " + str(id) + "...")
+		self._info("Telling joke {}...".format(id))
 		self._send_packet("s", "u#sj", None, self._id, id)
 		packet = self.next("sj")
 		if packet is None:
-			raise ClientError("Failed to tell joke " + str(id))
-		self._info("Told joke " + str(id))
+			raise ClientError("Failed to tell joke {}".format(id))
+		self._info("Told joke {}".format(id))
 
 	def emote(self, id):
-		self._info("Reacting emote " + str(id) + "...")
+		self._info("Reacting emote {}...".format(id))
 		self._send_packet("s", "u#se", id)
 		packet = self.next("se")
 		if packet is None:
-			raise ClientError("Failed to react emote " + str(id))
-		self._info("Reacted emote " + str(id))
+			raise ClientError("Failed to react emote {}".format(id))
+		self._info("Reacted emote {}".format(id))
 
 	def mail(self, id, postcard):
-		self._info("Sending postcard #" + str(postcard) + "...")
+		self._info("Sending postcard #{}...".format(postcard))
 		self._send_packet("s", "l#ms", id, postcard)
 		packet = self.next("ms")
 		if packet is None:
-			raise ClientError("Failed to send postcard #" + str(postcard))
+			raise ClientError("Failed to send postcard #{}".format(postcard))
 		coins = int(packet[4])
 		cost = self._coins - coins
 		self._coins = coins
 		sent = packet[5]
 		if sent == "0":
 			raise ClientError("Maximum postcards reached")
-		if sent == "1":
-			self._info("Sent postcard #" + str(postcard))
 		if sent == "2":
 			raise ClientError("Not enough coins")
+		if sent == "1":
+			self._info("Sent postcard #{}".format(postcard))
 		raise ClientError("Invalid response")
 
 	def add_item(self, id):
-		self._info("Adding item " + str(id) + "...")
+		self._info("Adding item {}".format(id))
 		self._send_packet("s", "i#ai", id)
 		packet = self.next("ai", lambda p: int(p[4]) == int(id))
 		if packet is None:
-			raise ClientError("Failed to add item " + str(id))
+			raise ClientError("Failed to add item {}".format(id))
 		coins = int(packet[5])
 		cost = self._coins - coins
 		self._coins = coins
-		self._info("Added item " + str(id))
+		self._info("Added item {}".format(id))
 
 	# TODO
 	def add_coins(self, coins):
-		self._info("Adding " + str(coins) + " coins...")
+		self._info("Adding {} coins...".format(coins))
 		internal_room_id = self._internal_room_id
 		self._internal_room_id = -1
 		room = self._room
 		self._send_packet("s", "j#jr", 912, 0, 0)
 		packet = self.next("jg")
 		if packet is None:
-			raise ClientError("Failed to add " + str(coins) + " coins")
+			raise ClientError("Failed to add {} coins".format(coins))
 		self._send_packet("z", "zo", int(coins) * 10)
 		packet = self.next("zo")
 		if packet is None:
-			raise ClientError("Failed to add " + str(coins) + " coins")
+			raise ClientError("Failed to add {}".format(coins))
 		coins = int(packet[4])
 		earn = coins - self._coins
 		self._coins = coins
 		self._internal_room_id = internal_room_id
 		# self.room = room
-		self._info("Added " + str(earn) + " coins")
+		self._info("Added {} coins".format(earn))
 
 	def add_stamp(self, id):
-		self._info("Adding stamp " + str(id) + "...")
+		self._info("Adding stamp {}...".format(id))
 		self._send_packet("s", "st#sse", id)
 		packet = self.next("sse")
 		if packet is None:
-			raise ClientError("Failed to add stamp " + str(id))
-		self._info("Added stamp " + str(id))
+			raise ClientError("Failed to add stamp {}".format(id))
+		self._info("Added stamp {}".format(id))
 
 	def add_igloo(self, id):
-		self._info("Adding igloo " + str(id) + "...")
+		self._info("Adding igloo {}...".format(id))
 		self._send_packet("s", "g#au", None, self._id, id)
 		packet = self.next("au")
 		if packet is None:
-			raise ClientError("Failed to add igloo " + str(id))
-		self._info("Added igloo " + str(id))
+			raise ClientError("Failed to add igloo {}".format(id))
+		self._info("Added igloo {}".format(id))
 
 	def add_furniture(self, id):
-		self._info("Adding furniture " + str(id) + "...")
+		self._info("Adding furniture {}...".format(id))
 		self._send_packet("s", "g#af", id)
 		packet = self.next("af")
 		if packet is None:
-			raise ClientError("Failed to add furniture " + str(id))
-		self._info("Added furniture " + str(id))
+			raise ClientError("Failed to add furniture {}".format(id))
+		self._info("Added furniture {}".format(id))
 
 	# TODO
 	def igloo_music(self, id):
-		self._info("Setting music to #" + str(id) + "...")
+		self._info("Setting music to #{}...".format(id))
 		self._send_packet("s", "g#go", None, self._id)
 		# receive
 		self._send_packet("s", "g#um", None, self._id, id)
 		# receive
-		self._info("Set music to #" + str(id))
+		self._info("Set music to #{}".format(id))
 
 	def buddy(self, id):
-		self._info("Sending buddy request to " + str(id) + "...")
+		self._info("Sending buddy request to {}...".format(id))
 		self._send_packet("s", "b#br", id)
 		packet = self.next("br")
 		if packet is None:
-			raise ClientError("Failed to send buddy request to " + str(id))
-		self._info("Sent buddy request to " + str(id))
+			raise ClientError("Failed to send buddy request to {}".format(id))
+		self._info("Sent buddy request to {}".format(id))
 
 	def follow(self, id, dx=0, dy=0):
 		if id == self._id:
 			raise ValueError("Cannot follow self")
-		self._info("Following " + str(id) + "...")
+		self._info("Following {}...".format(id))
 		self.buddy(id)
 		self._follow = (id, dx, dy)
 		penguin = self._penguins[id]

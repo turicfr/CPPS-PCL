@@ -4,6 +4,10 @@ import json
 import logging
 import client as pcl
 import login
+try:
+	import readline
+except ImportError:
+	pass
 
 def help(clients):
 	return """HELP"""
@@ -15,7 +19,7 @@ def room(client, id):
 		name = id
 		id = client.Client.get_room_id(name)
 		if not id:
-			return "Room '" + name + "' not found"
+			return "Room '{}' not found".format(name)
 	for client in clients:
 		client.room = id
 
@@ -26,7 +30,7 @@ def igloo(client, id):
 		name = id
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '" + name + "' not found"
+			return "Penguin '{}' not found".format(name)
 	for client in clients:
 		client.igloo = id
 
@@ -128,18 +132,43 @@ def logout(clients):
 		client.logout()
 	sys.exit(0)
 
-if __name__ == "__main__":
-	cpps = raw_input("CPPS: ").lower()
-	server = raw_input("Server: ").lower()
-	login_ip, login_port, game_ip, game_port, magic, single_quotes = login.get_server(cpps, server)
-	
+def main():
+	if "-r" in sys.argv:
+		remember = sys.argv.pop(sys.argv.index("-r") + 1)
+		sys.argv.remove("-r")
+		if remember == "yes":
+			remember = True
+		elif remember == "no":
+			remember = False
+		elif remember == "ask":
+			remember = None
+		else:
+			sys.exit("Unknown remember option: '{}'".format(remember))
+	else:
+		remember = None
+
+	argc = len(sys.argv)
+	if argc > 1:
+		cpps = sys.argv[1].lower()
+	else:
+		cpps = raw_input("CPPS: ").lower()
+
 	filename = os.path.join(os.path.dirname(__file__), "json/shapes.json")
 	with open(filename) as file:
 		data = json.load(file)
-	shape = raw_input("Shape: ").lower()
+	if argc > 3:
+		shape = sys.argv[3]
+	else:
+		shape = raw_input("Shape: ").lower()
 	if not shape in data:
 		sys.exit("Shape not found")
 	shape = data[shape]
+
+	if argc > 2:
+		server = sys.argv[2]
+	else:
+		server = raw_input("Server: ").lower()
+	login_ip, login_port, game_ip, game_port, magic, single_quotes = login.get_server(cpps, server)
 	
 	logger = logging.getLogger()
 	logger.addHandler(logging.NullHandler())
@@ -148,7 +177,7 @@ if __name__ == "__main__":
 	for i in range(count):
 		clients.append(pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger))
 	
-	print "Logins with " + str(count) + " penguin(s)..."
+	print "Logins with {} penguin(s)...".format(count)
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
 	try:
 		with open(filename) as file:
@@ -161,19 +190,19 @@ if __name__ == "__main__":
 			try:
 				clients[count - 1].connect(user, password, True)
 			except pcl.ClientError as e:
-				print "Username: " + user
+				print "Username: {}".format(user)
 				if e.code == 603:
 					login.remove_penguin(cpps, user, data)
 				continue
 			count -= 1
 			if count == 0:
 				break
-			print "Connected! (" + str(count) + " left)"
+			print "Connected! ({} left)".format(count)
 	
 	i = 0
 	while i < count:
 		user = raw_input("Username: ").lower()
-		password, encrypted = login.get_password(cpps, user)
+		password, encrypted = login.get_password(cpps, user, remember)
 		print "Connecting..."
 		try:
 			clients[i].connect(user, password)
@@ -181,7 +210,7 @@ if __name__ == "__main__":
 			continue
 		i += 1
 		if i < count:
-			print "Connected! (" + str(count - i) + " left)"
+			print "Connected! ({} left)".format(count - i)
 	print "All connected!"
 	
 	for client in clients:
@@ -235,13 +264,17 @@ if __name__ == "__main__":
 		"quit": logout
 	}
 	while True:
-		print ">>>",
-		cmd = raw_input().split(' ')
-		name = cmd[0]
-		params = cmd[1:]
-		if name in commands:
+		try:
+			command = raw_input(">>> ").split(' ')
+		except KeyboardInterrupt:
+			print
+			continue
+		except EOFError:
+			logout(clients)
+		command, params = command[0], command[1:]
+		if command in commands:
 			try:
-				msg = commands[name](clients, *params)
+				msg = commands[command](clients, *params)
 				if msg is not None:
 					print msg
 			except TypeError as e:
@@ -250,5 +283,8 @@ if __name__ == "__main__":
 				print e.message
 			except pcl.ClientError as e:
 				print e.message
-		elif name:
-			print "command '" + name + "' doesn't exist"
+		elif command:
+			print "command '{}' doesn't exist".format(name)
+
+if __name__ == "__main__":
+	main()

@@ -5,6 +5,10 @@ import json
 import logging
 from getpass import getpass
 import client as pcl
+try:
+	import readline
+except ImportError:
+	pass
 
 def get_server(cpps, server):
 	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
@@ -33,7 +37,7 @@ def get_client(cpps, server):
 	login_ip, login_port, game_ip, game_port, magic, single_quotes = get_server(cpps, server)
 	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes)
 
-def get_password(cpps, user, remember=True):
+def get_password(cpps, user, remember=None):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
 	try:
 		with open(filename) as file:
@@ -43,7 +47,9 @@ def get_password(cpps, user, remember=True):
 	if cpps in data and user in data[cpps]:
 		return data[cpps][user], True
 	password = getpass("Password: ")
-	if remember and raw_input("Remember? [y/N] ") == "y":
+	if remember is None:
+		remember = raw_input("Remember? [y/N] ") == "y"
+	if remember:
 		if not cpps in data:
 			data[cpps] = {}
 		data[cpps][user] = hashlib.md5(password).hexdigest()
@@ -60,7 +66,7 @@ def remove_penguin(cpps, user, data=None):
 		except:
 			return False
 	if cpps in data and user in data[cpps]:
-		print "Removing " + user + "..."
+		print "Removing {}...".format(user)
 		del data[cpps][user]
 		with open(filename, "w") as file:
 			json.dump(data, file)
@@ -68,10 +74,38 @@ def remove_penguin(cpps, user, data=None):
 	return False
 
 def login():
-	cpps = raw_input("CPPS: ").lower()
-	user = raw_input("Username: ").lower()
-	password, encrypted = get_password(cpps, user)
-	server = raw_input("Server: ").lower()
+	if "-r" in sys.argv:
+		remember = sys.argv.pop(sys.argv.index("-r") + 1)
+		sys.argv.remove("-r")
+		if remember == "yes":
+			remember = True
+		elif remember == "no":
+			remember = False
+		elif remember == "ask":
+			remember = None
+		else:
+			sys.exit("Unknown remember option: '{}'".format(remember))
+	else:
+		remember = None
+
+	argc = len(sys.argv)
+	if argc > 1:
+		cpps = sys.argv[1].lower()
+	else:
+		cpps = raw_input("CPPS: ").lower()
+
+	if argc > 3:
+		user = sys.argv[3]
+	else:
+		user = raw_input("Username: ").lower()
+
+	password, encrypted = get_password(cpps, user, remember)
+
+	if argc > 2:
+		server = sys.argv[2]
+	else:
+		server = raw_input("Server: ").lower()
+
 	client = get_client(cpps, server)
 	try:
 		client.connect(user, password, encrypted)
@@ -108,12 +142,12 @@ def log(client, level=None):
 		elif level == "cricital":
 			level = logging.CRICITAL
 		else:
-			return "Unknown logging level '" + level + "'"
+			return "Unknown logging level '{}'".format(level)
 	client.logger.setLevel(level)
-	return "Logging " + msg + " messages"
+	return "Logging {} messages".format(msg)
 
 def internal(client):
-	return "Current internal room id: " + str(client.internal_room_id)
+	return "Current internal room id: {}".format(client.internal_room_id)
 
 def id(client, name=None):
 	if name is None:
@@ -121,8 +155,8 @@ def id(client, name=None):
 	else:
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '" + name + "' not found"
-	return "ID: " + str(id)
+			return "Penguin '{}' not found".format(name)
+	return "ID: {}".format(id)
 
 def name(client, id=None):
 	if id is None:
@@ -130,19 +164,19 @@ def name(client, id=None):
 	elif id in client.penguins:
 		name = client.penguins[id].name
 	else:
-		return "Penguin #" + str(id) + " not found"
-	return "Name: " + name
+		return "Penguin #{} not found".format(id)
+	return "Name: ".format(name)
 
 def room(client, id=None):
 	if id is None:
-		return "Current room: " + client.get_room_name(client.room)
+		return "Current room: {}".format(client.get_room_name(client.room))
 	try:
 		id = int(id)
 	except ValueError:
 		name = id
 		id = client.get_room_id(name)
 		if not id:
-			return "Room '" + name + "' not found"
+			return "Room '{}' not found".format(name)
 	client.room = id
 
 def igloo(client, id=None):
@@ -155,7 +189,7 @@ def igloo(client, id=None):
 			name = id
 			id = client.get_id(name)
 			if not id:
-				return "Penguin '" + name + "' not found"
+				return "Penguin '{}' not found".format(name)
 	client.igloo = id
 
 def penguins(client):
@@ -163,55 +197,55 @@ def penguins(client):
 
 def color(client, id=None):
 	if id is None:
-		return "Current color: " + str(client.color)
+		return "Current color: {}".format(client.color)
 	else:
 		client.color = id
 
 def head(client, id=None):
 	if id is None:
-		return "Current head item: " + str(client.head)
+		return "Current head item: {}".format(client.head)
 	else:
 		client.head = id
 
 def face(client, id=None):
 	if id is None:
-		return "Current face item: " + str(client.face)
+		return "Current face item: {}".format(client.face)
 	else:
 		client.face = id
 
 def neck(client, id=None):
 	if id is None:
-		return "Current neck item: " + str(client.neck)
+		return "Current neck item: {}".format(client.neck)
 	else:
 		client.neck = id
 
 def body(client, id=None):
 	if id is None:
-		return "Current body item: " + str(client.body)
+		return "Current body item: {}".format(client.body)
 	else:
 		client.body = id
 
 def hand(client, id=None):
 	if id is None:
-		return "Current hand item: " + str(client.hand)
+		return "Current hand item: {}".format(client.hand)
 	else:
 		client.hand = id
 
 def feet(client, id=None):
 	if id is None:
-		return "Current feet item: " + str(client.feet)
+		return "Current feet item: {}".format(client.feet)
 	else:
 		client.feet = id
 
 def pin(client, id=None):
 	if id is None:
-		return "Current pin: " + str(client.pin)
+		return "Current pin: {}".format(client.pin)
 	else:
 		client.pin = id
 
 def background(client, id=None):
 	if id is None:
-		return "Current background: " + str(client.background)
+		return "Current background: {}".format(client.background)
 	else:
 		client.background = id
 
@@ -230,12 +264,12 @@ def mail(client, *params):
 		name = ' '.join(params[1:])
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '" + name + "' not found"
+			return "Penguin '{}' not found".format(name)
 		client.mail(id, postcard)
 
 def coins(client, amount=None):
 	if amount is None:
-		return "Current coins: " + str(client.coins)
+		return "Current coins: {}".format(client.coins)
 	else:
 		client.add_coins(amount)
 
@@ -243,7 +277,7 @@ def buddy(client, *params):
 	name = ' '.join(params)
 	id = client.get_id(name)
 	if not id:
-		return "Penguin '" + name + "' not found"
+		return "Penguin '{}' not found".format(name)
 	client.buddy(id)
 
 def follow(client, *params):
@@ -260,21 +294,21 @@ def follow(client, *params):
 		name = ' '.join(params)
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '" + name + "' not found"
+			return "Penguin '{}' not found".format(name)
 		if offset:
 			client.follow(id, dx, dy)
 		else:
 			client.follow(id)
 		return None
 	elif client._follow:
-		return "Currently following '" + client.penguins[client._follow[0]].name + "'"
+		return "Currently following '{}'".format(client.penguins[client._follow[0]].name)
 	return "Currently not following"
 
 def logout(client):
 	client.logout()
 	sys.exit(0)
 
-if __name__ == "__main__":
+def main():
 	client = login()
 	commands = {
 		"help": help,
@@ -321,12 +355,16 @@ if __name__ == "__main__":
 		"quit": logout
 	}
 	while True:
-		print ">>>",
-		cmd = raw_input().split(' ')
-		name = cmd[0]
-		params = cmd[1:]
-		if name in commands:
-			function = commands[name]
+		try:
+			command = raw_input(">>> ").split(' ')
+		except KeyboardInterrupt:
+			print
+			continue
+		except EOFError:
+			logout(client)
+		command, params = command[0], command[1:]
+		if command in commands:
+			function = commands[command]
 			try:
 				if hasattr(function, "__self__"):
 					function(*params)
@@ -340,5 +378,8 @@ if __name__ == "__main__":
 				print e.message
 			except pcl.ClientError as e:
 				print e.message
-		elif name:
-			print "command '" + name + "' doesn't exist"
+		elif command:
+			print "command '{}' doesn't exist".format(command)
+
+if __name__ == "__main__":
+	main()

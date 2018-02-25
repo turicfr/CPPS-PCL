@@ -27,19 +27,26 @@ TODO
 ### Single-Login
 1. Run login.py:
 ```
-python login.py
+python login.py [-r yes|no|ask] [<cpps>] [<server>] [<username>]
+
+Options:
+-r  Remember password in the future
 ```
-2. Enter your username and password
-3. Choose a server
-4. Waddle on!
+2. Choose a server (if you didn't do that in the command line)
+3. Enter your username and password (if you didn't do that in the command line)
+4. Choose a server
+5. Waddle on!
 
 ### Multi-Login
 1. Run multi.py:
 ```
-python multi.py
+python multi.py [-r yes|no|ask] [<cpps>] [<server>] [<shape>]
+
+Options:
+-r  Remember password in the future
 ```
-2. Choose a server
-3. Choose a shape (defined in json/shapes.json)
+2. Choose a server (if you didn't do that in the command line)
+3. Choose a shape (defined in json/shapes.json, if you didn't do that in the command line)
 4. Enter your usernames and passwords (as many as needed for the shape)
 5. Waddle on!
 

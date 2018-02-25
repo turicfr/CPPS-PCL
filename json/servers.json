@@ -69,5 +69,16 @@
 			"blizzard": 3112,
 			"frosty": 3116
 		}
+	},
+	"super": {
+		"ip": "167.114.148.26",
+		"login": 1708,
+		"magic": "",
+		"magic": "",
+		"servers": {
+			"nevisca": 3,
+			"avalancha": 3112,
+			"yeti": 1717
+		}
 	}
 }
