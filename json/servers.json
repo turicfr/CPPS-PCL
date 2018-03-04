@@ -7,13 +7,6 @@
 			"uk": 3
 		}
 	},
-	"blizzardcp": {
-		"ip": "34.227.176.197",
-		"login": 6112,
-		"servers": {
-			"blizzard": 6113
-		}
-	},
 	"me": {
 		"login": "172.104.66.25:6114",
 		"servers": {
@@ -36,13 +29,6 @@
 			"main": 8868
 		},
 		"single_quotes": true
-	},
-	"ml": {
-		"ip": "185.62.190.22",
-		"login": 6112,
-		"servers": {
-			"blizzard": 6113
-		}
 	},
 	"brazil": {
 		"ip": "37.59.42.217",
@@ -79,6 +65,15 @@
 			"nevisca": 3,
 			"avalancha": 3112,
 			"yeti": 1717
+		}
+	},
+	"online": {
+		"ip": "54.36.246.6",
+		"login": 7000,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"servers": {
+			"abominable": 7007,
+			"alaska": 7002
 		}
 	}
 }
