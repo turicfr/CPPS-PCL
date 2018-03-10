@@ -82,5 +82,14 @@
 		"servers": {
 			"breeze": 2873
 		}
+	},
+	"cpu": {
+		"ip": "78.46.255.177",
+		"login": 6112,
+		"servers": {
+			"blizzard": 6113,
+			"sleet": 6114,
+			"deep freeze": 6115
+		}
 	}
 }

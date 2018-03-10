@@ -281,10 +281,10 @@ class Client(object):
 		age = int(packet[9])
 		# banned_age = int(packet[10])
 		play_time = int(packet[11])
-		if packet[12]:
+		try:
 			member_left = int(packet[12])
-		else:
-			member_left = 0
+		except ValueError:
+			member_left = None
 		timezone = int(packet[13])
 		# opened_playcard = packet[14] == '1'
 		# saved_map_category = int(packet[15])
