@@ -263,7 +263,7 @@ def main():
 		"exit": logout,
 		"quit": logout
 	}
-	while True:
+	while all(client.connected for client in clients):
 		try:
 			command = raw_input(">>> ").split(' ')
 		except KeyboardInterrupt:
@@ -271,6 +271,7 @@ def main():
 			continue
 		except EOFError:
 			logout(clients)
+			break
 		command, params = command[0], command[1:]
 		if command in commands:
 			try:

@@ -78,6 +78,7 @@ class Client(object):
 		self._buffer = ""
 		self._handlers = {}
 		self._nexts = []
+		self._heartbeat_timer = None
 		self._internal_room_id = -1
 		self._id = -1
 		self._coins = -1
@@ -131,7 +132,7 @@ class Client(object):
 		try:
 			self.sock.send(data + chr(0))
 			return True
-		except:
+		except socket.error:
 			self._critical("Connection lost")
 			return False
 
@@ -141,7 +142,7 @@ class Client(object):
 			args = args[1:]
 		else:
 			packet += str(self._internal_room_id) + "%"
-		packet += "%".join(str(arg) for arg in args) + "%"
+		packet += "".join(str(arg) + "%" for arg in args)
 		return self._send(packet)
 
 	def _receive(self):
@@ -150,7 +151,7 @@ class Client(object):
 			while not chr(0) in self._buffer:
 				data += self._buffer
 				self._buffer = self.sock.recv(4096)
-		except:
+		except socket.error:
 			return None
 		i = self._buffer.index(chr(0))
 		data += self._buffer[:i]
@@ -288,6 +289,9 @@ class Client(object):
 		# opened_playcard = packet[14] == '1'
 		# saved_map_category = int(packet[15])
 		# status_field = int(packet[16])
+
+		thread = threading.Thread(target=self._heartbeat)
+		thread.start()
 
 	def _ap(self, packet):
 		penguin = Penguin.from_player(packet[4])
@@ -459,8 +463,6 @@ class Client(object):
 			self.emote(emote)
 
 	def _game(self):
-		thread = threading.Thread(target=self._heartbeat)
-		thread.start()
 		self.handle("h")
 		self.handle("lp", self._lp)
 		self.handle("ap", self._ap)
@@ -485,7 +487,10 @@ class Client(object):
 		self.handle("se", self._se)
 		while self._connected:
 			packet = self._receive_packet()
-			if not self._connected or packet is None:
+			if not self._connected:
+				break
+			if packet is None:
+				self.logout()
 				break
 			cmd = packet[2]
 			handled = False
@@ -500,12 +505,15 @@ class Client(object):
 			if not handled:
 				self._warning("# UNHANDLED PACKET: {}".format('%'.join(packet)))
 
+		if self._heartbeat_timer is not None:
+			self._heartbeat_timer.cancel()
+
 	def connect(self, user, password, encrypted=False, ver=153):
 		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
 			self.sock.connect((self._login_ip, self._login_port))
-		except:
+		except socket.error:
 			raise ClientError("Failed to connect to login server at {}:{}".format(self._login_ip, self._login_port))
 
 		packet, ok = self._login(user, password, encrypted, ver)
@@ -538,7 +546,7 @@ class Client(object):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
 			self.sock.connect((self._game_ip, self._game_port))
-		except:
+		except socket.error:
 			raise ClientError("Failed to connect to game server at {}:{}".format(self._game_ip, self._game_port))
 
 		packet, ok = self._join_server(user, login_key, confirmation, ver)
@@ -802,12 +810,17 @@ class Client(object):
 		return packet[4:-1]
 
 	def _heartbeat(self):
-		threading.Timer(600, self._heartbeat)
-		self._send_packet("s", "u#h")
+		if self._connected:
+			self._heartbeat_timer = threading.Timer(600, self._heartbeat)
+			self._heartbeat_timer.start()
+			self._send_packet("s", "u#h")
+		else:
+			self._heartbeat_timer = None
 
 	def walk(self, x, y):
 		self._info("Walking to ({}, {})...".format(x, y))
-		self._send_packet("s", "u#sp", None, self._id, x, y)
+		# self._send_packet("s", "u#sp", None, self._id, x, y)
+		self._send_packet("s", "u#sp", self._id, x, y)
 		packet = self.next("sp")
 		if packet is None:
 			raise ClientError("Failed to walk to ({}, {})".format(x, y))
@@ -1010,5 +1023,8 @@ class Client(object):
 	def logout(self):
 		self._info("Logging out...")
 		self._connected = False
-		self.sock.shutdown(socket.SHUT_RDWR)
+		try:
+			self.sock.shutdown(socket.SHUT_RDWR)
+		except socket.error:
+			pass
 		self.sock.close()

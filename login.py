@@ -354,7 +354,7 @@ def main():
 		"exit": logout,
 		"quit": logout
 	}
-	while True:
+	while client.connected:
 		try:
 			command = raw_input(">>> ").split(' ')
 		except KeyboardInterrupt:
@@ -362,6 +362,7 @@ def main():
 			continue
 		except EOFError:
 			logout(client)
+			break
 		command, params = command[0], command[1:]
 		if command in commands:
 			function = commands[command]
