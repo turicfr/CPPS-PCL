@@ -12,27 +12,27 @@ except ImportError:
 def help(clients):
 	return """HELP"""
 
-def room(client, id):
+def room(clients, id):
 	try:
 		id = int(id)
 	except ValueError:
 		name = id
-		id = client.Client.get_room_id(name)
+		id = pcl.Client.get_room_id(name)
 		if not id:
 			return "Room '{}' not found".format(name)
 	for client in clients:
 		client.room = id
 
-def igloo(client, id):
-	try:
-		id = int(id)
-	except ValueError:
-		name = id
-		id = client.get_id(name)
-		if not id:
-			return "Penguin '{}' not found".format(name)
-	for client in clients:
-		client.igloo = id
+# def igloo(clients, id):
+# 	try:
+# 		id = int(id)
+# 	except ValueError:
+# 		name = id
+# 		id = client.get_id(name)
+# 		if not id:
+# 			return "Penguin '{}' not found".format(name)
+# 	for client in clients:
+# 		client.igloo = id
 
 def color(clients, id):
 	for client in clients:
@@ -236,7 +236,7 @@ def main():
 	commands = {
 		"help": help,
 		"room": room,
-		"igloo": igloo,
+		# "igloo": igloo,
 		"color": color,
 		"head": head,
 		"face": face,

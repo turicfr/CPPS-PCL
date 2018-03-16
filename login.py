@@ -165,7 +165,7 @@ def name(client, id=None):
 		name = client.penguins[id].name
 	else:
 		return "Penguin #{} not found".format(id)
-	return "Name: ".format(name)
+	return "Name: {}".format(name)
 
 def room(client, id=None):
 	if id is None:
@@ -250,7 +250,7 @@ def background(client, id=None):
 		client.background = id
 
 def inventory(client):
-	return '\n'.join(client.inventory)
+	return '\n'.join(str(id) for id in client.inventory)
 
 def stamps(client):
 	return '\n'.join(client.stamps)

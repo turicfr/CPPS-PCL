@@ -34,8 +34,10 @@ class _CallbackHandler(_Handler):
 
 class _OneTimeHandler(_Handler):
 	def __init__(self, handlers, cmd, inner_predicate, timeout):
-		if cmd is None or inner_predicate is None:
+		if cmd is None:
 			predicate = inner_predicate
+		elif inner_predicate is None:
+			predicate = lambda p: p[2] == cmd
 		else:
 			predicate = lambda p: p[2] == cmd and inner_predicate(p)
 		super(_OneTimeHandler, self).__init__(handlers, predicate)
@@ -128,7 +130,7 @@ class Client(object):
 			self._logger.critical(msg)
 
 	def _send(self, data):
-		self._debug("# SEND: {}".format(data))
+		self._debug("# Send: {}".format(data))
 		try:
 			self.sock.send(data + chr(0))
 			return True
@@ -156,7 +158,7 @@ class Client(object):
 		i = self._buffer.index(chr(0))
 		data += self._buffer[:i]
 		self._buffer = self._buffer[i + 1:]
-		self._debug("# RECEIVE: {}".format(data))
+		self._debug("# Receive: {}".format(data))
 		return data
 
 	def _receive_packet(self):
@@ -496,14 +498,20 @@ class Client(object):
 			handled = False
 			if cmd in self._handlers:
 				for handler in self._handlers[cmd]:
+					try:
+						if handler.handle(packet):
+							handled = True
+					except ClientError as e:
+						self._error(e.message)
+			for handler in self._nexts:
+				try:
 					if handler.handle(packet):
 						handled = True
-			for handler in self._nexts:
-				if handler.handle(packet):
-					handled = True
-					break
+						break
+				except ClientError as e:
+					self._error(e.message)
 			if not handled:
-				self._warning("# UNHANDLED PACKET: {}".format('%'.join(packet)))
+				self._warning("# Unhandled packet: {}".format('%'.join(packet)))
 
 		if self._heartbeat_timer is not None:
 			self._heartbeat_timer.cancel()
@@ -690,7 +698,7 @@ class Client(object):
 		packet = self.next("uph")
 		if packet is None:
 			raise ClientError("Failed to change head item to {}".format(id))
-		self._info("Changed head item to {}".format(od))
+		self._info("Changed head item to {}".format(id))
 
 	@property
 	def face(self):
@@ -879,6 +887,8 @@ class Client(object):
 		self._info("Threw snowball to ({}, {})".format(x, y))
 
 	def say(self, msg, safe=False):
+		if not msg:
+			raise ClientError("Cannot say nothing")
 		self._info("Saying '{}'...".format(msg))
 		if safe:
 			self._send_packet("s", "u#ss", msg)
@@ -927,7 +937,7 @@ class Client(object):
 		raise ClientError("Invalid response")
 
 	def add_item(self, id):
-		self._info("Adding item {}".format(id))
+		self._info("Adding item {}...".format(id))
 		self._send_packet("s", "i#ai", id)
 		packet = self.next("ai", lambda p: int(p[4]) == int(id))
 		if packet is None:
@@ -1001,7 +1011,7 @@ class Client(object):
 
 	def follow(self, id, dx=0, dy=0):
 		if id == self._id:
-			raise ValueError("Cannot follow self")
+			raise ClientError("Cannot follow self")
 		self._info("Following {}...".format(id))
 		self.buddy(id)
 		self._follow = (id, dx, dy)

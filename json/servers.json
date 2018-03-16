@@ -47,15 +47,6 @@
 		},
 		"single_quotes": true
 	},
-	"regen": {
-		"ip": "54.37.68.52",
-		"login": 3111,
-		"servers": {
-			"avalanche": 3117,
-			"blizzard": 3112,
-			"frosty": 3116
-		}
-	},
 	"super": {
 		"ip": "167.114.148.26",
 		"login": 1708,
@@ -84,7 +75,7 @@
 		}
 	},
 	"cpu": {
-		"ip": "78.46.255.177",
+		"ip": "188.209.49.31",
 		"login": 6112,
 		"servers": {
 			"blizzard": 6113,
