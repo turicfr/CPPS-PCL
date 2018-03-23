@@ -4,11 +4,25 @@ import hashlib
 import json
 import logging
 from getpass import getpass
-import client as pcl
+from client import Client, ClientError
 try:
 	import readline
 except ImportError:
 	pass
+
+def get_remember():
+	if "-r" in sys.argv:
+		index = sys.argv.index("-r")
+		remember = sys.argv.pop(index + 1)
+		sys.argv.pop(index)
+		if remember == "yes":
+			return True
+		if remember == "no":
+			return False
+		if remember == "ask":
+			return None
+		sys.exit("Unknown remember option: '{}'".format(remember))
+	return None
 
 def get_server(cpps, server):
 	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
@@ -35,7 +49,7 @@ def get_server(cpps, server):
 
 def get_client(cpps, server):
 	login_ip, login_port, game_ip, game_port, magic, single_quotes = get_server(cpps, server)
-	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes)
+	return Client(login_ip, login_port, game_ip, game_port, magic, single_quotes)
 
 def get_password(cpps, user, remember=None):
 	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
@@ -74,42 +88,16 @@ def remove_penguin(cpps, user, data=None):
 	return False
 
 def login():
-	if "-r" in sys.argv:
-		remember = sys.argv.pop(sys.argv.index("-r") + 1)
-		sys.argv.remove("-r")
-		if remember == "yes":
-			remember = True
-		elif remember == "no":
-			remember = False
-		elif remember == "ask":
-			remember = None
-		else:
-			sys.exit("Unknown remember option: '{}'".format(remember))
-	else:
-		remember = None
-
+	remember = get_remember()
 	argc = len(sys.argv)
-	if argc > 1:
-		cpps = sys.argv[1].lower()
-	else:
-		cpps = raw_input("CPPS: ").lower()
-
-	if argc > 3:
-		user = sys.argv[3]
-	else:
-		user = raw_input("Username: ").lower()
-
+	cpps = sys.argv[1].lower() if argc > 1 else raw_input("CPPS: ").lower()
+	user = sys.argv[3] if argc > 3 else raw_input("Username: ").lower()
 	password, encrypted = get_password(cpps, user, remember)
-
-	if argc > 2:
-		server = sys.argv[2]
-	else:
-		server = raw_input("Server: ").lower()
-
+	server = sys.argv[2] if argc > 2 else raw_input("Server: ").lower()
 	client = get_client(cpps, server)
 	try:
 		client.connect(user, password, encrypted)
-	except pcl.ClientError as e:
+	except ClientError as e:
 		if e.code == 603:
 			remove_penguin(cpps, user)
 		sys.exit("Failed to connect")
@@ -122,13 +110,13 @@ def help(client):
 def log(client, level=None):
 	if level is None:
 		if client.logger.level:
-			msg = "all"
+			name = "all"
 			level = logging.NOTSET
 		else:
-			msg = "error"
+			name = "error"
 			level = logging.ERROR
 	else:
-		msg = level
+		name = level
 		if level == "all":
 			level = logging.NOTSET
 		if level == "debug":
@@ -144,7 +132,7 @@ def log(client, level=None):
 		else:
 			return "Unknown logging level '{}'".format(level)
 	client.logger.setLevel(level)
-	return "Logging {} messages".format(msg)
+	return "Logging {} messages".format(name)
 
 def internal(client):
 	return "Current internal room id: {}".format(client.internal_room_id)
@@ -300,7 +288,7 @@ def follow(client, *params):
 		else:
 			client.follow(id)
 		return None
-	elif client._follow:
+	if client._follow:
 		return "Currently following '{}'".format(client.penguins[client._follow[0]].name)
 	return "Currently not following"
 
@@ -370,14 +358,14 @@ def main():
 				if hasattr(function, "__self__"):
 					function(*params)
 				else:
-					msg = function(client, *params)
-					if msg is not None:
-						print msg
+					message = function(client, *params)
+					if message is not None:
+						print message
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
 					raise
 				print e.message
-			except pcl.ClientError as e:
+			except ClientError as e:
 				print e.message
 		elif command:
 			print "command '{}' doesn't exist".format(command)

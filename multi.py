@@ -2,12 +2,126 @@ import os
 import sys
 import json
 import logging
-import client as pcl
+from client import Client, ClientError
 import login
 try:
 	import readline
 except ImportError:
 	pass
+
+offsets = []
+
+def get_shape(shape):
+	filename = os.path.join(os.path.dirname(__file__), "json/shapes.json")
+	with open(filename) as file:
+		data = json.load(file)
+	if not shape in data:
+		sys.exit("Shape not found")
+	return data[shape]
+
+def connect_clients(clients, cpps, remember):
+	count = len(clients)
+	print "Logging in with {} penguin{}...".format(count, "s" if count > 1 else "")
+	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
+	try:
+		with open(filename) as file:
+			data = json.load(file)
+	except:
+		data = {}
+
+	if cpps in data:
+		for user, password in data[cpps].iteritems():
+			try:
+				clients[count - 1].connect(user, password, True)
+			except ClientError as e:
+				print "{}: {}".format(user, e.message)
+				if e.code == 603:
+					login.remove_penguin(cpps, user, data)
+				continue
+			count -= 1
+			if count == 0:
+				break
+			print "Connected! ({} left)\r".format(count),
+
+	i = 0
+	while i < count:
+		user = raw_input("Username: ").lower()
+		password, encrypted = login.get_password(cpps, user, remember)
+		print "Connecting..."
+		try:
+			clients[i].connect(user, password)
+		except ClientError as e:
+			print e.message
+			continue
+		i += 1
+		if i < count:
+			print "Connected! ({} left)".format(count - i)
+	print "All connected!      "
+
+def unify_clients(clients, shape):
+	for client in clients:
+		if "color" in shape:
+			try:
+				client.color = shape["color"]
+			except ClientError as e:
+				print e.message
+		if "head" in shape:
+			try:
+				client.head = shape["head"]
+			except ClientError as e:
+				print e.message
+		if "face" in shape:
+			try:
+				client.face = shape["face"]
+			except ClientError as e:
+				print e.message
+		if "neck" in shape:
+			try:
+				client.neck = shape["neck"]
+			except ClientError as e:
+				print e.message
+		if "body" in shape:
+			try:
+				client.body = shape["body"]
+			except ClientError as e:
+				print e.message
+		if "hand" in shape:
+			try:
+				client.hand = shape["hand"]
+			except ClientError as e:
+				print e.message
+		if "feet" in shape:
+			try:
+				client.feet = shape["feet"]
+			except ClientError as e:
+				print e.message
+		if "pin" in shape:
+			try:
+				client.pin = shape["pin"]
+			except ClientError as e:
+				print e.message
+		if "background" in shape:
+			try:
+				client.background = shape["background"]
+			except ClientError as e:
+				print e.message
+
+def get_clients():
+	remember = login.get_remember()
+	argc = len(sys.argv)
+	cpps = sys.argv[1].lower() if argc > 1 else raw_input("CPPS: ").lower()
+	shape = sys.argv[3] if argc > 3 else raw_input("Shape: ").lower()
+	shape = get_shape(shape)
+	global offsets
+	offsets = [(int(offset["x"]), int(offset["y"])) for offset in shape["offsets"]]
+	server = sys.argv[2] if argc > 2 else raw_input("Server: ").lower()
+	login_ip, login_port, game_ip, game_port, magic, single_quotes = login.get_server(cpps, server)
+	logger = logging.getLogger()
+	logger.addHandler(logging.NullHandler())
+	clients = [Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger) for offset in offsets]
+	connect_clients(clients, cpps, remember)
+	unify_clients(clients, shape)
+	return clients
 
 def help(clients):
 	return """HELP"""
@@ -17,226 +131,199 @@ def room(clients, id):
 		id = int(id)
 	except ValueError:
 		name = id
-		id = pcl.Client.get_room_id(name)
+		id = Client.get_room_id(name)
 		if not id:
 			return "Room '{}' not found".format(name)
 	for client in clients:
-		client.room = id
+		try:
+			client.room = id
+		except ClientError:
+			pass
 
-# def igloo(clients, id):
-# 	try:
-# 		id = int(id)
-# 	except ValueError:
-# 		name = id
-# 		id = client.get_id(name)
-# 		if not id:
-# 			return "Penguin '{}' not found".format(name)
-# 	for client in clients:
-# 		client.igloo = id
+def igloo(clients, id):
+	try:
+		id = int(id)
+	except ValueError:
+		name = id
+		id = clients[0].get_id(name)
+		if not id:
+			return "Penguin '{}' not found".format(name)
+	for client in clients:
+		try:
+			client.igloo = id
+		except ClientError:
+			pass
 
 def color(clients, id):
 	for client in clients:
-		client.color = id
+		try:
+			client.color = id
+		except ClientError:
+			pass
 
 def head(clients, id):
 	for client in clients:
-		client.head = id
+		try:
+			client.head = id
+		except ClientError:
+			pass
 
 def face(clients, id):
 	for client in clients:
-		client.face = id
+		try:
+			client.face = id
+		except ClientError:
+			pass
 
 def neck(clients, id):
 	for client in clients:
-		client.neck = id
+		try:
+			client.neck = id
+		except ClientError:
+			pass
 
 def body(clients, id):
 	for client in clients:
-		client.body = id
+		try:
+			client.body = id
+		except ClientError:
+			pass
 
 def hand(clients, id):
 	for client in clients:
-		client.hand = id
+		try:
+			client.hand = id
+		except ClientError:
+			pass
 
 def feet(clients, id):
 	for client in clients:
-		client.feet = id
+		try:
+			client.feet = id
+		except ClientError:
+			pass
 
 def pin(clients, id):
 	for client in clients:
-		client.pin = id
+		try:
+			client.pin = id
+		except ClientError:
+			pass
 
 def background(clients, id):
 	for client in clients:
-		client.background = id
+		try:
+			client.background = id
+		except ClientError:
+			pass
 
 def walk(clients, x, y):
-	for client, offset in zip(cliets, shape["offsets"]):
-		client.walk(int(x) + int(offset["x"]), int(y) + int(offset["y"]))
+	for client, (dx, dy) in zip(clients, offsets):
+		try:
+			client.walk(int(x) + dx, int(y) + dy)
+		except ClientError:
+			pass
 
 def dance(clients):
 	for client in clients:
-		client.dance()
+		try:
+			client.dance()
+		except ClientError:
+			pass
 
 def wave(clients):
 	for client in clients:
-		client.wave()
+		try:
+			client.wave()
+		except ClientError:
+			pass
 
 def sit(clients, dir=None):
-	if dir is None:
-		for client in clients:
-			client.sit()
-	else:
-		for client in clients:
-			client.sit(dir)
+
+	for client in clients:
+		try:
+			if dir is None:
+				client.sit()
+			else:
+				client.sit(dir)
+		except ClientError:
+			pass
 
 def snowball(clients, x, y):
 	for client in clients:
-		client.snowball(x, y)
+		try:
+			client.snowball(x, y)
+		except ClientError:
+			pass
 
 def say(clients, *params):
 	message = ' '.join(params)
 	for client in clients:
-		client.say(message)
+		try:
+			client.say(message)
+		except ClientError:
+			pass
 
-def joke(clients, params):
-	if params:
-		for client in clients:
-			client.joke(params[0])
-	else:
-		print "An argument is required"
+def joke(clients, id):
+	for client in clients:
+		try:
+			client.joke(id)
+		except ClientError:
+			pass
 
 def emote(clients, id):
 	for client in clients:
-		client.emote(id)
+		try:
+			client.emote(id)
+		except ClientError:
+			pass
 
 def add_item(clients, id):
 	for client in clients:
-		client.add_item(id)
+		try:
+			client.add_item(id)
+		except ClientError:
+			pass
 
 def coins(clients, amount):
 	for client in clients:
-		client.add_item(amount)
+		try:
+			client.add_item(amount)
+		except ClientError:
+			pass
 
 def follow(clients, *params):
 	name = ' '.join(params)
-	for client, offset in zip(clients, shape["offsets"]):
-		client.follow(name, int(offset["x"]), int(offset["y"]))
+	id = clients[0].get_id(name)
+	if not id:
+		return "Penguin '{}' not found".format(name)
+	for client, (dx, dy) in zip(clients, offsets):
+		try:
+			client.follow(id, dx, dy)
+		except ClientError:
+			pass
 
 def unfollow(clients):
 	for client in clients:
-		client.unfollow()
+		try:
+			client.unfollow()
+		except ClientError:
+			pass
 
 def logout(clients):
 	for client in clients:
-		client.logout()
+		try:
+			client.logout()
+		except ClientError:
+			pass
 	sys.exit(0)
 
 def main():
-	if "-r" in sys.argv:
-		remember = sys.argv.pop(sys.argv.index("-r") + 1)
-		sys.argv.remove("-r")
-		if remember == "yes":
-			remember = True
-		elif remember == "no":
-			remember = False
-		elif remember == "ask":
-			remember = None
-		else:
-			sys.exit("Unknown remember option: '{}'".format(remember))
-	else:
-		remember = None
-
-	argc = len(sys.argv)
-	if argc > 1:
-		cpps = sys.argv[1].lower()
-	else:
-		cpps = raw_input("CPPS: ").lower()
-
-	filename = os.path.join(os.path.dirname(__file__), "json/shapes.json")
-	with open(filename) as file:
-		data = json.load(file)
-	if argc > 3:
-		shape = sys.argv[3]
-	else:
-		shape = raw_input("Shape: ").lower()
-	if not shape in data:
-		sys.exit("Shape not found")
-	shape = data[shape]
-
-	if argc > 2:
-		server = sys.argv[2]
-	else:
-		server = raw_input("Server: ").lower()
-	login_ip, login_port, game_ip, game_port, magic, single_quotes = login.get_server(cpps, server)
-	
-	logger = logging.getLogger()
-	logger.addHandler(logging.NullHandler())
-	count = len(shape["offsets"])
-	clients = []
-	for i in range(count):
-		clients.append(pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger))
-	
-	print "Logins with {} penguin(s)...".format(count)
-	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
-	try:
-		with open(filename) as file:
-			data = json.load(file)
-	except:
-		data = {}
-	
-	if cpps in data:
-		for user, password in data[cpps].iteritems():
-			try:
-				clients[count - 1].connect(user, password, True)
-			except pcl.ClientError as e:
-				print "Username: {}".format(user)
-				if e.code == 603:
-					login.remove_penguin(cpps, user, data)
-				continue
-			count -= 1
-			if count == 0:
-				break
-			print "Connected! ({} left)".format(count)
-	
-	i = 0
-	while i < count:
-		user = raw_input("Username: ").lower()
-		password, encrypted = login.get_password(cpps, user, remember)
-		print "Connecting..."
-		try:
-			clients[i].connect(user, password)
-		except pcl.ClientError as e:
-			continue
-		i += 1
-		if i < count:
-			print "Connected! ({} left)".format(count - i)
-	print "All connected!"
-	
-	for client in clients:
-		if "color" in shape:
-			client.color = shape["color"]
-		if "head" in shape:
-			client.head = shape["head"]
-		if "face" in shape:
-			client.face = shape["face"]
-		if "neck" in shape:
-			client.neck = shape["neck"]
-		if "body" in shape:
-			client.body = shape["body"]
-		if "hand" in shape:
-			client.hand = shape["hand"]
-		if "feet" in shape:
-			client.feet = shape["feet"]
-		if "pin" in shape:
-			client.pin = shape["pin"]
-		if "background" in shape:
-			client.background = shape["background"]
-	
+	clients = get_clients()
 	commands = {
 		"help": help,
 		"room": room,
-		# "igloo": igloo,
+		"igloo": igloo,
 		"color": color,
 		"head": head,
 		"face": face,
@@ -274,18 +361,19 @@ def main():
 			break
 		command, params = command[0], command[1:]
 		if command in commands:
+			function = commands[command]
 			try:
-				msg = commands[command](clients, *params)
-				if msg is not None:
-					print msg
+				message = function(clients, *params)
+				if message is not None:
+					print message
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
 					raise
 				print e.message
-			except pcl.ClientError as e:
+			except ClientError as e:
 				print e.message
 		elif command:
-			print "command '{}' doesn't exist".format(name)
+			print "command '{}' doesn't exist".format(command)
 
 if __name__ == "__main__":
 	main()

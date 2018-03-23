@@ -58,8 +58,8 @@ class _OneTimeHandler(_Handler):
 			return None
 
 class ClientError(Exception):
-	def __init__(self, msg, code=0):
-		super(ClientError, self).__init__(msg)
+	def __init__(self, message, code=0):
+		super(ClientError, self).__init__(message)
 		self.code = code			
 
 class Client(object):
@@ -101,33 +101,33 @@ class Client(object):
 		password = password[16:32] + password[0:16]
 		return password
 
-	def _debug(self, msg):
+	def _debug(self, message):
 		if self._logger is not None:
-			self._logger.debug(msg)
+			self._logger.debug(message)
 
-	def _info(self, msg):
+	def _info(self, message):
 		if self._logger is not None:
-			self._logger.info(msg)
+			self._logger.info(message)
 
-	def _warning(self, msg):
+	def _warning(self, message):
 		if self._logger is not None:
-			self._logger.warning(msg)
+			self._logger.warning(message)
 
-	def _error(self, msg):
+	def _error(self, message):
 		if self._logger is not None:
-			if isinstance(msg, list):
+			if isinstance(message, list):
 				filename = os.path.join(os.path.dirname(__file__), "json/errors.json")
 				with open(filename) as file:
 					data = json.load(file)
-				code = int(msg[4])
-				msg = "Error #{}".format(code)
+				code = int(message[4])
+				message = "Error #{}".format(code)
 				if str(code) in data:
-					msg += ": {}".format(data[str(code)])
-			self._logger.error(msg)
+					message += ": {}".format(data[str(code)])
+			self._logger.error(message)
 
-	def _critical(self, msg):
+	def _critical(self, message):
 		if self._logger is not None:
-			self._logger.critical(msg)
+			self._logger.critical(message)
 
 	def _send(self, data):
 		self._debug("# Send: {}".format(data))
@@ -163,22 +163,24 @@ class Client(object):
 
 	def _receive_packet(self):
 		data = self._receive()
-		if data is None:
-			return None
+		while not data:
+			if data is None:
+				return None
+			data = self._receive()
 		if data.startswith("%"):
 			packet = data.split('%')
 			if packet[2] == "e":
 				self._error(packet)
 			return packet
-		raise ClientError("Invalid packet")
+		raise ClientError("Invalid packet: {}".format(data))
 
 	def _ver_check(self, ver):
 		self._info("Sending 'verChk' request...")
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='verChk' r='0'><ver v='{}' /></body></msg>".format(ver)
+			data = "<msg t='sys'><body action='verChk' r='0'><ver v='{}' /></body></msg>".format(ver)
 		else:
-			msg = '<msg t="sys"><body action="verChk" r="0"><ver v="{}"/></body></msg>'.format(ver)
-		if not self._send(msg):
+			data = '<msg t="sys"><body action="verChk" r="0"><ver v="{}"/></body></msg>'.format(ver)
+		if not self._send(data):
 			return False
 		data = self._receive()
 		if data is None:
@@ -193,15 +195,15 @@ class Client(object):
 		if "apiKO" in data:
 			self._info("Received 'apiKO' response")
 			return False
-		raise ClientError("Invalid response")
+		raise ClientError("Invalid verChk response: {}".format(data))
 
 	def _rndk(self):
 		self._info("Sending rndK request...")
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='rndK' r='-1'></body></msg>"
+			data = "<msg t='sys'><body action='rndK' r='-1'></body></msg>"
 		else:
-			msg = '<msg t="sys"><body action="rndK" r="-1"></body></msg>'
-		if not self._send(msg):
+			data = '<msg t="sys"><body action="rndK" r="-1"></body></msg>'
+		if not self._send(data):
 			return None
 		data = self._receive()
 		if data is None:
@@ -210,7 +212,7 @@ class Client(object):
 			key = re.search("<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", data).group(1)
 			self._info("Received key: {}".format(key))
 			return key
-		raise ClientError("Invalid response")
+		raise ClientError("Invalid rndk response: {}".format(data))
 
 	def _login(self, user, password, encrypted, ver):
 		self._info("Logging in...")
@@ -224,10 +226,10 @@ class Client(object):
 		else:
 			hash = password
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
+			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
 		else:
-			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
-		if not self._send(msg):
+			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
+		if not self._send(data):
 			return None, False
 		packet = self._receive_packet()
 		if packet is None or packet[2] == "e":
@@ -250,10 +252,10 @@ class Client(object):
 		if confirmation is not None:
 			hash += '#' + confirmation
 		if self._single_quotes:
-			msg = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
+			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
 		else:
-			msg = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
-		if not self._send(msg):
+			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
+		if not self._send(data):
 			return None, False
 		packet = self._receive_packet()
 		if packet is None or packet[2] == "e":
@@ -308,8 +310,7 @@ class Client(object):
 			packet = self.next("bf")
 			if packet is None:
 				return
-			room = int(packet[4])
-			self.room = room
+			self.room = int(packet[4])
 
 	def _jr(self, packet):
 		internal_room_id = int(packet[3])
@@ -320,8 +321,7 @@ class Client(object):
 		self._room = int(packet[4])
 		self._penguins.clear()
 		for i in packet[5:-1]:
-			penguin = Penguin.from_player(i)
-			self._penguins[penguin.id] = penguin
+			self._penguins[penguin.id] = Penguin.from_player(i)
 
 	def _br(self, packet):
 		id = int(packet[4])
@@ -332,82 +332,73 @@ class Client(object):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			color = int(packet[5])
-			penguin.color = color
+			penguin.color = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.color = color
+				self.color = penguin.color
 
 	def _uph(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			head = int(packet[5])
-			penguin.head = head
+			penguin.head = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.head = head
+				self.head = penguin.head
 
 	def _upf(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			face = int(packet[5])
-			penguin.face = face
+			penguin.face = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.face = face
+				self.face = penguin.face
 
 	def _upn(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			neck = int(packet[5])
-			penguin.neck = neck
+			penguin.neck = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.neck = neck
+				self.neck = penguin.neck
 
 	def _upb(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			body = int(packet[5])
-			penguin.body = body
+			penguin.body = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.body = body
+				self.body = penguin.body
 
 	def _upa(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			hand = int(packet[5])
-			penguin.hand = hand
+			penguin.hand = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.hand = hand
+				self.hand = penguin.hand
 
 	def _upe(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			feet = int(packet[5])
-			penguin.feet = feet
+			penguin.feet = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.feet = feet
+				self.feet = penguin.feet
 
 	def _upl(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			pin = int(packet[5])
-			penguin.pin = pin
+			penguin.pin = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.pin = pin
+				self.pin = penguin.pin
 
 	def _upp(self, packet):
 		id = int(packet[4])
 		if id in self._penguins:
 			penguin = self._penguins[id]
-			background = int(packet[5])
-			penguin.background = background
+			penguin.background = int(packet[5])
 			if self._follow is not None and id == self._follow[0]:
-				self.background = background
+				self.background = penguin.background
 
 	def _sp(self, packet):
 		id = int(packet[4])
@@ -442,15 +433,15 @@ class Client(object):
 
 	def _sm(self, packet):
 		id = int(packet[4])
-		msg = packet[5]
+		message = packet[5]
 		if self._follow is not None and id == self._follow[0]:
-			self.say(msg)
+			self.say(message)
 
 	def _ss(self, packet):
 		id = int(packet[4])
-		msg = packet[5]
+		message = packet[5]
 		if self._follow is not None and id == self._follow[0]:
-			self.say(msg, True)
+			self.say(message, True)
 
 	def _sj(self, packet):
 		id = int(packet[4])
@@ -825,10 +816,11 @@ class Client(object):
 		else:
 			self._heartbeat_timer = None
 
+	# TODO
 	def walk(self, x, y):
 		self._info("Walking to ({}, {})...".format(x, y))
-		# self._send_packet("s", "u#sp", None, self._id, x, y)
-		self._send_packet("s", "u#sp", self._id, x, y)
+		self._send_packet("s", "u#sp", None, self._id, x, y)
+		# self._send_packet("s", "u#sp", self._id, x, y)
 		packet = self.next("sp")
 		if packet is None:
 			raise ClientError("Failed to walk to ({}, {})".format(x, y))
@@ -886,21 +878,21 @@ class Client(object):
 			raise ClientError("Failed to throw snowball to ({}, {})".format(x, y))
 		self._info("Threw snowball to ({}, {})".format(x, y))
 
-	def say(self, msg, safe=False):
-		if not msg:
+	def say(self, message, safe=False):
+		if not message:
 			raise ClientError("Cannot say nothing")
-		self._info("Saying '{}'...".format(msg))
+		self._info("Saying '{}'...".format(message))
 		if safe:
-			self._send_packet("s", "u#ss", msg)
+			self._send_packet("s", "u#ss", message)
 			packet = self.next("ss")
 			if packet is None:
-				raise ClientError("Failed to say '{}'".format(msg))
+				raise ClientError("Failed to say '{}'".format(message))
 		else:
-			self._send_packet("s", "m#sm", self._id, msg)
+			self._send_packet("s", "m#sm", self._id, message)
 			packet = self.next("sm")
 			if packet is None:
-				raise ClientError("Failed to say '{}'".format(msg))
-		self._info("Said '{}'".format(msg))
+				raise ClientError("Failed to say '{}'".format(message))
+		self._info("Said '{}'".format(message))
 
 	def joke(self, id):
 		self._info("Telling joke {}...".format(id))
@@ -934,7 +926,7 @@ class Client(object):
 			raise ClientError("Not enough coins")
 		if sent == "1":
 			self._info("Sent postcard #{}".format(postcard))
-		raise ClientError("Invalid response")
+		raise ClientError("Invalid postcard response: {}".format(packet))
 
 	def add_item(self, id):
 		self._info("Adding item {}...".format(id))
@@ -965,7 +957,7 @@ class Client(object):
 		earn = coins - self._coins
 		self._coins = coins
 		self._internal_room_id = internal_room_id
-		# self.room = room
+		self.room = room
 		self._info("Added {} coins".format(earn))
 
 	def add_stamp(self, id):
@@ -1013,7 +1005,7 @@ class Client(object):
 		if id == self._id:
 			raise ClientError("Cannot follow self")
 		self._info("Following {}...".format(id))
-		self.buddy(id)
+		# self.buddy(id)
 		self._follow = (id, dx, dy)
 		penguin = self._penguins[id]
 		self.walk(penguin.x + dx, penguin.y + dy)

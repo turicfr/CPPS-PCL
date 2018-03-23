@@ -43,7 +43,7 @@
 		"login": 6112,
 		"magic": "dc3726460bc0b89b1ba952836531486bY(02.>'H}t\":E1_root",
 		"servers": {
-			"en": 6116
+			"freeland": 6116
 		},
 		"single_quotes": true
 	},
@@ -59,19 +59,22 @@
 		}
 	},
 	"online": {
-		"ip": "54.36.246.6",
+		"ip": "5.9.29.202",
 		"login": 7000,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
 			"abominable": 7007,
-			"alaska": 7002
+			"alaska": 7002,
+			"sleet": 7008
 		}
 	},
 	"tundrapenguin": {
 		"ip": "198.98.58.92",
 		"login": 3945,
 		"servers": {
-			"breeze": 2873
+			"breeze": 2873,
+			"polar": 2874,
+			"vanilla": 2875
 		}
 	},
 	"cpu": {
@@ -80,7 +83,23 @@
 		"servers": {
 			"blizzard": 6113,
 			"sleet": 6114,
-			"deep freeze": 6115
+			"deep freeze": 6115,
+			"big surf": 6116
+		}
+	},
+	"hangout": {
+		"ip": "207.148.13.157",
+		"login": 6112,
+		"servers": {
+			"blizzard": 6113,
+			"yeti": 6114
+		}
+	},
+	"iclubpenguin": {
+		"ip": "149.56.101.213",
+		"login": 6112,
+		"servers": {
+			"skynet": 6113
 		}
 	}
 }
