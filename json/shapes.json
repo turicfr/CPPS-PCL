@@ -5,15 +5,6 @@
 		]
 	},
 	"square": {
-		"color": 1,
-		"head": 0,
-		"face": 0,
-		"neck": 0,
-		"body": 0,
-		"hand": 0,
-		"feet": 0,
-		"pin": 0,
-		"background": 0,
 		"offsets": [
 			{"x": 50, "y": 50},
 			{"x": -50, "y": 50},

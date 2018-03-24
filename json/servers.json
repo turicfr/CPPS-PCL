@@ -101,5 +101,12 @@
 		"servers": {
 			"skynet": 6113
 		}
+	},
+	"ruby": {
+		"ip": "136.243.184.102",
+		"login": 6112,
+		"servers": {
+			"blizzard": 6113
+		}
 	}
 }

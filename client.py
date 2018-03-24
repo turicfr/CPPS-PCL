@@ -321,7 +321,8 @@ class Client(object):
 		self._room = int(packet[4])
 		self._penguins.clear()
 		for i in packet[5:-1]:
-			self._penguins[penguin.id] = Penguin.from_player(i)
+			penguin = Penguin.from_player(i)
+			self._penguins[penguin.id] = penguin
 
 	def _br(self, packet):
 		id = int(packet[4])
