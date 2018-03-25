@@ -8,6 +8,7 @@ import threading
 import Queue
 import logging
 from penguin import Penguin
+from aes import AES
 
 class _Handler(object):
 	def __init__(self, handlers, predicate):
@@ -76,6 +77,8 @@ class Client(object):
 		self._logger = logger
 		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
 		self._single_quotes = single_quotes
+		self._walk_internal_room_id = False
+
 		self._connected = False
 		self._buffer = ""
 		self._handlers = {}
@@ -223,6 +226,9 @@ class Client(object):
 			return None, False
 		if self._magic:
 			hash = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
+			if rndk == "houdini":
+				aes = AES(256, 256)
+				hash = aes.encrypt(hash, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
 		else:
 			hash = password
 		if self._single_quotes:
@@ -479,6 +485,17 @@ class Client(object):
 		self.handle("ss", self._ss)
 		self.handle("sj", self._sj)
 		self.handle("se", self._se)
+
+		try:
+			self.walk(0, 0, False)
+			self._walk_internal_room_id = False
+		except ClientError:
+			try:
+				self.walk(0, 0, True)
+				self._walk_internal_room_id = True
+			except ClientError:
+				self._warning("Walk method not found")
+
 		while self._connected:
 			packet = self._receive_packet()
 			if not self._connected:
@@ -817,11 +834,12 @@ class Client(object):
 		else:
 			self._heartbeat_timer = None
 
-	# TODO
-	def walk(self, x, y):
+	def walk(self, x, y, internal_room_id=False):
 		self._info("Walking to ({}, {})...".format(x, y))
-		self._send_packet("s", "u#sp", None, self._id, x, y)
-		# self._send_packet("s", "u#sp", self._id, x, y)
+		if internal_room_id:
+			self._send_packet("s", "u#sp", self._id, x, y)
+		else:
+			self._send_packet("s", "u#sp", None, self._id, x, y)
 		packet = self.next("sp")
 		if packet is None:
 			raise ClientError("Failed to walk to ({}, {})".format(x, y))
@@ -1006,7 +1024,10 @@ class Client(object):
 		if id == self._id:
 			raise ClientError("Cannot follow self")
 		self._info("Following {}...".format(id))
-		# self.buddy(id)
+		try:
+			self.buddy(id)
+		except ClientError:
+			pass
 		self._follow = (id, dx, dy)
 		penguin = self._penguins[id]
 		self.walk(penguin.x + dx, penguin.y + dy)
