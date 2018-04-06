@@ -21,7 +21,7 @@ def get_remember():
 			return False
 		if remember == "ask":
 			return None
-		sys.exit("Unknown remember option: '{}'".format(remember))
+		sys.exit('Unknown remember option: "{}"'.format(remember))
 	return None
 
 def get_server(cpps, server):
@@ -38,9 +38,9 @@ def get_server(cpps, server):
 		login_port = data[cpps]["login"]
 		game_port = data[cpps]["servers"][server]
 	else:
-		login_ip, login_port = data[cpps]["login"].split(':')
+		login_ip, login_port = data[cpps]["login"].split(":")
 		login_port = int(login_port)
-		game_ip, game_port = data[cpps]["servers"][server].split(':')
+		game_ip, game_port = data[cpps]["servers"][server].split(":")
 		game_port = int(game_port)
 	magic = data[cpps].get("magic")
 	single_quotes = data[cpps].get("single_quotes")
@@ -127,10 +127,10 @@ def log(client, level=None):
 			level = logging.WARNING
 		elif level == "error":
 			level = logging.ERROR
-		elif level == "cricital":
-			level = logging.CRICITAL
+		elif level == "critical":
+			level = logging.CRITICAL
 		else:
-			return "Unknown logging level '{}'".format(level)
+			return 'Unknown logging level "{}"'.format(level)
 	client.logger.setLevel(level)
 	return "Logging {} messages".format(name)
 
@@ -143,7 +143,7 @@ def id(client, name=None):
 	else:
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '{}' not found".format(name)
+			return 'Penguin "{}" not found'.format(name)
 	return "ID: {}".format(id)
 
 def name(client, id=None):
@@ -164,7 +164,7 @@ def room(client, id=None):
 		name = id
 		id = client.get_room_id(name)
 		if not id:
-			return "Room '{}' not found".format(name)
+			return 'Room "{}" not found'.format(name)
 	client.room = id
 
 def igloo(client, id=None):
@@ -177,11 +177,11 @@ def igloo(client, id=None):
 			name = id
 			id = client.get_id(name)
 			if not id:
-				return "Penguin '{}' not found".format(name)
+				return 'Penguin "{}" not found'.format(name)
 	client.igloo = id
 
 def penguins(client):
-	return '\n'.join(penguin.name for id, penguin in client.penguins.iteritems())
+	return "\n".join(penguin.name for id, penguin in client.penguins.iteritems())
 
 def color(client, id=None):
 	if id is None:
@@ -238,21 +238,21 @@ def background(client, id=None):
 		client.background = id
 
 def inventory(client):
-	return '\n'.join(str(id) for id in client.inventory)
+	return "\n".join(str(id) for id in client.inventory)
 
 def stamps(client):
-	return '\n'.join(client.stamps)
+	return "\n".join(client.stamps)
 
 def say(client, *params):
-	client.say(' '.join(params))
+	client.say(" ".join(params))
 
 def mail(client, *params):
 	if len(params) > 1:
 		postcard = params[0]
-		name = ' '.join(params[1:])
+		name = " ".join(params[1:])
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '{}' not found".format(name)
+			return 'Penguin "{}" not found'.format(name)
 		client.mail(id, postcard)
 
 def coins(client, amount=None):
@@ -262,10 +262,10 @@ def coins(client, amount=None):
 		client.add_coins(amount)
 
 def buddy(client, *params):
-	name = ' '.join(params)
+	name = " ".join(params)
 	id = client.get_id(name)
 	if not id:
-		return "Penguin '{}' not found".format(name)
+		return 'Penguin "{}" not found'.format(name)
 	client.buddy(id)
 
 def follow(client, *params):
@@ -279,17 +279,17 @@ def follow(client, *params):
 				offset = True
 			except ValueError:
 				pass
-		name = ' '.join(params)
+		name = " ".join(params)
 		id = client.get_id(name)
 		if not id:
-			return "Penguin '{}' not found".format(name)
+			return 'Penguin "{}" not found'.format(name)
 		if offset:
 			client.follow(id, dx, dy)
 		else:
 			client.follow(id)
 		return None
 	if client._follow:
-		return "Currently following '{}'".format(client.penguins[client._follow[0]].name)
+		return 'Currently following "{}"'.format(client.penguins[client._follow[0]].name)
 	return "Currently not following"
 
 def logout(client):
@@ -344,7 +344,7 @@ def main():
 	}
 	while client.connected:
 		try:
-			command = raw_input(">>> ").split(' ')
+			command = raw_input(">>> ").split(" ")
 		except KeyboardInterrupt:
 			print
 			continue
@@ -366,9 +366,9 @@ def main():
 					raise
 				print e.message
 			except ClientError as e:
-				print e.message
+				pass
 		elif command:
-			print "command '{}' doesn't exist".format(command)
+			print 'command "{}" does not exist'.format(command)
 
 if __name__ == "__main__":
 	main()

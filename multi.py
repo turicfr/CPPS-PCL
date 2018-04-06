@@ -41,7 +41,7 @@ def connect_clients(clients, cpps, remember):
 			count -= 1
 			if count == 0:
 				break
-			print "Connected! ({} left)\r".format(count),
+			print "Connected! ({} left)".format(count)
 
 	i = 0
 	while i < count:
@@ -56,7 +56,7 @@ def connect_clients(clients, cpps, remember):
 		i += 1
 		if i < count:
 			print "Connected! ({} left)".format(count - i)
-	print "All connected!      "
+	print "All connected!"
 
 def unify_clients(clients, shape):
 	for client in clients:
@@ -133,7 +133,7 @@ def room(clients, id):
 		name = id
 		id = Client.get_room_id(name)
 		if not id:
-			return "Room '{}' not found".format(name)
+			return 'Room "{}" not found'.format(name)
 	for client in clients:
 		try:
 			client.room = id
@@ -147,7 +147,7 @@ def igloo(clients, id):
 		name = id
 		id = clients[0].get_id(name)
 		if not id:
-			return "Penguin '{}' not found".format(name)
+			return 'Penguin "{}" not found'.format(name)
 	for client in clients:
 		try:
 			client.igloo = id
@@ -257,7 +257,7 @@ def snowball(clients, x, y):
 			pass
 
 def say(clients, *params):
-	message = ' '.join(params)
+	message = " ".join(params)
 	for client in clients:
 		try:
 			client.say(message)
@@ -293,10 +293,10 @@ def coins(clients, amount):
 			pass
 
 def follow(clients, *params):
-	name = ' '.join(params)
+	name = " ".join(params)
 	id = clients[0].get_id(name)
 	if not id:
-		return "Penguin '{}' not found".format(name)
+		return 'Penguin "{}" not found'.format(name)
 	for client, (dx, dy) in zip(clients, offsets):
 		try:
 			client.follow(id, dx, dy)
@@ -352,7 +352,7 @@ def main():
 	}
 	while all(client.connected for client in clients):
 		try:
-			command = raw_input(">>> ").split(' ')
+			command = raw_input(">>> ").split(" ")
 		except KeyboardInterrupt:
 			print
 			continue
@@ -371,9 +371,9 @@ def main():
 					raise
 				print e.message
 			except ClientError as e:
-				print e.message
+				pass
 		elif command:
-			print "command '{}' doesn't exist".format(command)
+			print 'command "{}" does not exist'.format(command)
 
 if __name__ == "__main__":
 	main()
