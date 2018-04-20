@@ -8,7 +8,28 @@ from client import Client, ClientError
 try:
 	import readline
 except ImportError:
-	pass
+	readline = None
+
+class LoginError(Exception):
+	def __init__(self, message=""):
+		super(LoginError, self).__init__(message)
+
+def get_json(filename):
+	filename = os.path.join(os.path.dirname(__file__), "json", filename + ".json")
+	try:
+		with open(filename) as file:
+			return json.load(file)
+	except IOError:
+		return {}
+
+def set_json(filename, data):
+	filename = os.path.join(os.path.dirname(__file__), "json", filename + ".json")
+	try:
+		with open(filename, "w") as file:
+			json.dump(data, file)
+	except IOError:
+		return False
+	return True
 
 def get_remember():
 	if "-r" in sys.argv:
@@ -21,86 +42,116 @@ def get_remember():
 			return False
 		if remember == "ask":
 			return None
-		sys.exit('Unknown remember option: "{}"'.format(remember))
+		raise LoginError('Unknown remember option: "{}"'.format(remember))
 	return None
 
-def get_server(cpps, server):
-	filename = os.path.join(os.path.dirname(__file__), "json/servers.json")
-	with open(filename) as file:
-		data = json.load(file)
-	if not cpps in data:
-		sys.exit("CPPS not found")
-	if not server in data[cpps]["servers"]:
-		sys.exit("Server not found")
+def complete(options):
+	def complete_inner(text, state):
+		line = readline.get_line_buffer()
+		return [option for option in options if option.startswith(line)][state]
+	return complete_inner
 
-	if "ip" in data[cpps]:
-		login_ip = game_ip = data[cpps]["ip"]
-		login_port = data[cpps]["login"]
-		game_port = data[cpps]["servers"][server]
-	else:
-		login_ip, login_port = data[cpps]["login"].split(":")
-		login_port = int(login_port)
-		game_ip, game_port = data[cpps]["servers"][server].split(":")
-		game_port = int(game_port)
-	magic = data[cpps].get("magic")
-	single_quotes = data[cpps].get("single_quotes")
-	
-	return login_ip, login_port, game_ip, game_port, magic, single_quotes
+def get_input(prompt=None, options=None):
+	if readline is not None and options is not None:
+		completer_delims = readline.get_completer_delims()
+		completer = readline.get_completer()
 
-def get_client(cpps, server):
-	login_ip, login_port, game_ip, game_port, magic, single_quotes = get_server(cpps, server)
-	return Client(login_ip, login_port, game_ip, game_port, magic, single_quotes)
-
-def get_password(cpps, user, remember=None):
-	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
+		readline.set_completer_delims("")
+		readline.parse_and_bind("tab: complete")
+		readline.set_completer(complete(options))
 	try:
-		with open(filename) as file:
-			data = json.load(file)
-	except:
-		data = {}
-	if cpps in data and user in data[cpps]:
-		return data[cpps][user], True
+		return raw_input() if prompt is None else raw_input(prompt)
+	finally:
+		if readline is not None and options is not None:
+			readline.set_completer_delims(completer_delims)
+			readline.set_completer(completer)
+
+def get_cpps(servers, cpps=None):
+	if cpps is None:
+		cpps = get_input("CPPS: ", servers.keys())
+	cpps = cpps.lower()
+	if cpps not in servers:
+		raise LoginError("CPPS not found")
+	return cpps
+
+def get_user(penguins, cpps, user=None):
+	if user is None:
+		user = get_input("Username: ", penguins.get(cpps, {}).keys())
+	user = user.lower()
+	return user
+
+def get_password(penguins, cpps, user, remember=None):
+	if cpps in penguins and user in penguins[cpps]:
+		return penguins[cpps][user], True
 	password = getpass("Password: ")
 	if remember is None:
-		remember = raw_input("Remember? [y/N] ") == "y"
+		remember = get_input("Remember? [y/N] ", ["y", "N"]) == "y"
 	if remember:
-		if not cpps in data:
-			data[cpps] = {}
-		data[cpps][user] = hashlib.md5(password).hexdigest()
-		with open(filename, "w") as file:
-			json.dump(data, file)
+		if cpps not in penguins:
+			penguins[cpps] = {}
+		penguins[cpps][user] = hashlib.md5(password).hexdigest()
+		set_json("penguins", penguins)
 	return password, False
 
-def remove_penguin(cpps, user, data=None):
-	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
-	if not data:
-		try:
-			with open(filename) as file:
-				data = json.load(file)
-		except:
-			return False
-	if cpps in data and user in data[cpps]:
+def get_server(servers, cpps, server=None):
+	if server is None:
+		server = get_input("Server: ", servers[cpps]["servers"].keys())
+	server = server.lower()
+	if server not in servers[cpps]["servers"]:
+		raise LoginError("Server not found")
+	return server
+
+def get_client(servers, cpps, server, logger=None):
+	if "ip" in servers[cpps]:
+		login_ip = game_ip = servers[cpps]["ip"]
+		login_port = servers[cpps]["login"]
+		game_port = servers[cpps]["servers"][server]
+	else:
+		login_ip, login_port = servers[cpps]["login"].split(":")
+		login_port = int(login_port)
+		game_ip, game_port = servers[cpps]["servers"][server].split(":")
+		game_port = int(game_port)
+	magic = servers[cpps].get("magic")
+	single_quotes = servers[cpps].get("single_quotes")
+	return Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
+
+def get_penguin(cpps=None, server=None, user=None, remember=None):
+	servers = get_json("servers")
+	penguins = get_json("penguins")
+
+	try:
+		cpps = get_cpps(servers, cpps)
+		user = get_user(penguins, cpps, user)
+		password, encrypted = get_password(penguins, cpps, user, remember)
+		server = get_server(servers, cpps, server)
+	except KeyboardInterrupt:
+		raise LoginError()
+
+	client = get_client(servers, cpps, server)
+	return cpps, server, user, password, encrypted, client
+
+def remove_penguin(cpps, user, penguins=None):
+	if penguins is None:
+		penguins = get_json("penguins")
+	if cpps in penguins and user in penguins[cpps]:
 		print "Removing {}...".format(user)
-		del data[cpps][user]
-		with open(filename, "w") as file:
-			json.dump(data, file)
-		return True
-	return False
+		del penguins[cpps][user]
+		set_json("penguins", penguins)
 
 def login():
 	remember = get_remember()
 	argc = len(sys.argv)
-	cpps = sys.argv[1].lower() if argc > 1 else raw_input("CPPS: ").lower()
-	user = sys.argv[3] if argc > 3 else raw_input("Username: ").lower()
-	password, encrypted = get_password(cpps, user, remember)
-	server = sys.argv[2] if argc > 2 else raw_input("Server: ").lower()
-	client = get_client(cpps, server)
+	cpps = sys.argv[1] if argc > 1 else None
+	server = sys.argv[2] if argc > 2 else None
+	user = sys.argv[3] if argc > 3 else None
+	cpps, server, user, password, encrypted, client = get_penguin(cpps, server, user, remember)
+
 	try:
 		client.connect(user, password, encrypted)
 	except ClientError as e:
-		if e.code == 603:
+		if e.code == 101 or e.code == 603:
 			remove_penguin(cpps, user)
-		sys.exit("Failed to connect")
+		raise LoginError("Failed to connect")
 	print "Connected!"
 	return client
 
@@ -297,7 +348,11 @@ def logout(client):
 	sys.exit(0)
 
 def main():
-	client = login()
+	try:
+		client = login()
+	except LoginError as e:
+		print e.message
+		sys.exit(1)
 	commands = {
 		"help": help,
 		"log": log,
@@ -344,7 +399,7 @@ def main():
 	}
 	while client.connected:
 		try:
-			command = raw_input(">>> ").split(" ")
+			command = get_input(">>> ", commands.keys()).split(" ")
 		except KeyboardInterrupt:
 			print
 			continue
@@ -364,7 +419,7 @@ def main():
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
 					raise
-				print e.message
+				print 'command "{}" does not take {} arguments'.format(command, len(params))
 			except ClientError as e:
 				pass
 		elif command:

@@ -1,42 +1,32 @@
-import os
 import sys
-import json
 import logging
 from client import Client, ClientError
 import login
-try:
-	import readline
-except ImportError:
-	pass
 
 offsets = []
 
-def get_shape(shape):
-	filename = os.path.join(os.path.dirname(__file__), "json/shapes.json")
-	with open(filename) as file:
-		data = json.load(file)
-	if not shape in data:
-		sys.exit("Shape not found")
-	return data[shape]
+def get_shape(shapes, shape=None):
+	if shape is None:
+		shape = login.get_input("Shape: ", shapes.keys())
+	shape = shape.lower()
+	if shape not in shapes:
+		raise login.LoginError("Shape not found")
+	return shapes[shape]
 
-def connect_clients(clients, cpps, remember):
+def connect_clients(cpps, server, clients, remember):
 	count = len(clients)
 	print "Logging in with {} penguin{}...".format(count, "s" if count > 1 else "")
-	filename = os.path.join(os.path.dirname(__file__), "json/penguins.json")
-	try:
-		with open(filename) as file:
-			data = json.load(file)
-	except:
-		data = {}
 
-	if cpps in data:
-		for user, password in data[cpps].items():
+	penguins = login.get_json("penguins")
+	if cpps in penguins:
+		for user, password in penguins[cpps].items():
+			print "Connecting..."
 			try:
 				clients[count - 1].connect(user, password, True)
 			except ClientError as e:
 				print "{}: {}".format(user, e.message)
-				if e.code == 603:
-					login.remove_penguin(cpps, user, data)
+				if e.code == 101 or e.code == 603:
+					login.remove_penguin(cpps, user, penguins)
 				continue
 			count -= 1
 			if count == 0:
@@ -45,13 +35,14 @@ def connect_clients(clients, cpps, remember):
 
 	i = 0
 	while i < count:
-		user = raw_input("Username: ").lower()
-		password, encrypted = login.get_password(cpps, user, remember)
+		cpps, server, user, password, encrypted, clients[i] = login.get_penguin(cpps, server, remember=remember)
 		print "Connecting..."
 		try:
 			clients[i].connect(user, password)
 		except ClientError as e:
 			print e.message
+			if e.code == 101 or e.code == 603:
+				login.remove_penguin(cpps, user)
 			continue
 		i += 1
 		if i < count:
@@ -106,20 +97,33 @@ def unify_clients(clients, shape):
 			except ClientError as e:
 				print e.message
 
-def get_clients():
-	remember = login.get_remember()
-	argc = len(sys.argv)
-	cpps = sys.argv[1].lower() if argc > 1 else raw_input("CPPS: ").lower()
-	shape = sys.argv[3] if argc > 3 else raw_input("Shape: ").lower()
-	shape = get_shape(shape)
-	global offsets
+def get_penguins(cpps=None, server=None, shape=None):
+	servers = login.get_json("servers")
+	shapes = login.get_json("shapes")
+
+	try:
+		cpps = login.get_cpps(servers, cpps)
+		server = login.get_server(servers, cpps, server)
+		shape = get_shape(shapes, shape)
+	except KeyboardInterrupt:
+		raise login.LoginError()
+
 	offsets = [(int(offset["x"]), int(offset["y"])) for offset in shape["offsets"]]
-	server = sys.argv[2] if argc > 2 else raw_input("Server: ").lower()
-	login_ip, login_port, game_ip, game_port, magic, single_quotes = login.get_server(cpps, server)
 	logger = logging.getLogger()
 	logger.addHandler(logging.NullHandler())
-	clients = [Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger) for offset in offsets]
-	connect_clients(clients, cpps, remember)
+	clients = [login.get_client(servers, cpps, server, logger) for offset in offsets]
+	return cpps, server, shape, offsets, clients
+
+def logins():
+	remember = login.get_remember()
+	argc = len(sys.argv)
+	cpps = sys.argv[1] if argc > 1 else None
+	server = sys.argv[2] if argc > 2 else None
+	shape = sys.argv[3] if argc > 3 else None
+	global offsets
+	cpps, server, shape, offsets, clients = get_penguins(cpps, server, shape)
+
+	connect_clients(cpps, server, clients, remember)
 	unify_clients(clients, shape)
 	return clients
 
@@ -319,7 +323,11 @@ def logout(clients):
 	sys.exit(0)
 
 def main():
-	clients = get_clients()
+	try:
+		clients = logins()
+	except login.LoginError as e:
+		print e.message
+		sys.exit(1)
 	commands = {
 		"help": help,
 		"room": room,
@@ -352,7 +360,7 @@ def main():
 	}
 	while all(client.connected for client in clients):
 		try:
-			command = raw_input(">>> ").split(" ")
+			command = login.get_input(">>> ", commands.keys()).split(" ")
 		except KeyboardInterrupt:
 			print
 			continue
@@ -369,7 +377,7 @@ def main():
 			except TypeError as e:
 				if function.__name__ + "() takes" not in e.message:
 					raise
-				print e.message
+				print 'command "{}" does not take {} arguments'.format(command, len(params))
 			except ClientError as e:
 				pass
 		elif command:

@@ -17,7 +17,8 @@ class _Handler(object):
 
 	def handle(self, packet):
 		if self._predicate is None or self._predicate(packet):
-			self.inner_handle(packet)
+			thread = threading.Thread(target=self.inner_handle, args=(packet,))
+			thread.start()
 			return True
 		return False
 
@@ -48,15 +49,15 @@ class _OneTimeHandler(_Handler):
 
 	def inner_handle(self, packet):
 		self._queue.put(packet)
-		self._handlers.remove(self)
 
 	@property
 	def packet(self):
 		try:
 			return self._queue.get(timeout=self._timeout)
 		except Queue.Empty:
-			self._handlers.remove(self)
 			return None
+		finally:
+			self._handlers.remove(self)
 
 	def cancel(self):
 		self._queue.put(None)
@@ -763,13 +764,14 @@ class Client(object):
 		packet = self.next("gi")
 		if packet is None:
 			self._error("Failed to fetch inventory")
-		return [int(id) for id in packet[4:-1]]
+		return [int(id) for id in packet[4:-1] if id]
 
 	@property
 	def stamps(self):
 		self._info("Fetching stamps...")
 		self._send_packet("s", "st#gps")
-		if self.next("gps") is None:
+		packet = self.next("gps")
+		if packet is None:
 			self._error("Failed to fetch stamps")
 		return packet[4:-1]
 
