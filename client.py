@@ -475,12 +475,18 @@ class Client(object):
 			handled = False
 			if cmd in self._handlers:
 				for handler in self._handlers[cmd]:
+					try:
+						if handler.handle(packet):
+							handled = True
+					except ClientError:
+						pass
+			for handler in self._nexts:
+				try:
 					if handler.handle(packet):
 						handled = True
-			for handler in self._nexts:
-				if handler.handle(packet):
-					handled = True
-					break
+						break
+				except ClientError:
+					pass
 			if not handled:
 				self._warning("# Unhandled packet: {}".format("%".join(packet)))
 
@@ -667,7 +673,7 @@ class Client(object):
 		self._info("Changing face item to {}...".format(id))
 		self._send_packet("s", "s#upf", id)
 		if self.next("upf") is None:
-			self._error("Failed to face head item to {}".format(id))
+			self._error("Failed to change face item to {}".format(id))
 		self._info("Changed face item to {}".format(id))
 
 	@property
@@ -754,7 +760,8 @@ class Client(object):
 	def inventory(self):
 		self._info("Fetching inventory...")
 		self._send_packet("s", "i#gi")
-		if self.next("gi") is None:
+		packet = self.next("gi")
+		if packet is None:
 			self._error("Failed to fetch inventory")
 		return [int(id) for id in packet[4:-1]]
 

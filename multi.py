@@ -30,7 +30,7 @@ def connect_clients(clients, cpps, remember):
 		data = {}
 
 	if cpps in data:
-		for user, password in data[cpps].iteritems():
+		for user, password in data[cpps].items():
 			try:
 				clients[count - 1].connect(user, password, True)
 			except ClientError as e:
