@@ -1,14 +1,29 @@
-import os
 import sys
 import socket
 import hashlib
 import re
-import json
 import threading
 import Queue
 import logging
+import common
 from penguin import Penguin
 from aes import AES
+
+class _ExceptionThread(threading.Thread):
+	def __init__(self, *arg, **kwargs):
+		super(_ExceptionThread, self).__init__(*arg, **kwargs)
+		self._exception = None
+
+	def run(self, *args, **kwargs):
+		try:
+			super(_ExceptionThread, self).run(*args, **kwargs)
+		except Exception as e:
+			self._exception = e
+
+	def join(self, *args, **kwargs):
+		super(_ExceptionThread, self).join(*args, **kwargs)
+		if self._exception is not None:
+			raise self._exception
 
 class _Handler(object):
 	def __init__(self, handlers, predicate):
@@ -17,10 +32,10 @@ class _Handler(object):
 
 	def handle(self, packet):
 		if self._predicate is None or self._predicate(packet):
-			thread = threading.Thread(target=self.inner_handle, args=(packet,))
+			thread = _ExceptionThread(target=self.inner_handle, args=(packet,))
 			thread.start()
-			return True
-		return False
+			return thread
+		return None
 
 class _CallbackHandler(_Handler):
 	def __init__(self, handlers, predicate, callback):
@@ -45,22 +60,22 @@ class _OneTimeHandler(_Handler):
 		super(_OneTimeHandler, self).__init__(handlers, predicate)
 		self._cmd = cmd
 		self._timeout = timeout
-		self._queue = Queue.Queue(1)
+		self._packet = Queue.Queue(1)
 
 	def inner_handle(self, packet):
-		self._queue.put(packet)
+		self._packet.put(packet)
 
 	@property
 	def packet(self):
 		try:
-			return self._queue.get(timeout=self._timeout)
+			return self._packet.get(timeout=self._timeout)
 		except Queue.Empty:
 			return None
 		finally:
 			self._handlers.remove(self)
 
 	def cancel(self):
-		self._queue.put(None)
+		self._packet.put(None)
 
 class ClientError(Exception):
 	def __init__(self, message, code=0):
@@ -122,11 +137,8 @@ class Client(object):
 
 	def _error(self, message):
 		if isinstance(message, list):
-			filename = os.path.join(os.path.dirname(__file__), "json/errors.json")
-			with open(filename) as file:
-				data = json.load(file)
 			code = int(message[4])
-			message = data.get(str(code), "")
+			message = common.get_json("errors").get(str(code), "")
 			if self._logger is not None:
 				if message:
 					self._logger.error("Error #{}: {}".format(code, message))
@@ -145,8 +157,7 @@ class Client(object):
 	def _send(self, data):
 		self._debug("# Send: {}".format(data))
 		try:
-			self.sock.send(data + chr(0))
-			return True
+			self._sock.send(data + chr(0))
 		except socket.error:
 			self._critical("Connection lost")
 
@@ -157,14 +168,14 @@ class Client(object):
 		else:
 			packet += str(self._internal_room_id) + "%"
 		packet += "".join(str(arg) + "%" for arg in args)
-		return self._send(packet)
+		self._send(packet)
 
 	def _receive(self):
 		data = ""
 		try:
 			while not chr(0) in self._buffer:
 				data += self._buffer
-				self._buffer = self.sock.recv(4096)
+				self._buffer = self._sock.recv(4096)
 		except socket.error:
 			self._critical("Connection lost")
 		i = self._buffer.index(chr(0))
@@ -258,7 +269,7 @@ class Client(object):
 		self._info("Joined server")
 
 	def _e(self, packet):
-		pass
+		self._error(packet)
 
 	def _lp(self, packet):
 		del self._handlers["lp"]
@@ -280,8 +291,7 @@ class Client(object):
 		# saved_map_category = int(packet[15])
 		# status_field = int(packet[16])
 
-		thread = threading.Thread(target=self._heartbeat)
-		thread.start()
+		self._heartbeat()
 
 	def _ap(self, packet):
 		penguin = Penguin.from_player(packet[4])
@@ -465,6 +475,7 @@ class Client(object):
 		self.handle("sj", self._sj)
 		self.handle("se", self._se)
 
+		threads = set()
 		while self._connected:
 			try:
 				packet = self._receive_packet(True)
@@ -474,28 +485,40 @@ class Client(object):
 				break
 			cmd = packet[2]
 			handled = False
+
 			if cmd in self._handlers:
 				for handler in self._handlers[cmd]:
-					try:
-						if handler.handle(packet):
-							handled = True
-					except ClientError:
-						pass
-			for handler in self._nexts:
-				try:
-					if handler.handle(packet):
+					thread = handler.handle(packet)
+					if thread is not None:
+						threads.add(thread)
 						handled = True
-						break
-				except ClientError:
-					pass
+
+			for handler in self._nexts:
+				thread = handler.handle(packet)
+				if thread is not None:
+					threads.add(thread)
+					handled = True
+					break
+
 			if not handled:
 				self._warning("# Unhandled packet: {}".format("%".join(packet)))
 
+			alive = set()
+			for thread in threads:
+				if thread.isAlive():
+					alive.add(thread)
+				else:
+					try:
+						thread.join()
+					except ClientError:
+						pass
+			threads = alive
+
 	def connect(self, user, password, encrypted=False, ver=153):
 		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
-		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.sock.connect((self._login_ip, self._login_port))
+			self._sock.connect((self._login_ip, self._login_port))
 		except socket.error:
 			self._error("Failed to connect to login server at {}:{}".format(self._login_ip, self._login_port))
 
@@ -522,10 +545,16 @@ class Client(object):
 			login_key = packet[5]
 			confirmation = None
 
-		self._info("Connecting to game server at {}:{}...".format(self._game_ip, self._game_port))
-		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self.sock.connect((self._game_ip, self._game_port))
+			self._sock.shutdown(socket.SHUT_RDWR)
+		except socket.error:
+			pass
+		self._sock.close()
+
+		self._info("Connecting to game server at {}:{}...".format(self._game_ip, self._game_port))
+		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			self._sock.connect((self._game_ip, self._game_port))
 		except socket.error:
 			self._error("Failed to connect to game server at {}:{}".format(self._game_ip, self._game_port))
 
@@ -606,22 +635,14 @@ class Client(object):
 
 	@staticmethod
 	def get_room_id(name):
-		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
-		with open(filename) as file:
-			data = json.load(file)
-		for id in data:
-			if data[id] == name:
+		for id, room_name in common.get_json("rooms").iteritems():
+			if room_name == name:
 				return int(id)
 		return 0
 
 	@staticmethod
 	def get_room_name(id):
-		filename = os.path.join(os.path.dirname(__file__), "json/rooms.json")
-		with open(filename) as file:
-			data = json.load(file)
-		if str(id) in data:
-			return data[str(id)]
-		return "Unknown"
+		return common.get_json("rooms").get(str(id), "Unknown")
 
 	@property
 	def igloo(self):
@@ -904,18 +925,20 @@ class Client(object):
 		internal_room_id = self._internal_room_id
 		self._internal_room_id = -1
 		room = self._room
-		self._send_packet("s", "j#jr", 912, 0, 0)
-		if self.next("jg") is None:
-			self._error("Failed to add {} coins".format(coins))
-		self._send_packet("z", "zo", int(coins) * 10)
-		packet = self.next("zo")
-		if packet is None:
-			self._error("Failed to add {} coins".format(coins))
+		try:
+			self._send_packet("s", "j#jr", 912, 0, 0)
+			if self.next("jg") is None:
+				self._error("Failed to add {} coins".format(coins))
+			self._send_packet("z", "zo", int(coins))
+			packet = self.next("zo")
+			if packet is None:
+				self._error("Failed to add {} coins".format(coins))
+		finally:
+			self._internal_room_id = internal_room_id
+			self.room = room
 		coins = int(packet[4])
 		earn = coins - self._coins
 		self._coins = coins
-		self._internal_room_id = internal_room_id
-		self.room = room
 		self._info("Added {} coins".format(earn))
 
 	def add_stamp(self, id):
@@ -983,14 +1006,16 @@ class Client(object):
 		self._follow = None
 
 	def logout(self):
+		if not self._connected:
+			return
+		self._connected = False
 		self._info("Logging out...")
 		for handler in self._nexts:
 			handler.cancel()
 		if self._heartbeat_timer is not None:
 			self._heartbeat_timer.cancel()
 		try:
-			self.sock.shutdown(socket.SHUT_RDWR)
+			self._sock.shutdown(socket.SHUT_RDWR)
 		except socket.error:
 			pass
-		self.sock.close()
-		self._connected = False
+		self._sock.close()

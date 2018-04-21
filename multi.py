@@ -1,23 +1,23 @@
 import sys
 import logging
-from client import Client, ClientError
-import login
+import common
+from client import ClientError
 
 offsets = []
 
 def get_shape(shapes, shape=None):
 	if shape is None:
-		shape = login.get_input("Shape: ", shapes.keys())
+		shape = common.get_input("Shape: ", shapes.keys())
 	shape = shape.lower()
 	if shape not in shapes:
-		raise login.LoginError("Shape not found")
+		raise common.LoginError("Shape not found")
 	return shapes[shape]
 
 def connect_clients(cpps, server, clients, remember):
 	count = len(clients)
 	print "Logging in with {} penguin{}...".format(count, "s" if count > 1 else "")
 
-	penguins = login.get_json("penguins")
+	penguins = common.get_json("penguins")
 	if cpps in penguins:
 		for user, password in penguins[cpps].items():
 			print "Connecting..."
@@ -26,7 +26,7 @@ def connect_clients(cpps, server, clients, remember):
 			except ClientError as e:
 				print "{}: {}".format(user, e.message)
 				if e.code == 101 or e.code == 603:
-					login.remove_penguin(cpps, user, penguins)
+					common.remove_penguin(cpps, user, penguins)
 				continue
 			count -= 1
 			if count == 0:
@@ -35,14 +35,14 @@ def connect_clients(cpps, server, clients, remember):
 
 	i = 0
 	while i < count:
-		cpps, server, user, password, encrypted, clients[i] = login.get_penguin(cpps, server, remember=remember)
+		cpps, server, user, password, encrypted, clients[i] = common.get_penguin(cpps, server, remember=remember)
 		print "Connecting..."
 		try:
 			clients[i].connect(user, password)
 		except ClientError as e:
 			print e.message
 			if e.code == 101 or e.code == 603:
-				login.remove_penguin(cpps, user)
+				common.remove_penguin(cpps, user)
 			continue
 		i += 1
 		if i < count:
@@ -98,24 +98,24 @@ def unify_clients(clients, shape):
 				print e.message
 
 def get_penguins(cpps=None, server=None, shape=None):
-	servers = login.get_json("servers")
-	shapes = login.get_json("shapes")
+	servers = common.get_json("servers")
+	shapes = common.get_json("shapes")
 
 	try:
-		cpps = login.get_cpps(servers, cpps)
-		server = login.get_server(servers, cpps, server)
+		cpps = common.get_cpps(servers, cpps)
+		server = common.get_server(servers, cpps, server)
 		shape = get_shape(shapes, shape)
 	except KeyboardInterrupt:
-		raise login.LoginError()
+		raise common.LoginError()
 
 	offsets = [(int(offset["x"]), int(offset["y"])) for offset in shape["offsets"]]
 	logger = logging.getLogger()
 	logger.addHandler(logging.NullHandler())
-	clients = [login.get_client(servers, cpps, server, logger) for offset in offsets]
+	clients = [common.get_client(servers, cpps, server, logger) for offset in offsets]
 	return cpps, server, shape, offsets, clients
 
-def logins():
-	remember = login.get_remember()
+def login():
+	remember = common.get_remember()
 	argc = len(sys.argv)
 	cpps = sys.argv[1] if argc > 1 else None
 	server = sys.argv[2] if argc > 2 else None
@@ -135,7 +135,7 @@ def room(clients, id):
 		id = int(id)
 	except ValueError:
 		name = id
-		id = Client.get_room_id(name)
+		id = clients[0].get_room_id(name)
 		if not id:
 			return 'Room "{}" not found'.format(name)
 	for client in clients:
@@ -324,8 +324,8 @@ def logout(clients):
 
 def main():
 	try:
-		clients = logins()
-	except login.LoginError as e:
+		clients = login()
+	except common.LoginError as e:
 		print e.message
 		sys.exit(1)
 	commands = {
@@ -360,7 +360,7 @@ def main():
 	}
 	while all(client.connected for client in clients):
 		try:
-			command = login.get_input(">>> ", commands.keys()).split(" ")
+			command = common.get_input(">>> ", commands.keys()).split(" ")
 		except KeyboardInterrupt:
 			print
 			continue
