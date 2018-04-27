@@ -32,7 +32,7 @@ Options:
 ```
 2. Choose a server (if you didn't do that in the command line)
 3. Enter your username and password (if you didn't do that in the command line)
-4. Choose a server
+4. Choose a server (if you didn't do that in the command line)
 5. Waddle on!
 
 ### Multi-Login
@@ -90,7 +90,7 @@ Options:
 - say __[msg]__ - says __[msg]__
 - joke __[id]__ - says a joke with id __[id]__
 - emote __[id]__ - says an emote with id __[id]__
-- mail __[postcard]__ __[name]__ - sends a penguin named __[name]__ a poscard with id __[postcard]__
+- mail __[id/name]__ __[postcard]__ - sends a penguin with id __[id]__ _or_ sends a penguin named __[name]__ a poscard with id __[postcard]__
 - buy / ai __[id]__ - buys an item with id __[id]__
 - coins __[amount]__ - earns __[amount]__ coins / prints current coins (single-login only)
 - ac  __[amount]__ - earns __[amount]__ coins

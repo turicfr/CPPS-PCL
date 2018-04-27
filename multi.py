@@ -130,97 +130,98 @@ def login():
 def help(clients):
 	return """HELP"""
 
-def room(clients, id):
+def room(clients, room_id):
 	try:
-		id = int(id)
+		room_id = int(room_id)
 	except ValueError:
-		name = id
-		id = clients[0].get_room_id(name)
-		if not id:
-			return 'Room "{}" not found'.format(name)
+		room_name = room_id
+		room_id = clients[0].get_room_id(room_name)
+		if not room_id:
+			return 'Room "{}" not found'.format(room_name)
 	for client in clients:
 		try:
-			client.room = id
+			client.room = room_id
 		except ClientError:
 			pass
 
-def igloo(clients, id):
+def igloo(clients, penguin_id):
 	try:
-		id = int(id)
+		penguin_id = int(penguin_id)
 	except ValueError:
-		name = id
-		id = clients[0].get_id(name)
-		if not id:
-			return 'Penguin "{}" not found'.format(name)
+		penguin_name = penguin_id
+		penguin_id = clients[0].get_id(penguin_name)
+		if not penguin_id:
+			return 'Penguin "{}" not found'.format(penguin_name)
 	for client in clients:
 		try:
-			client.igloo = id
+			client.igloo = penguin_id
 		except ClientError:
 			pass
 
-def color(clients, id):
+def color(clients, item_id):
 	for client in clients:
 		try:
-			client.color = id
+			client.color = item_id
 		except ClientError:
 			pass
 
-def head(clients, id):
+def head(clients, item_id):
 	for client in clients:
 		try:
-			client.head = id
+			client.head = item_id
 		except ClientError:
 			pass
 
-def face(clients, id):
+def face(clients, item_id):
 	for client in clients:
 		try:
-			client.face = id
+			client.face = item_id
 		except ClientError:
 			pass
 
-def neck(clients, id):
+def neck(clients, item_id):
 	for client in clients:
 		try:
-			client.neck = id
+			client.neck = item_id
 		except ClientError:
 			pass
 
-def body(clients, id):
+def body(clients, item_id):
 	for client in clients:
 		try:
-			client.body = id
+			client.body = item_id
 		except ClientError:
 			pass
 
-def hand(clients, id):
+def hand(clients, item_id):
 	for client in clients:
 		try:
-			client.hand = id
+			client.hand = item_id
 		except ClientError:
 			pass
 
-def feet(clients, id):
+def feet(clients, item_id):
 	for client in clients:
 		try:
-			client.feet = id
+			client.feet = item_id
 		except ClientError:
 			pass
 
-def pin(clients, id):
+def pin(clients, item_id):
 	for client in clients:
 		try:
-			client.pin = id
+			client.pin = item_id
 		except ClientError:
 			pass
 
-def background(clients, id):
+def background(clients, item_id):
 	for client in clients:
 		try:
-			client.background = id
+			client.background = item_id
 		except ClientError:
 			pass
 
+# TODO: input validation
 def walk(clients, x, y):
 	for client, (dx, dy) in zip(clients, offsets):
 		try:
@@ -242,14 +243,13 @@ def wave(clients):
 		except ClientError:
 			pass
 
-def sit(clients, dir=None):
-
+def sit(clients, direction=None):
 	for client in clients:
 		try:
-			if dir is None:
+			if direction is None:
 				client.sit()
 			else:
-				client.sit(dir)
+				client.sit(direction)
 		except ClientError:
 			pass
 
@@ -268,24 +268,24 @@ def say(clients, *params):
 		except ClientError:
 			pass
 
-def joke(clients, id):
+def joke(clients, joke_id):
 	for client in clients:
 		try:
-			client.joke(id)
+			client.joke(joke_id)
 		except ClientError:
 			pass
 
-def emote(clients, id):
+def emote(clients, emote):
 	for client in clients:
 		try:
-			client.emote(id)
+			client.emote(emote)
 		except ClientError:
 			pass
 
-def add_item(clients, id):
+def add_item(clients, item_id):
 	for client in clients:
 		try:
-			client.add_item(id)
+			client.add_item(item_id)
 		except ClientError:
 			pass
 
@@ -297,13 +297,13 @@ def coins(clients, amount):
 			pass
 
 def follow(clients, *params):
-	name = " ".join(params)
-	id = clients[0].get_id(name)
-	if not id:
-		return 'Penguin "{}" not found'.format(name)
+	penguin_name = " ".join(params)
+	penguin_id = clients[0].get_id(penguin_name)
+	if not penguin_id:
+		return 'Penguin "{}" not found'.format(penguin_name)
 	for client, (dx, dy) in zip(clients, offsets):
 		try:
-			client.follow(id, dx, dy)
+			client.follow(penguin_id, dx, dy)
 		except ClientError:
 			pass
 

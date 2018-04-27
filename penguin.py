@@ -1,6 +1,6 @@
 class Penguin:
-	def __init__(self, id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y):
-		self.id = id
+	def __init__(self, penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y):
+		self.id = penguin_id
 		self.name = name
 		self.frame = frame
 		self.color = color
@@ -18,7 +18,7 @@ class Penguin:
 	@classmethod
 	def from_player(cls, player):
 		player = player.split('|')
-		id = int(player[0])
+		penguin_id = int(player[0])
 		name = player[1]
 		frame = player[2]
 		color = int(player[3], 0)
@@ -32,4 +32,4 @@ class Penguin:
 		background = int(player[11])
 		x = int(player[12])
 		y = int(player[13])
-		return cls(id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y)
+		return cls(penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y)

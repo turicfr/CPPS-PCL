@@ -51,110 +51,110 @@ def log(client, level=None):
 	return "Logging {} messages".format(name)
 
 def internal(client):
-	return "Current internal room id: {}".format(client.internal_room_id)
+	return "Current internal room ID: {}".format(client.internal_room_id)
 
-def id(client, name=None):
-	if name is None:
-		id = client.id
+def get_id(client, penguin_name=None):
+	if penguin_name is None:
+		penguin_id = client.id
 	else:
-		id = client.get_id(name)
-		if not id:
-			return 'Penguin "{}" not found'.format(name)
-	return "ID: {}".format(id)
+		penguin_id = client.get_id(penguin_name)
+		if not penguin_id:
+			return 'Penguin "{}" not found'.format(penguin_name)
+	return "ID: {}".format(penguin_id)
 
-def name(client, id=None):
-	if id is None:
-		name = client.name
-	elif id in client.penguins:
-		name = client.penguins[id].name
+def get_name(client, penguin_id=None):
+	if penguin_id is None:
+		penguin_name = client.name
+	elif penguin_id in client.penguins:
+		penguin_name = client.penguins[penguin_id].name
 	else:
-		return "Penguin #{} not found".format(id)
-	return "Name: {}".format(name)
+		return "Penguin #{} not found".format(penguin_id)
+	return "Name: {}".format(penguin_name)
 
-def room(client, id=None):
-	if id is None:
+def room(client, room_id=None):
+	if room_id is None:
 		return "Current room: {}".format(client.get_room_name(client.room))
 	try:
-		id = int(id)
+		room_id = int(room_id)
 	except ValueError:
-		name = id
-		id = client.get_room_id(name)
-		if not id:
-			return 'Room "{}" not found'.format(name)
-	client.room = id
+		room_name = room_id
+		room_id = client.get_room_id(room_name)
+		if not room_id:
+			return 'Room "{}" not found'.format(room_name)
+	client.room = room_id
 
-def igloo(client, id=None):
-	if id is None:
-		id = client.id
+def igloo(client, penguin_id=None):
+	if penguin_id is None:
+		penguin_id = client.id
 	else:
 		try:
-			id = int(id)
+			penguin_id = int(penguin_id)
 		except ValueError:
-			name = id
-			id = client.get_id(name)
-			if not id:
-				return 'Penguin "{}" not found'.format(name)
-	client.igloo = id
+			penguin_name = penguin_id
+			penguin_id = client.get_id(penguin_name)
+			if not penguin_id:
+				return 'Penguin "{}" not found'.format(penguin_name)
+	client.igloo = penguin_id
 
 def penguins(client):
-	return "\n".join(penguin.name for id, penguin in client.penguins.iteritems())
+	return "\n".join(penguin.name for penguin_id, penguin in client.penguins.iteritems())
 
-def color(client, id=None):
-	if id is None:
+def color(client, item_id=None):
+	if item_id is None:
 		return "Current color: {}".format(client.color)
 	else:
-		client.color = id
+		client.color = item_id
 
-def head(client, id=None):
-	if id is None:
+def head(client, item_id=None):
+	if item_id is None:
 		return "Current head item: {}".format(client.head)
 	else:
-		client.head = id
+		client.head = item_id
 
-def face(client, id=None):
-	if id is None:
+def face(client, item_id=None):
+	if item_id is None:
 		return "Current face item: {}".format(client.face)
 	else:
-		client.face = id
+		client.face = item_id
 
-def neck(client, id=None):
-	if id is None:
+def neck(client, item_id=None):
+	if item_id is None:
 		return "Current neck item: {}".format(client.neck)
 	else:
-		client.neck = id
+		client.neck = item_id
 
-def body(client, id=None):
-	if id is None:
+def body(client, item_id=None):
+	if item_id is None:
 		return "Current body item: {}".format(client.body)
 	else:
-		client.body = id
+		client.body = item_id
 
-def hand(client, id=None):
-	if id is None:
+def hand(client, item_id=None):
+	if item_id is None:
 		return "Current hand item: {}".format(client.hand)
 	else:
-		client.hand = id
+		client.hand = item_id
 
-def feet(client, id=None):
-	if id is None:
+def feet(client, item_id=None):
+	if item_id is None:
 		return "Current feet item: {}".format(client.feet)
 	else:
-		client.feet = id
+		client.feet = item_id
 
-def pin(client, id=None):
-	if id is None:
+def pin(client, item_id=None):
+	if item_id is None:
 		return "Current pin: {}".format(client.pin)
 	else:
-		client.pin = id
+		client.pin = item_id
 
-def background(client, id=None):
-	if id is None:
+def background(client, item_id=None):
+	if item_id is None:
 		return "Current background: {}".format(client.background)
 	else:
-		client.background = id
+		client.background = item_id
 
 def inventory(client):
-	return "\n".join(str(id) for id in client.inventory)
+	return "\n".join(str(item_id) for item_id in client.inventory)
 
 def stamps(client):
 	return "\n".join(client.stamps)
@@ -162,14 +162,15 @@ def stamps(client):
 def say(client, *params):
 	client.say(" ".join(params))
 
-def mail(client, *params):
-	if len(params) > 1:
-		postcard = params[0]
-		name = " ".join(params[1:])
-		id = client.get_id(name)
-		if not id:
-			return 'Penguin "{}" not found'.format(name)
-		client.mail(id, postcard)
+def mail(client, penguin_id, postcard_id):
+	try:
+		penguin_id = int(penguin_id)
+	except ValueError:
+		penguin_name = penguin_id
+		penguin_id = client.get_id(penguin_name)
+		if not penguin_id:
+			return 'Penguin "{}" not found'.format(penguin_name)
+	client.mail(penguin_id, postcard_id)
 
 def coins(client, amount=None):
 	if amount is None:
@@ -177,12 +178,15 @@ def coins(client, amount=None):
 	else:
 		client.add_coins(amount)
 
-def buddy(client, *params):
-	name = " ".join(params)
-	id = client.get_id(name)
-	if not id:
-		return 'Penguin "{}" not found'.format(name)
-	client.buddy(id)
+def buddy(client, penguin_id):
+	try:
+		penguin_id = int(penguin_id)
+	except ValueError:
+		penguin_name = penguin_id
+		penguin_id = client.get_id(penguin_name)
+		if not penguin_id:
+			return 'Penguin "{}" not found'.format(penguin_name)
+	client.buddy(penguin_id)
 
 def follow(client, *params):
 	if params:
@@ -195,14 +199,14 @@ def follow(client, *params):
 				offset = True
 			except ValueError:
 				pass
-		name = " ".join(params)
-		id = client.get_id(name)
-		if not id:
-			return 'Penguin "{}" not found'.format(name)
+		penguin_name = " ".join(params)
+		penguin_id = client.get_id(penguin_name)
+		if not penguin_id:
+			return 'Penguin "{}" not found'.format(penguin_name)
 		if offset:
-			client.follow(id, dx, dy)
+			client.follow(penguin_id, dx, dy)
 		else:
-			client.follow(id)
+			client.follow(penguin_id)
 		return None
 	if client._follow:
 		return 'Currently following "{}"'.format(client.penguins[client._follow[0]].name)
@@ -222,8 +226,8 @@ def main():
 		"help": help,
 		"log": log,
 		"internal": internal,
-		"id": id,
-		"name": name,
+		"id": get_id,
+		"name": get_name,
 		"room": room,
 		"igloo": igloo,
 		"penguins": penguins,

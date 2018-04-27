@@ -232,16 +232,16 @@ class Client(object):
 		self._ver_check(ver)
 		rndk = self._rndk()
 		if self._magic:
-			hash = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
+			digest = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
 			if self._login_ip == "198.100.148.54":
 				aes = AES(256, 256)
-				hash = aes.encrypt(hash, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
+				digest = aes.encrypt(digest, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
 		else:
-			hash = password
+			digest = password
 		if self._single_quotes:
-			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
+			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, digest)
 		else:
-			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
+			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, digest)
 		self._send(data)
 		packet = self._receive_packet()
 		while packet[2] != "l":
@@ -253,13 +253,13 @@ class Client(object):
 		self._info("Joining server...")
 		self._ver_check(ver)
 		rndk = self._rndk()
-		hash = self._swapped_md5(login_key + rndk) + login_key
+		digest = self._swapped_md5(login_key + rndk) + login_key
 		if confirmation is not None:
-			hash += "#" + confirmation
+			digest += "#" + confirmation
 		if self._single_quotes:
-			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, hash)
+			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, digest)
 		else:
-			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, hash)
+			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, digest)
 		self._send(data)
 		packet = self._receive_packet()
 		while packet[2] != "l":
@@ -300,11 +300,11 @@ class Client(object):
 		self._penguins[penguin.id] = penguin
 
 	def _rp(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins.pop(id)
-		if self._follow is not None and id == self._follow[0]:
-			self._send_packet("s", "b#bf", id)
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins.pop(penguin_id)
+		if self._follow is not None and penguin_id == self._follow[0]:
+			self._send_packet("s", "b#bf", penguin_id)
 			packet = self.next("bf")
 			if packet is None:
 				return
@@ -321,135 +321,135 @@ class Client(object):
 			self._penguins[penguin.id] = penguin
 
 	def _br(self, packet):
-		id = int(packet[4])
-		name = packet[5]
-		self._send_packet("s", "b#ba", id)
+		penguin_id = int(packet[4])
+		penguin_name = packet[5]
+		self._send_packet("s", "b#ba", penguin_id)
 
 	def _upc(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.color = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.color = penguin.color
 
 	def _uph(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.head = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.head = penguin.head
 
 	def _upf(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.face = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.face = penguin.face
 
 	def _upn(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.neck = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.neck = penguin.neck
 
 	def _upb(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.body = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.body = penguin.body
 
 	def _upa(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.hand = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.hand = penguin.hand
 
 	def _upe(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.feet = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.feet = penguin.feet
 
 	def _upl(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.pin = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.pin = penguin.pin
 
 	def _upp(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.background = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.background = penguin.background
 
 	def _sp(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.x = int(packet[5])
 			penguin.y = int(packet[6])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.walk(penguin.x + self._follow[1], penguin.y + self._follow[2])
 
 	def _sa(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
 			action = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.action(action)
 
 	def _sf(self, packet):
-		id = int(packet[4])
-		if id in self._penguins:
-			penguin = self._penguins[id]
+		penguin_id = int(packet[4])
+		if penguin_id in self._penguins:
+			penguin = self._penguins[penguin_id]
 			penguin.frame = int(packet[5])
-			if self._follow is not None and id == self._follow[0]:
+			if self._follow is not None and penguin_id == self._follow[0]:
 				self.frame = penguin.frame
 
 	def _sb(self, packet):
-		id = int(packet[4])
+		penguin_id = int(packet[4])
 		x = int(packet[5])
 		y = int(packet[6])
-		if self._follow is not None and id == self._follow[0]:
+		if self._follow is not None and penguin_id == self._follow[0]:
 			self.snowball(x, y)
 
 	def _sm(self, packet):
-		id = int(packet[4])
+		penguin_id = int(packet[4])
 		message = packet[5]
-		if self._follow is not None and id == self._follow[0]:
+		if self._follow is not None and penguin_id == self._follow[0]:
 			self.say(message)
 
 	def _ss(self, packet):
-		id = int(packet[4])
+		penguin_id = int(packet[4])
 		message = packet[5]
-		if self._follow is not None and id == self._follow[0]:
+		if self._follow is not None and penguin_id == self._follow[0]:
 			self.say(message, True)
 
 	def _sj(self, packet):
-		id = int(packet[4])
+		penguin_id = int(packet[4])
 		joke = int(packet[5])
-		if self._follow is not None and id == self._follow[0]:
+		if self._follow is not None and penguin_id == self._follow[0]:
 			self.joke(joke)
 
 	def _se(self, packet):
-		id = int(packet[4])
+		penguin_id = int(packet[4])
 		emote = int(packet[5])
-		if self._follow is not None and id == self._follow[0]:
+		if self._follow is not None and penguin_id == self._follow[0]:
 			self.emote(emote)
 
 	def _game(self):
@@ -628,23 +628,23 @@ class Client(object):
 		return self._room
 
 	@room.setter
-	def room(self, id, x=0, y=0):
-		self._info("Joining room {}...".format(id))
-		self._send_packet("s", "j#jr", id, x, y)
+	def room(self, room_id, x=0, y=0):
+		self._info("Joining room {}...".format(room_id))
+		self._send_packet("s", "j#jr", room_id, x, y)
 		if self.next("jr") is None:
-			self._error("Failed to join room {}".format(id))
-		self._info("Joined room {}".format(id))
+			self._error("Failed to join room {}".format(room_id))
+		self._info("Joined room {}".format(room_id))
 
 	@staticmethod
 	def get_room_id(name):
-		for id, room_name in common.get_json("rooms").iteritems():
+		for room_id, room_name in common.get_json("rooms").iteritems():
 			if room_name == name:
-				return int(id)
+				return int(room_id)
 		return 0
 
 	@staticmethod
-	def get_room_name(id):
-		return common.get_json("rooms").get(str(id), "unknown")
+	def get_room_name(room_id):
+		return common.get_json("rooms").get(str(room_id), "unknown")
 
 	@property
 	def igloo(self):
@@ -652,13 +652,13 @@ class Client(object):
 			return self._room - 1000
 
 	@igloo.setter
-	def igloo(self, id):
-		name = self._penguins[id].name if id in self._penguins else "Penguin {}".format(id)
-		self._info("Joining {}'s igloo...".format(name))
-		self._send_packet("s", "j#jp", None, self._id, int(id) + 1000)
+	def igloo(self, penguin_id):
+		penguin_name = self._penguins.get(penguin_id, "Penguin {}".format(penguin_id))
+		self._info("Joining {}'s igloo...".format(penguin_name))
+		self._send_packet("s", "j#jp", None, self._id, int(penguin_id) + 1000)
 		if self.next("jr") is None:
-			self._error("Failed to join {}'s igloo".format(name))
-		self._info("Joined {}'s igloo".format(name))
+			self._error("Failed to join {}'s igloo".format(penguin_name))
+		self._info("Joined {}'s igloo".format(penguin_name))
 
 	@property
 	def penguins(self):
@@ -669,108 +669,108 @@ class Client(object):
 		return self._penguins[self._id].color
 
 	@color.setter
-	def color(self, id):
-		self._info("Changing color to {}...".format(id))
-		self._send_packet("s", "s#upc", id)
+	def color(self, item_id):
+		self._info("Changing color to {}...".format(item_id))
+		self._send_packet("s", "s#upc", item_id)
 		if self.next("upc") is None:
-			self._error("Failed to change color to {}".format(id))
-		self._info("Changed color to {}".format(id))
+			self._error("Failed to change color to {}".format(item_id))
+		self._info("Changed color to {}".format(item_id))
 
 	@property
 	def head(self):
 		return self._penguins[self._id].head
 
 	@head.setter
-	def head(self, id):
-		self._info("Changing head item to {}...".format(id))
-		self._send_packet("s", "s#uph", id)
+	def head(self, item_id):
+		self._info("Changing head item to {}...".format(item_id))
+		self._send_packet("s", "s#uph", item_id)
 		if self.next("uph") is None:
-			self._error("Failed to change head item to {}".format(id))
-		self._info("Changed head item to {}".format(id))
+			self._error("Failed to change head item to {}".format(item_id))
+		self._info("Changed head item to {}".format(item_id))
 
 	@property
 	def face(self):
 		return self._penguins[self._id].face
 
 	@face.setter
-	def face(self, id):
-		self._info("Changing face item to {}...".format(id))
-		self._send_packet("s", "s#upf", id)
+	def face(self, item_id):
+		self._info("Changing face item to {}...".format(item_id))
+		self._send_packet("s", "s#upf", item_id)
 		if self.next("upf") is None:
-			self._error("Failed to change face item to {}".format(id))
-		self._info("Changed face item to {}".format(id))
+			self._error("Failed to change face item to {}".format(item_id))
+		self._info("Changed face item to {}".format(item_id))
 
 	@property
 	def neck(self):
 		return self._penguins[self._id].neck
 
 	@neck.setter
-	def neck(self, id):
-		self._info("Changing neck item to {}...".format(id))
-		self._send_packet("s", "s#upn", id)
+	def neck(self, item_id):
+		self._info("Changing neck item to {}...".format(item_id))
+		self._send_packet("s", "s#upn", item_id)
 		if self.next("upn") is None:
-			self._error("Failed to change neck item to {}".format(id))
-		self._info("Changed neck item to {}".format(id))
+			self._error("Failed to change neck item to {}".format(item_id))
+		self._info("Changed neck item to {}".format(item_id))
 
 	@property
 	def body(self):
 		return self._penguins[self._id].body
 
 	@body.setter
-	def body(self, id):
-		self._info("Changing body item to {}...".format(id))
-		self._send_packet("s", "s#upb", id)
+	def body(self, item_id):
+		self._info("Changing body item to {}...".format(item_id))
+		self._send_packet("s", "s#upb", item_id)
 		if self.next("upb") is None:
-			self._error("Failed to change body item to {}".format(id))
-		self._info("Changed body item to {}".format(id))
+			self._error("Failed to change body item to {}".format(item_id))
+		self._info("Changed body item to {}".format(item_id))
 
 	@property
 	def hand(self):
 		return self._penguins[self._id].hand
 
 	@hand.setter
-	def hand(self, id):
-		self._info("Changing hand item to {}...".format(id))
-		self._send_packet("s", "s#upa", id)
+	def hand(self, item_id):
+		self._info("Changing hand item to {}...".format(item_id))
+		self._send_packet("s", "s#upa", item_id)
 		if self.next("upa") is None:
-			self._error("Failed to change hand item to {}".format(id))
-		self._info("Changed hand item to {}".format(id))
+			self._error("Failed to change hand item to {}".format(item_id))
+		self._info("Changed hand item to {}".format(item_id))
 
 	@property
 	def feet(self):
 		return self._penguins[self._id].feet
 
 	@feet.setter
-	def feet(self, id):
-		self._info("Changing feet item to {}...".format(id))
-		self._send_packet("s", "s#upe", id)
+	def feet(self, item_id):
+		self._info("Changing feet item to {}...".format(item_id))
+		self._send_packet("s", "s#upe", item_id)
 		if self.next("upe") is None:
-			self._error("Failed to change feet item to {}".format(id))
-		self._info("Changed feet item to {}".format(id))
+			self._error("Failed to change feet item to {}".format(item_id))
+		self._info("Changed feet item to {}".format(item_id))
 
 	@property
 	def pin(self):
 		return self._penguins[self._id].pin
 
 	@pin.setter
-	def pin(self, id):
-		self._info("Changing pin to {}...".format(id))
-		self._send_packet("s", "s#upl", id)
+	def pin(self, item_id):
+		self._info("Changing pin to {}...".format(item_id))
+		self._send_packet("s", "s#upl", item_id)
 		if self.next("upl") is None:
-			self._error("Failed to change pin to {}".format(id))
-		self._info("Changed pin to {}".format(id))
+			self._error("Failed to change pin to {}".format(item_id))
+		self._info("Changed pin to {}".format(item_id))
 
 	@property
 	def background(self):
 		return self._penguins[self._id].background
 
 	@background.setter
-	def background(self, id):
-		self._info("Changing background to {}...".format(id))
-		self._send_packet("s", "s#upp", id)
+	def background(self, item_id):
+		self._info("Changing background to {}...".format(item_id))
+		self._send_packet("s", "s#upp", item_id)
 		if self.next("upp") is None:
-			self._error("Failed to change background to {}".format(id))
-		self._info("Changed background to {}".format(id))
+			self._error("Failed to change background to {}".format(item_id))
+		self._info("Changed background to {}".format(item_id))
 
 	@property
 	def x(self):
@@ -787,7 +787,7 @@ class Client(object):
 		packet = self.next("gi")
 		if packet is None:
 			self._error("Failed to fetch inventory")
-		return [int(id) for id in packet[4:-1] if id]
+		return [int(item_id) for item_id in packet[4:-1] if item_id]
 
 	@property
 	def stamps(self):
@@ -819,24 +819,24 @@ class Client(object):
 			self._error("Failed to walk to ({}, {})".format(x, y))
 		self._info("Walked to ({}, {})".format(x, y))
 
-	def action(self, id):
-		self._info("Performing action {}...".format(id))
-		self._send_packet("s", "u#sa", id)
+	def action(self, action_id):
+		self._info("Performing action {}...".format(action_id))
+		self._send_packet("s", "u#sa", action_id)
 		if self.next("sa") is None:
-			self._error("Failed to perform action {}".format(id))
-		self._info("Performed action {}".format(id))
+			self._error("Failed to perform action {}".format(action_id))
+		self._info("Performed action {}".format(action_id))
 
 	@property
 	def frame(self):
 		return self._penguins[self._id].frame
 
 	@frame.setter
-	def frame(self, id):
-		self._info("Setting frame to {}...".format(id))
-		self._send_packet("s", "u#sf", id)
+	def frame(self, frame_id):
+		self._info("Setting frame to {}...".format(frame_id))
+		self._send_packet("s", "u#sf", frame_id)
 		if self.next("sf") is None:
-			self._error("Failed to set frame to {}".format(id))
-		self._info("Set frame to {}".format(id))
+			self._error("Failed to set frame to {}".format(frame_id))
+		self._info("Set frame to {}".format(frame_id))
 
 	def dance(self):
 		self.frame = 26
@@ -882,23 +882,23 @@ class Client(object):
 				self._error('Failed to say "{}"'.format(message))
 		self._info('Said "{}"'.format(message))
 
-	def joke(self, id):
-		self._info("Telling joke {}...".format(id))
-		self._send_packet("s", "u#sj", None, self._id, id)
+	def joke(self, joke_id):
+		self._info("Telling joke {}...".format(joke_id))
+		self._send_packet("s", "u#sj", None, self._joke_id, joke_id)
 		if self.next("sj") is None:
-			self._error("Failed to tell joke {}".format(id))
-		self._info("Told joke {}".format(id))
+			self._error("Failed to tell joke {}".format(joke_id))
+		self._info("Told joke {}".format(joke_id))
 
-	def emote(self, id):
-		self._info("Reacting emote {}...".format(id))
-		self._send_packet("s", "u#se", id)
+	def emote(self, emote_id):
+		self._info("Reacting emote {}...".format(emote_id))
+		self._send_packet("s", "u#se", emote_id)
 		if self.next("se") is None:
-			self._error("Failed to react emote {}".format(id))
-		self._info("Reacted emote {}".format(id))
+			self._error("Failed to react emote {}".format(emote_id))
+		self._info("Reacted emote {}".format(emote_id))
 
-	def mail(self, id, postcard):
+	def mail(self, penguin_id, postcard):
 		self._info("Sending postcard #{}...".format(postcard))
-		self._send_packet("s", "l#ms", id, postcard)
+		self._send_packet("s", "l#ms", penguin_id, postcard)
 		packet = self.next("ms")
 		if packet is None:
 			self._error("Failed to send postcard #{}".format(postcard))
@@ -914,16 +914,16 @@ class Client(object):
 			self._info("Sent postcard #{}".format(postcard))
 		self._error("Invalid postcard response: {}".format(packet))
 
-	def add_item(self, id):
-		self._info("Adding item {}...".format(id))
-		self._send_packet("s", "i#ai", id)
-		packet = self.next("ai", lambda p: int(p[4]) == int(id))
+	def add_item(self, item_id):
+		self._info("Adding item {}...".format(item_id))
+		self._send_packet("s", "i#ai", item_id)
+		packet = self.next("ai", lambda p: int(p[4]) == int(item_id))
 		if packet is None:
-			self._error("Failed to add item {}".format(id))
+			self._error("Failed to add item {}".format(item_id))
 		coins = int(packet[5])
 		cost = self._coins - coins
 		self._coins = coins
-		self._info("Added item {}".format(id))
+		self._info("Added item {}".format(item_id))
 
 	def add_coins(self, coins):
 		self._info("Adding {} coins...".format(coins))
@@ -946,58 +946,58 @@ class Client(object):
 		self._coins = coins
 		self._info("Added {} coins".format(earn))
 
-	def add_stamp(self, id):
-		self._info("Adding stamp {}...".format(id))
-		self._send_packet("s", "st#sse", id)
+	def add_stamp(self, stamp_id):
+		self._info("Adding stamp {}...".format(stamp_id))
+		self._send_packet("s", "st#sse", stamp_id)
 		if self.next("sse") is None:
-			self._error("Failed to add stamp {}".format(id))
-		self._info("Added stamp {}".format(id))
+			self._error("Failed to add stamp {}".format(stamp_id))
+		self._info("Added stamp {}".format(stamp_id))
 
-	def add_igloo(self, id):
-		self._info("Adding igloo {}...".format(id))
-		self._send_packet("s", "g#au", None, self._id, id)
+	def add_igloo(self, igloo_id):
+		self._info("Adding igloo {}...".format(igloo_id))
+		self._send_packet("s", "g#au", None, self._id, igloo_id)
 		if self.next("au") is None:
-			self._error("Failed to add igloo {}".format(id))
-		self._info("Added igloo {}".format(id))
+			self._error("Failed to add igloo {}".format(igloo_id))
+		self._info("Added igloo {}".format(igloo_id))
 
-	def add_furniture(self, id):
-		self._info("Adding furniture {}...".format(id))
-		self._send_packet("s", "g#af", id)
+	def add_furniture(self, furniture_id):
+		self._info("Adding furniture {}...".format(furniture_id))
+		self._send_packet("s", "g#af", furniture_id)
 		if self.next("af") is None:
-			self._error("Failed to add furniture {}".format(id))
-		self._info("Added furniture {}".format(id))
+			self._error("Failed to add furniture {}".format(furniture_id))
+		self._info("Added furniture {}".format(furniture_id))
 
 	# TODO
-	def igloo_music(self, id):
-		self._info("Setting igloo music to #{}...".format(id))
+	def igloo_music(self, music_id):
+		self._info("Setting igloo music to #{}...".format(music_id))
 		self._send_packet("s", "g#go", None, self._id)
 		if self.next("go") is None:
-			self._error("Failed to set igloo music to {}".format(id))
-		# self._send_packet("s", "g#um", None, self._id, id)
+			self._error("Failed to set igloo music to {}".format(music_id))
+		# self._send_packet("s", "g#um", None, self._id, music_id)
 		# if self.next("um") is None:
-		# 	self._error("Failed to set igloo music to {}".format(id))
-		self._info("Set igloo music to #{}".format(id))
+		# 	self._error("Failed to set igloo music to {}".format(music_id))
+		self._info("Set igloo music to #{}".format(music_id))
 
 	# TODO
-	def buddy(self, id):
-		self._info("Sending buddy request to {}...".format(id))
-		self._send_packet("s", "b#br", id)
+	def buddy(self, penguin_id):
+		self._info("Sending buddy request to {}...".format(penguin_id))
+		self._send_packet("s", "b#br", penguin_id)
 		if self.next("br") is None:
-			self._error("Failed to send buddy request to {}".format(id))
-		self._info("Sent buddy request to {}".format(id))
+			self._error("Failed to send buddy request to {}".format(penguin_id))
+		self._info("Sent buddy request to {}".format(penguin_id))
 
-	def follow(self, id, dx=0, dy=0):
-		self._info("Following {}...".format(id))
-		if id == self._id:
+	def follow(self, penguin_id, dx=0, dy=0):
+		self._info("Following {}...".format(penguin_id))
+		if penguin_id == self._id:
 			self._error("Cannot follow self")
-		if id not in self._penguins:
-			self._error("Penguin {} not found".format(id))
+		if penguin_id not in self._penguins:
+			self._error("Penguin {} not found".format(penguin_id))
 		try:
-			self.buddy(id)
+			self.buddy(penguin_id)
 		except ClientError:
 			pass
-		self._follow = (id, dx, dy)
-		penguin = self._penguins[id]
+		self._follow = (penguin_id, dx, dy)
+		penguin = self._penguins[penguin_id]
 		self.walk(penguin.x + dx, penguin.y + dy)
 		self.color = penguin.color
 		self.head = penguin.head
