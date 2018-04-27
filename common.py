@@ -2,8 +2,8 @@ import os
 import sys
 import json
 import hashlib
+import client
 from getpass import getpass
-from client import Client
 try:
 	import readline
 except ImportError:
@@ -113,12 +113,11 @@ def get_client(servers, cpps, server, logger=None):
 		game_port = int(game_port)
 	magic = servers[cpps].get("magic")
 	single_quotes = servers[cpps].get("single_quotes")
-	return Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
+	return client.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
 
 def get_penguin(cpps=None, server=None, user=None, remember=None):
 	servers = get_json("servers")
 	penguins = get_json("penguins")
-
 	try:
 		cpps = get_cpps(servers, cpps)
 		user = get_user(penguins, cpps, user)
@@ -126,9 +125,7 @@ def get_penguin(cpps=None, server=None, user=None, remember=None):
 		server = get_server(servers, cpps, server)
 	except KeyboardInterrupt:
 		raise LoginError()
-
-	client = get_client(servers, cpps, server)
-	return cpps, server, user, password, encrypted, client
+	return cpps, server, user, password, encrypted, get_client(servers, cpps, server)
 
 def remove_penguin(cpps, user, penguins=None):
 	if penguins is None:

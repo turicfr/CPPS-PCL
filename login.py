@@ -285,7 +285,7 @@ def main():
 				if function.__name__ + "() takes" not in e.message:
 					raise
 				print 'command "{}" does not take {} arguments'.format(command, len(params))
-			except ClientError as e:
+			except ClientError:
 				pass
 		elif command:
 			print 'command "{}" does not exist'.format(command)

@@ -1,7 +1,7 @@
 import sys
 import socket
-import hashlib
 import re
+import hashlib
 import threading
 import Queue
 import logging
@@ -10,20 +10,22 @@ from penguin import Penguin
 from aes import AES
 
 class _ExceptionThread(threading.Thread):
-	def __init__(self, *arg, **kwargs):
-		super(_ExceptionThread, self).__init__(*arg, **kwargs)
+	def __init__(self, *args, **kwargs):
+		super(_ExceptionThread, self).__init__(*args, **kwargs)
+		self._exception_type = None
 		self._exception = None
+		self._traceback = None
 
 	def run(self, *args, **kwargs):
 		try:
 			super(_ExceptionThread, self).run(*args, **kwargs)
-		except Exception as e:
-			self._exception = e
+		except:
+			self._exception_type, self._exception, self._traceback = sys.exc_info()
 
 	def join(self, *args, **kwargs):
 		super(_ExceptionThread, self).join(*args, **kwargs)
 		if self._exception is not None:
-			raise self._exception
+			raise self._exception_type, self._exception, self._traceback
 
 class _Handler(object):
 	def __init__(self, handlers, predicate):
@@ -505,7 +507,7 @@ class Client(object):
 
 			alive = set()
 			for thread in threads:
-				if thread.isAlive():
+				if thread.is_alive():
 					alive.add(thread)
 				else:
 					try:
@@ -642,7 +644,7 @@ class Client(object):
 
 	@staticmethod
 	def get_room_name(id):
-		return common.get_json("rooms").get(str(id), "Unknown")
+		return common.get_json("rooms").get(str(id), "unknown")
 
 	@property
 	def igloo(self):
@@ -800,7 +802,10 @@ class Client(object):
 		if self._connected:
 			self._heartbeat_timer = threading.Timer(600, self._heartbeat)
 			self._heartbeat_timer.start()
-			self._send_packet("s", "u#h")
+			try:
+				self._send_packet("s", "u#h")
+			except ClientError:
+				pass
 		else:
 			self._heartbeat_timer = None
 
@@ -982,9 +987,11 @@ class Client(object):
 		self._info("Sent buddy request to {}".format(id))
 
 	def follow(self, id, dx=0, dy=0):
+		self._info("Following {}...".format(id))
 		if id == self._id:
 			self._error("Cannot follow self")
-		self._info("Following {}...".format(id))
+		if id not in self._penguins:
+			self._error("Penguin {} not found".format(id))
 		try:
 			self.buddy(id)
 		except ClientError:
@@ -1008,8 +1015,8 @@ class Client(object):
 	def logout(self):
 		if not self._connected:
 			return
-		self._connected = False
 		self._info("Logging out...")
+		self._connected = False
 		for handler in self._nexts:
 			handler.cancel()
 		if self._heartbeat_timer is not None:
