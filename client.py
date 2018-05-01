@@ -155,6 +155,12 @@ class Client(object):
 			self._logger.critical(message)
 		raise ClientError(message)
 
+	def _require_int(self, name, value):
+		try:
+			return int(value)
+		except ValueError:
+			self._error("{} must be int".format(name))
+
 	def _send(self, data):
 		self._debug("# Send: {}".format(data))
 		try:
@@ -289,6 +295,14 @@ class Client(object):
 			while packet[2] != "js":
 				packet = self._receive_packet()
 		self._info("Joined server")
+
+	def _heartbeat(self):
+		self._heartbeat_timer = threading.Timer(600, self._heartbeat)
+		self._heartbeat_timer.start()
+		try:
+			self._send_packet("s", "u#h")
+		except ClientError:
+			pass
 
 	def _e(self, packet):
 		self._error(packet)
@@ -584,6 +598,7 @@ class Client(object):
 		self._error('Penguin "{}" not found'.format(penguin_id_or_name))
 
 	def get_penguin(self, penguin_id):
+		penguin_id = self._require_int("penguin_id", penguin_id)
 		if penguin_id in self._penguins:
 			return self._penguins[penguin_id]
 		self._info("Fetching player information...")
@@ -593,8 +608,7 @@ class Client(object):
 			self._error("Failed to fetch player information")
 		return Penguin.from_player(packet[4])
 
-	@staticmethod
-	def get_room_id(room_id_or_name):
+	def get_room_id(self, room_id_or_name):
 		try:
 			return int(room_id_or_name)
 		except ValueError:
@@ -605,6 +619,7 @@ class Client(object):
 		self._error('Room "{}" not found'.format(room_id_or_name))
 
 	def get_room_name(self, room_id):
+		room_id = self._require_int("room_id", room_id)
 		if room_id > 1000:
 			return "{}'s igloo".format(self.get_penguin(room_id - 1000).name)
 		return common.get_json("rooms").get(str(room_id), "room {}".format(room_id))
@@ -655,6 +670,8 @@ class Client(object):
 
 	@room.setter
 	def room(self, room_id, x=0, y=0):
+		x = self._require_int("x", x)
+		y = self._require_int("y", y)
 		room_name = self.get_room_name(room_id)
 		self._info("Joining {}...".format(room_name))
 		self._send_packet("s", "j#jr", room_id, x, y)
@@ -685,6 +702,7 @@ class Client(object):
 
 	@color.setter
 	def color(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing color to {}...".format(item_id))
 		self._send_packet("s", "s#upc", item_id)
 		if self.next("upc") is None:
@@ -697,6 +715,7 @@ class Client(object):
 
 	@head.setter
 	def head(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing head item to {}...".format(item_id))
 		self._send_packet("s", "s#uph", item_id)
 		if self.next("uph") is None:
@@ -709,6 +728,7 @@ class Client(object):
 
 	@face.setter
 	def face(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing face item to {}...".format(item_id))
 		self._send_packet("s", "s#upf", item_id)
 		if self.next("upf") is None:
@@ -721,6 +741,7 @@ class Client(object):
 
 	@neck.setter
 	def neck(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing neck item to {}...".format(item_id))
 		self._send_packet("s", "s#upn", item_id)
 		if self.next("upn") is None:
@@ -733,6 +754,7 @@ class Client(object):
 
 	@body.setter
 	def body(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing body item to {}...".format(item_id))
 		self._send_packet("s", "s#upb", item_id)
 		if self.next("upb") is None:
@@ -745,6 +767,7 @@ class Client(object):
 
 	@hand.setter
 	def hand(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing hand item to {}...".format(item_id))
 		self._send_packet("s", "s#upa", item_id)
 		if self.next("upa") is None:
@@ -757,6 +780,7 @@ class Client(object):
 
 	@feet.setter
 	def feet(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing feet item to {}...".format(item_id))
 		self._send_packet("s", "s#upe", item_id)
 		if self.next("upe") is None:
@@ -769,6 +793,7 @@ class Client(object):
 
 	@pin.setter
 	def pin(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing pin to {}...".format(item_id))
 		self._send_packet("s", "s#upl", item_id)
 		if self.next("upl") is None:
@@ -781,6 +806,7 @@ class Client(object):
 
 	@background.setter
 	def background(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Changing background to {}...".format(item_id))
 		self._send_packet("s", "s#upp", item_id)
 		if self.next("upp") is None:
@@ -802,6 +828,7 @@ class Client(object):
 		packet = self.next("gi")
 		if packet is None:
 			self._error("Failed to fetch inventory")
+		self._info("Fetched inventory")
 		return [int(item_id) for item_id in packet[4:-1] if item_id]
 
 	@property
@@ -809,22 +836,18 @@ class Client(object):
 		return self.get_stamps(self._id)
 
 	def get_stamps(self, penguin_id):
-		self._info("Fetching stamps...")
+		penguin_name = self.get_penguin(penguin_id).name
+		self._info('Fetching stamps of "{}"...'.format(penguin_name))
 		self._send_packet("s", "st#gps", penguin_id)
 		packet = self.next("gps")
 		if packet is None:
-			self._error("Failed to fetch stamps")
+			self._error('Failed to fetch stamps of "{}"'.format(penguin_name))
+		self._info('Fetched stamps of "{}"'.format(penguin_name))
 		return [int(stamp_id) for stamp_id in packet[5].split("|") if stamp_id]
 
-	def _heartbeat(self):
-		self._heartbeat_timer = threading.Timer(600, self._heartbeat)
-		self._heartbeat_timer.start()
-		try:
-			self._send_packet("s", "u#h")
-		except ClientError:
-			pass
-
 	def walk(self, x, y, internal_room_id=False):
+		x = self._require_int("x", x)
+		y = self._require_int("y", y)
 		self._info("Walking to ({}, {})...".format(x, y))
 		if internal_room_id:
 			self._send_packet("s", "u#sp", self._id, x, y)
@@ -835,6 +858,7 @@ class Client(object):
 		self._info("Walked to ({}, {})".format(x, y))
 
 	def action(self, action_id):
+		action_id = self._require_int("action_id", action_id)
 		self._info("Performing action {}...".format(action_id))
 		self._send_packet("s", "u#sa", action_id)
 		if self.next("sa") is None:
@@ -847,6 +871,7 @@ class Client(object):
 
 	@frame.setter
 	def frame(self, frame_id):
+		frame_id = self._require_int("frame_id", frame_id)
 		self._info("Setting frame to {}...".format(frame_id))
 		self._send_packet("s", "u#sf", frame_id)
 		if self.next("sf") is None:
@@ -877,6 +902,8 @@ class Client(object):
 		self._info("Sat in direction {}".format(direction))
 
 	def snowball(self, x, y):
+		x = self._require_int("x", x)
+		y = self._require_int("y", y)
 		self._info("Throwing snowball to ({}, {})...".format(x, y))
 		self._send_packet("s", "u#sb", x, y)
 		if self.next("sb") is None:
@@ -884,20 +911,24 @@ class Client(object):
 		self._info("Threw snowball to ({}, {})".format(x, y))
 
 	def say(self, message, safe=False):
-		if not message:
-			self._error("Cannot say nothing")
-		self._info('Saying "{}"...'.format(message))
 		if safe:
+			message = self._require_int("message", message)
+			self._info('Saying {}...'.format(message))
 			self._send_packet("s", "u#ss", message)
 			if self.next("ss") is None:
 				self._error('Failed to say "{}"'.format(message))
+			self._info('Said {}'.format(message))
 		else:
+			if not message:
+				self._error("Cannot say nothing")
+			self._info('Saying "{}"...'.format(message))
 			self._send_packet("s", "m#sm", self._id, message)
 			if self.next("sm") is None:
 				self._error('Failed to say "{}"'.format(message))
-		self._info('Said "{}"'.format(message))
+			self._info('Said "{}"'.format(message))
 
 	def joke(self, joke_id):
+		joke_id = self._require_int("joke_id", joke_id)
 		self._info("Telling joke {}...".format(joke_id))
 		self._send_packet("s", "u#sj", None, self._id, joke_id)
 		if self.next("sj") is None:
@@ -905,6 +936,7 @@ class Client(object):
 		self._info("Told joke {}".format(joke_id))
 
 	def emote(self, emote_id):
+		emote_id = self._require_int("emote_id", emote_id)
 		self._info("Reacting emote {}...".format(emote_id))
 		self._send_packet("s", "u#se", emote_id)
 		if self.next("se") is None:
@@ -912,6 +944,7 @@ class Client(object):
 		self._info("Reacted emote {}".format(emote_id))
 
 	def mail(self, penguin_id, postcard_id):
+		postcard_id = self._require_int("postcard_id", postcard_id)
 		penguin = self.get_penguin(penguin_id)
 		self._info('Sending postcard #{} to "{}"...'.format(postcard_id, penguin.name))
 		self._send_packet("s", "l#ms", penguin.id, postcard_id)
@@ -932,9 +965,10 @@ class Client(object):
 		self._error("Invalid postcard response: {}".format(packet))
 
 	def add_item(self, item_id):
+		item_id = self._require_int("item_id", item_id)
 		self._info("Adding item {}...".format(item_id))
 		self._send_packet("s", "i#ai", item_id)
-		packet = self.next("ai", lambda p: int(p[4]) == int(item_id))
+		packet = self.next("ai", lambda p: int(p[4]) == item_id)
 		if packet is None:
 			self._error("Failed to add item {}".format(item_id))
 		coins = int(packet[5])
@@ -943,6 +977,7 @@ class Client(object):
 		self._info("Added item {}".format(item_id))
 
 	def add_coins(self, coins):
+		coins = self._require_int("coins", coins)
 		self._info("Adding {} coins...".format(coins))
 		internal_room_id = self._internal_room_id
 		self._internal_room_id = -1
@@ -951,7 +986,7 @@ class Client(object):
 			self._send_packet("s", "j#jr", 912, 0, 0)
 			if self.next("jg") is None:
 				self._error("Failed to add {} coins".format(coins))
-			self._send_packet("z", "zo", int(coins))
+			self._send_packet("z", "zo", coins)
 			packet = self.next("zo")
 			if packet is None:
 				self._error("Failed to add {} coins".format(coins))
@@ -964,6 +999,7 @@ class Client(object):
 		self._info("Added {} coins".format(earn))
 
 	def add_stamp(self, stamp_id):
+		stamp_id = self._require_int("stamp_id", stamp_id)
 		self._info("Adding stamp {}...".format(stamp_id))
 		self._send_packet("s", "st#sse", stamp_id)
 		if self.next("aabs") is None:
@@ -971,6 +1007,7 @@ class Client(object):
 		self._info("Added stamp {}".format(stamp_id))
 
 	def add_igloo(self, igloo_id):
+		igloo_id = self._require_int("igloo_id", igloo_id)
 		self._info("Adding igloo {}...".format(igloo_id))
 		self._send_packet("s", "g#au", None, self._id, igloo_id)
 		if self.next("au") is None:
@@ -978,6 +1015,7 @@ class Client(object):
 		self._info("Added igloo {}".format(igloo_id))
 
 	def add_furniture(self, furniture_id):
+		furniture_id = self._require_int("furniture_id", furniture_id)
 		self._info("Adding furniture {}...".format(furniture_id))
 		self._send_packet("s", "g#af", furniture_id)
 		if self.next("af") is None:
@@ -985,6 +1023,7 @@ class Client(object):
 		self._info("Added furniture {}".format(furniture_id))
 
 	def igloo_music(self, music_id):
+		music_id = self._require_int("music_id", music_id)
 		self._info("Setting igloo music to #{}...".format(music_id))
 		self._send_packet("s", "g#um", None, self._id, music_id)
 		if self.next("um") is None:
