@@ -104,7 +104,6 @@ class Client(object):
 		self._buffer = ""
 		self._handlers = {}
 		self._nexts = []
-		self._heartbeat_timer = None
 		self._internal_room_id = -1
 		self._id = -1
 		self._coins = -1
@@ -228,28 +227,49 @@ class Client(object):
 		return key
 
 	def _login(self, user, password, encrypted, ver):
-		self._info("Logging in...")
-		self._ver_check(ver)
-		rndk = self._rndk()
-		if self._magic:
-			digest = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
-			if self._login_ip == "198.100.148.54":
-				aes = AES(256, 256)
-				digest = aes.encrypt(digest, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
-		else:
-			digest = password
-		if self._single_quotes:
-			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, digest)
-		else:
-			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, digest)
-		self._send(data)
-		packet = self._receive_packet()
-		while packet[2] != "l":
+		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
+		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			self._sock.connect((self._login_ip, self._login_port))
+		except socket.error:
+			self._error("Failed to connect to login server at {}:{}".format(self._login_ip, self._login_port))
+
+		try:
+			self._info("Logging in...")
+			self._ver_check(ver)
+			rndk = self._rndk()
+			if self._magic:
+				digest = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
+				if self._login_ip == "198.100.148.54":
+					aes = AES(256, 256)
+					digest = aes.encrypt(digest, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
+			else:
+				digest = password
+			if self._single_quotes:
+				data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, digest)
+			else:
+				data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, digest)
+			self._send(data)
 			packet = self._receive_packet()
-		self._info("Logged in")
-		return packet
+			while packet[2] != "l":
+				packet = self._receive_packet()
+			self._info("Logged in")
+			return packet
+		finally:
+			try:
+				self._sock.shutdown(socket.SHUT_RDWR)
+			except socket.error:
+				pass
+			self._sock.close()
 
 	def _join_server(self, user, login_key, confirmation, ver):
+		self._info("Connecting to game server at {}:{}...".format(self._game_ip, self._game_port))
+		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			self._sock.connect((self._game_ip, self._game_port))
+		except socket.error:
+			self._error("Failed to connect to game server at {}:{}".format(self._game_ip, self._game_port))
+
 		self._info("Joining server...")
 		self._ver_check(ver)
 		rndk = self._rndk()
@@ -513,13 +533,6 @@ class Client(object):
 			threads = alive
 
 	def connect(self, user, password, encrypted=False, ver=153):
-		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
-		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		try:
-			self._sock.connect((self._login_ip, self._login_port))
-		except socket.error:
-			self._error("Failed to connect to login server at {}:{}".format(self._login_ip, self._login_port))
-
 		packet = self._login(user, password, encrypted, ver)
 		if "|" in packet[4]:
 			user = packet[4]
@@ -542,19 +555,6 @@ class Client(object):
 			self._id = int(packet[4])
 			login_key = packet[5]
 			confirmation = None
-
-		try:
-			self._sock.shutdown(socket.SHUT_RDWR)
-		except socket.error:
-			pass
-		self._sock.close()
-
-		self._info("Connecting to game server at {}:{}...".format(self._game_ip, self._game_port))
-		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		try:
-			self._sock.connect((self._game_ip, self._game_port))
-		except socket.error:
-			self._error("Failed to connect to game server at {}:{}".format(self._game_ip, self._game_port))
 
 		self._join_server(user, login_key, confirmation, ver)
 		self._connected = True
@@ -814,15 +814,12 @@ class Client(object):
 		return [int(stamp_id) for stamp_id in packet[5].split("|") if stamp_id]
 
 	def _heartbeat(self):
-		if self._connected:
-			self._heartbeat_timer = threading.Timer(600, self._heartbeat)
-			self._heartbeat_timer.start()
-			try:
-				self._send_packet("s", "u#h")
-			except ClientError:
-				pass
-		else:
-			self._heartbeat_timer = None
+		self._heartbeat_timer = threading.Timer(600, self._heartbeat)
+		self._heartbeat_timer.start()
+		try:
+			self._send_packet("s", "u#h")
+		except ClientError:
+			pass
 
 	def walk(self, x, y, internal_room_id=False):
 		self._info("Walking to ({}, {})...".format(x, y))
@@ -1043,8 +1040,7 @@ class Client(object):
 		self._connected = False
 		for handler in self._nexts:
 			handler.cancel()
-		if self._heartbeat_timer is not None:
-			self._heartbeat_timer.cancel()
+		self._heartbeat_timer.cancel()
 		try:
 			self._sock.shutdown(socket.SHUT_RDWR)
 		except socket.error:
