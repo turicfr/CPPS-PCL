@@ -71,14 +71,13 @@ def get_cpps(servers, cpps=None):
 		cpps = get_input("CPPS: ", servers.keys())
 	cpps = cpps.lower()
 	if cpps not in servers:
-		raise LoginError("CPPS not found")
+		raise LoginError('CPPS "{}" not found'.format(cpps))
 	return cpps
 
 def get_user(penguins, cpps, user=None):
 	if user is None:
 		user = get_input("Username: ", penguins.get(cpps, {}).keys())
-	user = user.lower()
-	return user
+	return user.lower()
 
 def get_password(penguins, cpps, user, remember=None):
 	if cpps in penguins and user in penguins[cpps]:
@@ -98,7 +97,7 @@ def get_server(servers, cpps, server=None):
 		server = get_input("Server: ", servers[cpps]["servers"].keys())
 	server = server.lower()
 	if server not in servers[cpps]["servers"]:
-		raise LoginError("Server not found")
+		raise LoginError('Server "{}" not found'.format(server))
 	return server
 
 def get_client(servers, cpps, server, logger=None):
@@ -123,7 +122,7 @@ def get_penguin(cpps=None, server=None, user=None, remember=None):
 		user = get_user(penguins, cpps, user)
 		password, encrypted = get_password(penguins, cpps, user, remember)
 		server = get_server(servers, cpps, server)
-	except KeyboardInterrupt:
+	except (KeyboardInterrupt, EOFError):
 		raise LoginError()
 	return cpps, server, user, password, encrypted, get_client(servers, cpps, server)
 
@@ -134,3 +133,32 @@ def remove_penguin(cpps, user, penguins=None):
 		print "Removing {}...".format(user)
 		del penguins[cpps][user]
 		set_json("penguins", penguins)
+
+def read_command(commands):
+	while True:
+		try:
+			command = get_input(">>> ", commands.keys()).split()
+		except KeyboardInterrupt:
+			print
+			continue
+		if not command:
+			continue
+		command, params = command[0], command[1:]
+		if command not in commands:
+			print 'Command "{}" does not exist'.format(command)
+			continue
+		break
+	return commands[command], command, params
+
+def execute_command(client, function, command, params):
+	try:
+		if hasattr(function, "__self__"):
+			function(*params)
+		else:
+			message = function(client, *params)
+			if message is not None:
+				print message
+	except TypeError as e:
+		if function.__name__ + "() takes" not in e.message:
+			raise
+		print 'Command "{}" does not take {} arguments'.format(command, len(params))

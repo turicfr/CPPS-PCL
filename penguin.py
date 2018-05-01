@@ -1,3 +1,5 @@
+import client
+
 class Penguin:
 	def __init__(self, penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y):
 		self.id = penguin_id
@@ -17,6 +19,8 @@ class Penguin:
 
 	@classmethod
 	def from_player(cls, player):
+		if not player:
+			raise client.ClientError("Invalid player")
 		player = player.split('|')
 		penguin_id = int(player[0])
 		name = player[1]
@@ -30,6 +34,10 @@ class Penguin:
 		feet = int(player[9])
 		pin = int(player[10])
 		background = int(player[11])
-		x = int(player[12])
-		y = int(player[13])
+		if len(player) > 12:
+			x = int(player[12])
+			y = int(player[13])
+		else:
+			x = None
+			y = None
 		return cls(penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y)

@@ -27,8 +27,7 @@
 		"login": 6112,
 		"servers": {
 			"main": 8868
-		},
-		"single_quotes": true
+		}
 	},
 	"brazil": {
 		"ip": "54.39.19.19",
@@ -114,6 +113,21 @@
 			"ice berg": 6114,
 			"white out": 6115,
 			"reversed": 6116
+		}
+	},
+	"aventure pingouin": {
+		"ip": "54.37.14.208",
+		"login": 6112,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"servers": {
+			"yeti": 9875
+		}
+	},
+	"one": {
+		"ip": "144.217.88.9",
+		"login": 3111,
+		"servers": {
+			"cpps.one": 9875
 		}
 	}
 }

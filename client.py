@@ -188,8 +188,8 @@ class Client(object):
 
 	def _receive_packet(self, error=False):
 		data = self._receive()
-		if not data.startswith("%"):
-			self._error("Invalid packet: {}".format(data))
+		while not data.startswith("%"):
+			data = self._receive()
 		packet = data.split("%")
 		if not error and packet[2] == "e":
 			self._error(packet)
@@ -206,10 +206,10 @@ class Client(object):
 		if "cross-domain-policy" in data:
 			data = self._receive()
 		if "apiOK" in data:
-			self._info("Received 'apiOK' response")
+			self._info('Received "apiOK" response')
 			return True
 		if "apiKO" in data:
-			self._info("Received 'apiKO' response")
+			self._info('Received "apiKO" response')
 			return False
 		self._error("Invalid verChk response: {}".format(data))
 
@@ -292,7 +292,6 @@ class Client(object):
 		# opened_playcard = packet[14] == "1"
 		# saved_map_category = int(packet[15])
 		# status_field = int(packet[16])
-
 		self._heartbeat()
 
 	def _ap(self, packet):
@@ -304,11 +303,7 @@ class Client(object):
 		if penguin_id in self._penguins:
 			penguin = self._penguins.pop(penguin_id)
 		if self._follow is not None and penguin_id == self._follow[0]:
-			self._send_packet("s", "b#bf", penguin_id)
-			packet = self.next("bf")
-			if packet is None:
-				return
-			self.room = int(packet[4])
+			self.room = self.find_buddy(penguin_id)
 
 	def _jr(self, packet):
 		internal_room_id = int(packet[3])
@@ -316,13 +311,14 @@ class Client(object):
 			self._internal_room_id = internal_room_id
 		self._room = int(packet[4])
 		self._penguins.clear()
-		for i in packet[5:-1]:
-			penguin = Penguin.from_player(i)
+		for player in packet[5:-1]:
+			penguin = Penguin.from_player(player)
 			self._penguins[penguin.id] = penguin
 
 	def _br(self, packet):
 		penguin_id = int(packet[4])
 		penguin_name = packet[5]
+		self._info('Received a buddy request from "{}"'.format(penguin_name))
 		self._send_packet("s", "b#ba", penguin_id)
 
 	def _upc(self, packet):
@@ -409,9 +405,9 @@ class Client(object):
 	def _sa(self, packet):
 		penguin_id = int(packet[4])
 		if penguin_id in self._penguins:
-			action = int(packet[5])
+			action_id = int(packet[5])
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.action(action)
+				self.action(action_id)
 
 	def _sf(self, packet):
 		penguin_id = int(packet[4])
@@ -442,15 +438,15 @@ class Client(object):
 
 	def _sj(self, packet):
 		penguin_id = int(packet[4])
-		joke = int(packet[5])
+		joke_id = int(packet[5])
 		if self._follow is not None and penguin_id == self._follow[0]:
-			self.joke(joke)
+			self.joke(joke_id)
 
 	def _se(self, packet):
 		penguin_id = int(packet[4])
-		emote = int(packet[5])
+		emote_id = int(packet[5])
 		if self._follow is not None and penguin_id == self._follow[0]:
-			self.emote(emote)
+			self.emote(emote_id)
 
 	def _game(self):
 		self.handle("h")
@@ -566,7 +562,7 @@ class Client(object):
 		thread.start()
 
 	def handle(self, cmd, callback=None, predicate=None):
-		if cmd not in self._handlers or not self._handlers[cmd]:
+		if cmd not in self._handlers:
 			self._handlers[cmd] = set()
 		handler = _CallbackHandler(self._handlers[cmd], predicate, callback)
 		self._handlers[cmd].add(handler)
@@ -576,6 +572,42 @@ class Client(object):
 		handler = _OneTimeHandler(self._nexts, cmd, predicate, timeout)
 		self._nexts.append(handler)
 		return handler.packet
+
+	def get_penguin_id(self, penguin_id_or_name):
+		try:
+			return int(penguin_id_or_name)
+		except ValueError:
+			pass
+		for penguin in self._penguins.itervalues():
+			if penguin.name == penguin_id_or_name:
+				return penguin.id
+		raise ClientError('Penguin "{}" not found'.format(penguin_id_or_name))
+
+	def get_penguin(self, penguin_id):
+		if penguin_id in self._penguins:
+			return self._penguins[penguin_id]
+		self._info("Fetching player information...")
+		self._send_packet("s", "u#gp", penguin_id)
+		packet = self.next("gp")
+		if packet is None:
+			self._error("Failed to fetch player information")
+		return Penguin.from_player(packet[4])
+
+	@staticmethod
+	def get_room_id(room_id_or_name):
+		try:
+			return int(room_id_or_name)
+		except ValueError:
+			pass
+		for room_id, room_name in common.get_json("rooms").iteritems():
+			if room_name == room_id_or_name:
+				return int(room_id)
+		raise ClientError('Room "{}" not found'.format(room_id_or_name))
+
+	def get_room_name(self, room_id):
+		if room_id > 1000:
+			return "{}'s igloo".format(self.get_penguin(room_id - 1000).name)
+		return common.get_json("rooms").get(str(room_id), "room {}".format(room_id))
 
 	@property
 	def login_ip(self):
@@ -609,12 +641,6 @@ class Client(object):
 	def id(self):
 		return self._id
 
-	def get_id(self, name):
-		for penguin in self._penguins.values():
-			if penguin.name == name:
-				return penguin.id
-		return 0
-
 	@property
 	def name(self):
 		return self._penguins[self._id].name
@@ -629,31 +655,20 @@ class Client(object):
 
 	@room.setter
 	def room(self, room_id, x=0, y=0):
-		self._info("Joining room {}...".format(room_id))
+		room_name = self.get_room_name(room_id)
+		self._info("Joining {}...".format(room_name))
 		self._send_packet("s", "j#jr", room_id, x, y)
 		if self.next("jr") is None:
-			self._error("Failed to join room {}".format(room_id))
-		self._info("Joined room {}".format(room_id))
-
-	@staticmethod
-	def get_room_id(name):
-		for room_id, room_name in common.get_json("rooms").iteritems():
-			if room_name == name:
-				return int(room_id)
-		return 0
-
-	@staticmethod
-	def get_room_name(room_id):
-		return common.get_json("rooms").get(str(room_id), "unknown")
+			self._error("Failed to join {}".format(room_name))
+		self._info("Joined {}".format(room_name))
 
 	@property
 	def igloo(self):
-		if self._room > 1000:
-			return self._room - 1000
+		return self._room - 1000 if self._room > 1000 else None
 
 	@igloo.setter
 	def igloo(self, penguin_id):
-		penguin_name = self._penguins.get(penguin_id, "Penguin {}".format(penguin_id))
+		penguin_name = self.get_penguin(penguin_id).name
 		self._info("Joining {}'s igloo...".format(penguin_name))
 		self._send_packet("s", "j#jp", None, self._id, int(penguin_id) + 1000)
 		if self.next("jr") is None:
@@ -662,7 +677,7 @@ class Client(object):
 
 	@property
 	def penguins(self):
-		return self._penguins
+		return self._penguins.copy()
 
 	@property
 	def color(self):
@@ -792,11 +807,11 @@ class Client(object):
 	@property
 	def stamps(self):
 		self._info("Fetching stamps...")
-		self._send_packet("s", "st#gps")
+		self._send_packet("s", "st#gps", self._id)
 		packet = self.next("gps")
 		if packet is None:
 			self._error("Failed to fetch stamps")
-		return packet[4:-1]
+		return [int(stamp_id) for stamp_id in packet[5].split("|") if stamp_id]
 
 	def _heartbeat(self):
 		if self._connected:
@@ -844,8 +859,8 @@ class Client(object):
 	def wave(self):
 		self.action(25)
 
-	def sit(self, dir="s"):
-		dirs = {
+	def sit(self, direction="s"):
+		directions = {
 			"se": 24,
 			"e": 23,
 			"ne": 22,
@@ -855,11 +870,11 @@ class Client(object):
 			"sw": 18,
 			"s": 17
 		}
-		if dir not in dirs:
-			dir = "s"
-		self._info("Sitting in direction {}...".format(dir))
-		self.frame = dirs[dir]
-		self._info("Sat in direction {}".format(dir))
+		if direction not in directions:
+			self._error('Unknown sit direction "{}"'.format(direction))
+		self._info("Sitting in direction {}...".format(direction))
+		self.frame = directions[direction]
+		self._info("Sat in direction {}".format(direction))
 
 	def snowball(self, x, y):
 		self._info("Throwing snowball to ({}, {})...".format(x, y))
@@ -884,7 +899,7 @@ class Client(object):
 
 	def joke(self, joke_id):
 		self._info("Telling joke {}...".format(joke_id))
-		self._send_packet("s", "u#sj", None, self._joke_id, joke_id)
+		self._send_packet("s", "u#sj", None, self._id, joke_id)
 		if self.next("sj") is None:
 			self._error("Failed to tell joke {}".format(joke_id))
 		self._info("Told joke {}".format(joke_id))
@@ -896,22 +911,24 @@ class Client(object):
 			self._error("Failed to react emote {}".format(emote_id))
 		self._info("Reacted emote {}".format(emote_id))
 
-	def mail(self, penguin_id, postcard):
-		self._info("Sending postcard #{}...".format(postcard))
-		self._send_packet("s", "l#ms", penguin_id, postcard)
+	def mail(self, penguin_id, postcard_id):
+		penguin = self.get_penguin(penguin_id)
+		self._info('Sending postcard #{} to "{}"...'.format(postcard_id, penguin.name))
+		self._send_packet("s", "l#ms", penguin.id, postcard_id)
 		packet = self.next("ms")
 		if packet is None:
-			self._error("Failed to send postcard #{}".format(postcard))
+			self._error('Failed to send postcard #{} to "{}"'.format(postcard_id, penguin.name))
 		coins = int(packet[4])
 		cost = self._coins - coins
 		self._coins = coins
-		sent = packet[5]
-		if sent == "0":
+		status = packet[5]
+		if status == "0":
 			self._error("Maximum postcards reached")
-		if sent == "2":
+		if status == "1":
+			self._info('Sent postcard #{} to "{}"'.format(postcard_id, penguin.name))
+			return
+		if status == "2":
 			self._error("Not enough coins")
-		if sent == "1":
-			self._info("Sent postcard #{}".format(postcard))
 		self._error("Invalid postcard response: {}".format(packet))
 
 	def add_item(self, item_id):
@@ -949,7 +966,7 @@ class Client(object):
 	def add_stamp(self, stamp_id):
 		self._info("Adding stamp {}...".format(stamp_id))
 		self._send_packet("s", "st#sse", stamp_id)
-		if self.next("sse") is None:
+		if self.next("aabs") is None:
 			self._error("Failed to add stamp {}".format(stamp_id))
 		self._info("Added stamp {}".format(stamp_id))
 
@@ -967,37 +984,44 @@ class Client(object):
 			self._error("Failed to add furniture {}".format(furniture_id))
 		self._info("Added furniture {}".format(furniture_id))
 
-	# TODO
 	def igloo_music(self, music_id):
 		self._info("Setting igloo music to #{}...".format(music_id))
-		self._send_packet("s", "g#go", None, self._id)
-		if self.next("go") is None:
+		self._send_packet("s", "g#um", None, self._id, music_id)
+		if self.next("um") is None:
 			self._error("Failed to set igloo music to {}".format(music_id))
-		# self._send_packet("s", "g#um", None, self._id, music_id)
-		# if self.next("um") is None:
-		# 	self._error("Failed to set igloo music to {}".format(music_id))
 		self._info("Set igloo music to #{}".format(music_id))
 
-	# TODO
 	def buddy(self, penguin_id):
-		self._info("Sending buddy request to {}...".format(penguin_id))
-		self._send_packet("s", "b#br", penguin_id)
+		penguin = self.get_penguin(penguin_id)
+		self._info('Sending buddy request to "{}"...'.format(penguin.name))
+		self._send_packet("s", "b#br", penguin.id)
 		if self.next("br") is None:
-			self._error("Failed to send buddy request to {}".format(penguin_id))
-		self._info("Sent buddy request to {}".format(penguin_id))
+			self._error('Failed to send buddy request to "{}"'.format(penguin.name))
+		self._info('Sent buddy request to "{}"'.format(penguin.name))
+
+	def find_buddy(self, penguin_id):
+		penguin = self.get_penguin(penguin_id)
+		self._info('Finding buddy "{}"...'.format(penguin.name))
+		self._send_packet("s", "b#bf", penguin.id)
+		packet = self.next("bf")
+		if packet is None:
+			self._error('Failed to find buddy "{}"'.format(penguin.name))
+		room_id = int(packet[4])
+		self._info('Found buddy "{}"'.format(penguin.name))
+		return room_id
 
 	def follow(self, penguin_id, dx=0, dy=0):
-		self._info("Following {}...".format(penguin_id))
-		if penguin_id == self._id:
+		penguin = self.get_penguin(penguin_id)
+		self._info('Following "{}"...'.format(penguin.name))
+		if penguin.id == self._id:
 			self._error("Cannot follow self")
-		if penguin_id not in self._penguins:
-			self._error("Penguin {} not found".format(penguin_id))
+		if penguin.id not in self._penguins:
+			self._error('"{}" not found'.format(penguin.name))
 		try:
-			self.buddy(penguin_id)
+			self.buddy(penguin.id)
 		except ClientError:
 			pass
-		self._follow = (penguin_id, dx, dy)
-		penguin = self._penguins[penguin_id]
+		self._follow = (penguin.id, dx, dy)
 		self.walk(penguin.x + dx, penguin.y + dy)
 		self.color = penguin.color
 		self.head = penguin.head
