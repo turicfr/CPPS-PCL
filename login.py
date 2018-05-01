@@ -60,7 +60,7 @@ def igloo(client, penguin_id_or_name=None):
 	client.igloo = client.id if penguin_id_or_name is None else client.get_penguin_id(penguin_id_or_name)
 
 def penguins(client):
-	return "\n".join("{} (ID: {})".format(penguin.name, penguin.id) for penguin in client.penguins.itervalues())
+	return "Penguins in current room:\n" + "\n".join("{} (ID: {})".format(penguin.name, penguin.id) for penguin in client.penguins.itervalues())
 
 def color(client, item_id=None):
 	if item_id is None:
@@ -108,10 +108,19 @@ def background(client, item_id=None):
 	client.background = item_id
 
 def inventory(client):
-	return "\n".join(str(item_id) for item_id in client.inventory)
+	return "Current inventory:\n" + "\n".join(str(item_id) for item_id in client.inventory)
 
-def stamps(client):
-	return "\n".join(str(stamp_id) for stamp_id in client.stamps)
+def get_stamps(client, penguin_id_or_name=None):
+	if penguin_id_or_name is None:
+		penguin_id = client.id
+		stamps = client.stamps
+	else:
+		penguin_id = client.get_penguin_id(penguin_id_or_name)
+		stamps = client.get_stamps(penguin_id)
+	penguin = client.get_penguin(penguin_id)
+	if not stamps:
+		return '"{}" has no stamps'.format(penguin.name)
+	return 'Stamps of "{}":\n'.format(penguin.name) + "\n".join(str(stamp_id) for stamp_id in stamps)
 
 def say(client, *message):
 	client.say(" ".join(message))
@@ -134,7 +143,7 @@ def find(client, penguin_id_or_name):
 def follow(client, penguin_id_or_name=None, dx=None, dy=None):
 	if penguin_id_or_name is None:
 		if client._follow:
-			return 'Currently following "{}"'.format(client.get_penguin_name(client._follow[0]))
+			return 'Currently following "{}"'.format(client.get_penguin(client._follow[0]).name)
 		return "Currently not following"
 	penguin_id = client.get_penguin_id(penguin_id_or_name)
 	if dx is None:
@@ -178,7 +187,7 @@ def main():
 		"pin": pin,
 		"background": background,
 		"inventory": inventory,
-		"stamps": stamps,
+		"stamps": get_stamps,
 		"walk": client.walk,
 		"dance": client.dance,
 		"wave": client.wave,

@@ -581,7 +581,7 @@ class Client(object):
 		for penguin in self._penguins.itervalues():
 			if penguin.name == penguin_id_or_name:
 				return penguin.id
-		raise ClientError('Penguin "{}" not found'.format(penguin_id_or_name))
+		self._error('Penguin "{}" not found'.format(penguin_id_or_name))
 
 	def get_penguin(self, penguin_id):
 		if penguin_id in self._penguins:
@@ -602,7 +602,7 @@ class Client(object):
 		for room_id, room_name in common.get_json("rooms").iteritems():
 			if room_name == room_id_or_name:
 				return int(room_id)
-		raise ClientError('Room "{}" not found'.format(room_id_or_name))
+		self._error('Room "{}" not found'.format(room_id_or_name))
 
 	def get_room_name(self, room_id):
 		if room_id > 1000:
@@ -806,8 +806,11 @@ class Client(object):
 
 	@property
 	def stamps(self):
+		return self.get_stamps(self._id)
+
+	def get_stamps(self, penguin_id):
 		self._info("Fetching stamps...")
-		self._send_packet("s", "st#gps", self._id)
+		self._send_packet("s", "st#gps", penguin_id)
 		packet = self.next("gps")
 		if packet is None:
 			self._error("Failed to fetch stamps")
