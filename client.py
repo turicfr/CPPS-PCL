@@ -606,7 +606,10 @@ class Client(object):
 		packet = self.next("gp")
 		if packet is None:
 			self._error("Failed to fetch player information")
-		return Penguin.from_player(packet[4])
+		try:
+			return Penguin.from_player(packet[4])
+		except ClientError as e:
+			self._error(e.message)
 
 	def get_room_id(self, room_id_or_name):
 		try:
