@@ -2,30 +2,30 @@ import sys
 import socket
 import re
 import hashlib
-import threading
+from threading import Thread, Timer
 import Queue
 import logging
 import common
 from penguin import Penguin
 from aes import AES
 
-class _ExceptionThread(threading.Thread):
+class _ExceptionThread(Thread):
 	def __init__(self, *args, **kwargs):
 		super(_ExceptionThread, self).__init__(*args, **kwargs)
-		self._exception_type = None
-		self._exception = None
-		self._traceback = None
+		self._exc_type = None
+		self._exc = None
+		self._exc_tb = None
 
 	def run(self, *args, **kwargs):
 		try:
 			super(_ExceptionThread, self).run(*args, **kwargs)
 		except:
-			self._exception_type, self._exception, self._traceback = sys.exc_info()
+			self._exc_type, self._exc, self._exc_tb = sys.exc_info()
 
 	def join(self, *args, **kwargs):
 		super(_ExceptionThread, self).join(*args, **kwargs)
-		if self._exception is not None:
-			raise self._exception_type, self._exception, self._traceback
+		if self._exc is not None:
+			raise self._exc_type, self._exc, self._exc_tb
 
 class _Handler(object):
 	def __init__(self, handlers, predicate):
@@ -80,8 +80,9 @@ class _OneTimeHandler(_Handler):
 		self._packet.put(None)
 
 class ClientError(Exception):
-	def __init__(self, message, code=0):
+	def __init__(self, client, message, code=0):
 		super(ClientError, self).__init__(message)
+		self.client = client
 		self.code = code
 
 class Client(object):
@@ -98,12 +99,12 @@ class Client(object):
 		self._logger = logger
 		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
 		self._single_quotes = single_quotes
-		self._walk_internal_room_id = False
 
 		self._connected = False
 		self._buffer = ""
 		self._handlers = {}
 		self._nexts = []
+		self._heartbeat_timer = None
 		self._internal_room_id = -1
 		self._id = -1
 		self._coins = -1
@@ -114,7 +115,10 @@ class Client(object):
 	def __iter__(self):
 		return self
 
-	def __exit__(self):
+	def __enter__(self):
+		return self
+
+	def __exit__(self, exc_type, exc, exc_tb):
 		self.logout()
 
 	@staticmethod
@@ -145,15 +149,15 @@ class Client(object):
 					self._logger.error("Error #{}: {}".format(code, message))
 				else:
 					self._logger.error("Error #{}".format(code))
-			raise ClientError(message, code)
+			raise ClientError(self, message, code)
 		if self._logger is not None:
 			self._logger.error(message)
-		raise ClientError(message)
+		raise ClientError(self, message)
 
 	def _critical(self, message):
 		if self._logger is not None:
 			self._logger.critical(message)
-		raise ClientError(message)
+		raise ClientError(self, message)
 
 	def _require_int(self, name, value):
 		try:
@@ -297,7 +301,7 @@ class Client(object):
 		self._info("Joined server")
 
 	def _heartbeat(self):
-		self._heartbeat_timer = threading.Timer(600, self._heartbeat)
+		self._heartbeat_timer = Timer(600, self._heartbeat)
 		self._heartbeat_timer.start()
 		try:
 			self._send_packet("s", "u#h")
@@ -572,7 +576,7 @@ class Client(object):
 
 		self._join_server(user, login_key, confirmation, ver)
 		self._connected = True
-		thread = threading.Thread(target=self._game)
+		thread = Thread(target=self._game)
 		thread.start()
 
 	def handle(self, cmd, callback=None, predicate=None):
@@ -608,7 +612,7 @@ class Client(object):
 			self._error("Failed to fetch player information")
 		try:
 			return Penguin.from_player(packet[4])
-		except ClientError as e:
+		except ValueError as e:
 			self._error(e.message)
 
 	def get_room_id(self, room_id_or_name):
@@ -979,20 +983,20 @@ class Client(object):
 		self._coins = coins
 		self._info("Added item {}".format(item_id))
 
-	def add_coins(self, coins):
-		coins = self._require_int("coins", coins)
-		self._info("Adding {} coins...".format(coins))
+	def add_coins(self, amount):
+		amount = self._require_int("amount", amount)
+		self._info("Adding {} coins...".format(amount))
 		internal_room_id = self._internal_room_id
 		self._internal_room_id = -1
 		room = self._room
 		try:
 			self._send_packet("s", "j#jr", 912, 0, 0)
 			if self.next("jg") is None:
-				self._error("Failed to add {} coins".format(coins))
-			self._send_packet("z", "zo", coins)
+				self._error("Failed to add {} coins".format(amount))
+			self._send_packet("z", "zo", amount)
 			packet = self.next("zo")
 			if packet is None:
-				self._error("Failed to add {} coins".format(coins))
+				self._error("Failed to add {} coins".format(amount))
 		finally:
 			self._internal_room_id = internal_room_id
 			self.room = room
@@ -1059,10 +1063,6 @@ class Client(object):
 			self._error("Cannot follow self")
 		if penguin.id not in self._penguins:
 			self._error('"{}" not found'.format(penguin.name))
-		try:
-			self.buddy(penguin.id)
-		except ClientError:
-			pass
 		self._follow = (penguin.id, dx, dy)
 		self.walk(penguin.x + dx, penguin.y + dy)
 		self.color = penguin.color
@@ -1074,6 +1074,10 @@ class Client(object):
 		self.feet = penguin.feet
 		self.pin = penguin.pin
 		self.background = penguin.background
+		try:
+			self.buddy(penguin.id)
+		except ClientError:
+			pass
 
 	def unfollow(self):
 		self._follow = None
@@ -1085,7 +1089,8 @@ class Client(object):
 		self._connected = False
 		for handler in self._nexts:
 			handler.cancel()
-		self._heartbeat_timer.cancel()
+		if self._heartbeat_timer is not None:
+			self._heartbeat_timer.cancel()
 		try:
 			self._sock.shutdown(socket.SHUT_RDWR)
 		except socket.error:

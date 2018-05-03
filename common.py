@@ -114,7 +114,7 @@ def get_client(servers, cpps, server, logger=None):
 	single_quotes = servers[cpps].get("single_quotes")
 	return client.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
 
-def get_penguin(cpps=None, server=None, user=None, remember=None):
+def get_penguin(cpps=None, server=None, user=None, remember=None, client=None):
 	servers = get_json("servers")
 	penguins = get_json("penguins")
 	try:
@@ -124,7 +124,7 @@ def get_penguin(cpps=None, server=None, user=None, remember=None):
 		server = get_server(servers, cpps, server)
 	except (KeyboardInterrupt, EOFError):
 		raise LoginError()
-	return cpps, server, user, password, encrypted, get_client(servers, cpps, server)
+	return cpps, server, user, password, encrypted, get_client(servers, cpps, server) if client is None else client
 
 def remove_penguin(cpps, user, penguins=None):
 	if penguins is None:

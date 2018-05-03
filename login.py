@@ -34,7 +34,7 @@ def log(client, level_name=None):
 		"critical": logging.CRITICAL
 	}.get(level_name)
 	if level is None:
-		raise ClientError('Unknown logging level "{}"'.format(level_name))
+		raise common.LoginError('Unknown logging level "{}"'.format(level_name))
 	client.logger.setLevel(level)
 	return "Logging {} messages".format(level_name)
 
@@ -149,13 +149,13 @@ def follow(client, penguin_id_or_name=None, dx=None, dy=None):
 	if dx is None:
 		client.follow(penguin_id)
 	elif dy is None:
-		raise ClientError("Invalid parameters")
+		raise common.LoginError("Invalid parameters")
 	else:
 		try:
 			dx = int(dx)
 			dy = int(dy)
 		except ValueError:
-			raise ClientError("Invalid parameters")
+			common.LoginError("Invalid parameters")
 		client.follow(penguin_id, dx, dy)
 
 def logout(client):
@@ -221,6 +221,8 @@ def main():
 			break
 		try:
 			common.execute_command(client, function, command, params)
+		except common.LoginError as e:
+			print e.message
 		except ClientError:
 			pass
 

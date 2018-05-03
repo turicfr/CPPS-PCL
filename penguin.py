@@ -1,6 +1,4 @@
-import client
-
-class Penguin:
+class Penguin(object):
 	def __init__(self, penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x=None, y=None):
 		self.id = penguin_id
 		self.name = name
@@ -20,7 +18,7 @@ class Penguin:
 	@classmethod
 	def from_player(cls, player):
 		if not player:
-			raise client.ClientError("Invalid player")
+			raise ValueError("Invalid player")
 		player = player.split("|")
 		penguin_id = int(player[0])
 		name = player[1]
