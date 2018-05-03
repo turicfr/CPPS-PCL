@@ -3,6 +3,7 @@ import sys
 import json
 import hashlib
 import client
+from shlex import split
 from getpass import getpass
 try:
 	import readline
@@ -137,7 +138,7 @@ def remove_penguin(cpps, user, penguins=None):
 def read_command(commands):
 	while True:
 		try:
-			command = get_input(">>> ", commands.keys()).split()
+			command = split(get_input(">>> ", commands.keys()))
 		except KeyboardInterrupt:
 			print
 			continue

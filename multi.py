@@ -83,11 +83,13 @@ def auto_login(cpps, penguins, clients):
 	assert count["value"] == len(not_connected)
 	return not_connected
 
-def manual_login(cpps, server, clients, remember):
-	count = len(clients)
-	for client in clients:
+def manual_login(cpps, server, connected, not_connected, remember):
+	for i, client in enumerate(not_connected):
 		while not client.connected:
 			cpps, server, user, password, encrypted, client = common.get_penguin(cpps, server, remember=remember, client=client)
+			if any(client.name.lower() == user for client in connected):
+				print "Already logged in"
+				continue
 			print "Connecting..."
 			try:
 				client.connect(user, password)
@@ -96,8 +98,7 @@ def manual_login(cpps, server, clients, remember):
 				if e.code == 101 or e.code == 603:
 					common.remove_penguin(cpps, user)
 				continue
-			count -= 1
-			print "Connected! ({} left)".format(count)
+			print "Connected! ({} left)".format(len(not_connected) - i)
 
 def connect_clients(cpps, server, clients_offsets, remember):
 	count = len(clients_offsets)
@@ -105,9 +106,13 @@ def connect_clients(cpps, server, clients_offsets, remember):
 	clients = [client for client, dx, dy in clients_offsets]
 	penguins = common.get_json("penguins")
 	if cpps in penguins:
-		clients_offsets = auto_login(cpps, penguins, clients)
+		not_connected = auto_login(cpps, penguins, clients)
+		connected = [client for client in clients if client not in not_connected]
+	else:
+		not_connected = clients
+		connected = []
 	try:
-		manual_login(cpps, server, clients, remember)
+		manual_login(cpps, server, connected, not_connected, remember)
 	except common.LoginError:
 		logout(clients_offsets)
 		raise
