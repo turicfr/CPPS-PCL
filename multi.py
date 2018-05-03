@@ -98,7 +98,7 @@ def manual_login(cpps, server, connected, not_connected, remember):
 				if e.code == 101 or e.code == 603:
 					common.remove_penguin(cpps, user)
 				continue
-			print "Connected! ({} left)".format(len(not_connected) - i)
+			print "Connected! ({} left)".format(len(not_connected) - i - 1)
 
 def connect_clients(cpps, server, clients_offsets, remember):
 	count = len(clients_offsets)
@@ -248,7 +248,7 @@ def coins(clients_offsets, amount=None):
 		return "\n".join("{}: Current coins: {}".format(client.name, client.coins) for client, dx, dy in clients_offsets)
 	call_all(clients_offsets, lambda c: c.add_coins)(amount)
 
-def buddy(clients_offsets):
+def buddy(clients_offsets, penguin_id_or_name):
 	@for_all(clients_offsets)
 	def inner_buddy(client, dx, dy):
 		client.buddy(client.get_penguin_id(penguin_id_or_name))

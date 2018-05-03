@@ -19,7 +19,7 @@ def get_json(filename):
 	try:
 		with open(filename) as file:
 			return json.load(file)
-	except IOError:
+	except (IOError, ValueError):
 		return {}
 
 def set_json(filename, data):
