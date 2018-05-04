@@ -139,6 +139,9 @@ def read_command(commands):
 	while True:
 		try:
 			command = split(get_input(">>> ", commands.keys()))
+		except ValueError as e:
+			print e.message
+			continue
 		except KeyboardInterrupt:
 			print
 			continue

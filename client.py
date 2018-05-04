@@ -5,6 +5,7 @@ import hashlib
 from threading import Thread, Timer
 import Queue
 import logging
+from bisect import insort
 import common
 from penguin import Penguin
 from aes import AES
@@ -91,14 +92,14 @@ class Client(object):
 		self._login_port = login_port
 		self._game_ip = game_ip
 		self._game_port = game_port
+		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
+		self._single_quotes = single_quotes
 		if logger is None:
 			logger = logging.getLogger()
 			logger.setLevel(logging.NOTSET)
 			handler = logging.StreamHandler(sys.stdout)
 			logger.addHandler(handler)
 		self._logger = logger
-		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
-		self._single_quotes = single_quotes
 
 		self._connected = False
 		self._buffer = ""
@@ -110,6 +111,7 @@ class Client(object):
 		self._coins = -1
 		self._room = -1
 		self._penguins = {}
+		self._inventory = None
 		self._follow = None
 
 	def __iter__(self):
@@ -486,6 +488,18 @@ class Client(object):
 		if self._follow is not None and penguin_id == self._follow[0]:
 			self.emote(emote_id)
 
+	def _ms(self, packet):
+		self._coins = int(packet[4])
+
+	def _ai(self, packet):
+		item_id = int(packet[4])
+		self._coins = int(packet[5])
+		if self._inventory is not None:
+			insort(self._inventory, item_id)
+
+	def _zo(self, packet):
+		self._coins = int(packet[4])
+
 	def _game(self):
 		self.handle("h")
 		self.handle("e", self._e)
@@ -510,6 +524,9 @@ class Client(object):
 		self.handle("ss", self._ss)
 		self.handle("sj", self._sj)
 		self.handle("se", self._se)
+		self.handle("ms", self._ms)
+		self.handle("ai", self._ai)
+		self.handle("zo", self._zo)
 
 		threads = set()
 		while self._connected:
@@ -597,7 +614,7 @@ class Client(object):
 		except ValueError:
 			pass
 		for penguin in self._penguins.itervalues():
-			if penguin.name == penguin_id_or_name:
+			if penguin.name.lower() == penguin_id_or_name.lower():
 				return penguin.id
 		self._error('Penguin "{}" not found'.format(penguin_id_or_name))
 
@@ -621,7 +638,7 @@ class Client(object):
 		except ValueError:
 			pass
 		for room_id, room_name in common.get_json("rooms").iteritems():
-			if room_name == room_id_or_name:
+			if room_name == room_id_or_name.lower():
 				return int(room_id)
 		self._error('Room "{}" not found'.format(room_id_or_name))
 
@@ -830,13 +847,15 @@ class Client(object):
 
 	@property
 	def inventory(self):
-		self._info("Fetching inventory...")
-		self._send_packet("s", "i#gi")
-		packet = self.next("gi")
-		if packet is None:
-			self._error("Failed to fetch inventory")
-		self._info("Fetched inventory")
-		return [int(item_id) for item_id in packet[4:-1] if item_id]
+		if self._inventory is None:
+			self._info("Fetching inventory...")
+			self._send_packet("s", "i#gi")
+			packet = self.next("gi")
+			if packet is None:
+				self._error("Failed to fetch inventory")
+			self._info("Fetched inventory")
+			self._inventory = [int(item_id) for item_id in packet[4:-1] if item_id]
+		return self._inventory
 
 	@property
 	def stamps(self):
@@ -955,12 +974,11 @@ class Client(object):
 		penguin = self.get_penguin(penguin_id)
 		self._info('Sending postcard #{} to "{}"...'.format(postcard_id, penguin.name))
 		self._send_packet("s", "l#ms", penguin.id, postcard_id)
+		coins = self._coins
 		packet = self.next("ms")
 		if packet is None:
 			self._error('Failed to send postcard #{} to "{}"'.format(postcard_id, penguin.name))
-		coins = int(packet[4])
-		cost = self._coins - coins
-		self._coins = coins
+		cost = coins - int(packet[4])
 		status = packet[5]
 		if status == "0":
 			self._error("Maximum postcards reached")
@@ -975,12 +993,11 @@ class Client(object):
 		item_id = self._require_int("item_id", item_id)
 		self._info("Adding item {}...".format(item_id))
 		self._send_packet("s", "i#ai", item_id)
+		coins = self._coins
 		packet = self.next("ai", lambda p: int(p[4]) == item_id)
 		if packet is None:
 			self._error("Failed to add item {}".format(item_id))
-		coins = int(packet[5])
-		cost = self._coins - coins
-		self._coins = coins
+		cost = coins - int(packet[5])
 		self._info("Added item {}".format(item_id))
 
 	def add_coins(self, amount):
@@ -988,6 +1005,7 @@ class Client(object):
 		self._info("Adding {} coins...".format(amount))
 		internal_room_id = self._internal_room_id
 		self._internal_room_id = -1
+		coins = self._coins
 		room = self._room
 		try:
 			self._send_packet("s", "j#jr", 912, 0, 0)
@@ -1000,9 +1018,7 @@ class Client(object):
 		finally:
 			self._internal_room_id = internal_room_id
 			self.room = room
-		coins = int(packet[4])
-		earn = coins - self._coins
-		self._coins = coins
+		earn = int(packet[4]) - coins
 		self._info("Added {} coins".format(earn))
 
 	def add_stamp(self, stamp_id):
