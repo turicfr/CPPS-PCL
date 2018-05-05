@@ -28,7 +28,7 @@ TODO
 python login.py [-r yes|no|ask] [<cpps>] [<server>] [<username>]
 
 Options:
--r  Remember password in the future
+	-r  Remember password in the future
 ```
 2. Choose a server (if you didn't do that in the command line)
 3. Enter your username and password (if you didn't do that in the command line)
@@ -41,7 +41,7 @@ Options:
 python multi.py [-r yes|no|ask] [<cpps>] [<server>] [<shape>]
 
 Options:
--r  Remember password in the future
+	-r  Remember password in the future
 ```
 2. Choose a server (if you didn't do that in the command line)
 3. Choose a shape (defined in json/shapes.json, if you didn't do that in the command line)
@@ -49,60 +49,78 @@ Options:
 5. Waddle on!
 
 ## Interactive Commands
-- help - prints "HELP" (will be done in the future)
-- log __[level]__ - sets log level (single-login only) / toggles log on/off (single-login only), where __[level]__ is one of the following:
-	- all - all log messages (may be really verbose).
-	- debug - all relevant messages for debugging (e.g. sent and received packets etc.) and below.
-	- info - all messages of higher-level activities (e.g. walking, talking etc.) and below.
-	- warning - all warning messages (e.g. unhandled received packets) and below.
-	- error - all error messages (e.g. could not add item) and below. This is the default log level.
-	- critical - all major error messages (e.g. connection lost).
-- internal - prints current internal room id (single-login only)
-- id [__[name]__] - prints your id (single-login only) / prints the id of penguin named __[name]__.
-- name [__[id]__] - prints your name (single-login only) / prints the name of penguin with id __[id]__.
-- room [__[id/name]__] - prints current room (single-login only) / goes to room with id __[id]__ _or_ room named __[name]__.
-- igloo [__[id/name]__] - goes to your igloo (single-login only) / goes to igloo of penguin with id __[id]__ _or_ penguin named __[name]__.
-- penguins - prints all penguins in current room (single-login only).
-- color [__[id]__] - prints current color (single-login only) / equips color with id __[id]__.
-- head [__[id]__] - prints current head item (single-login only) / equips head item with id __[id]__.
-- face [__[id]__] - prints current face item (single-login only) / equips face item with id __[id]__.
-- neck [__[id]__] - prints current neck item (single-login only) / equips neck item with id __[id]__.
-- body [__[id]__] - prints current body item (single-login only) / equips body item with id __[id]__.
-- hand [__[id]__] - prints current hand item (single-login only) / equips hand item with id __[id]__.
-- feet [__[id]__] - prints current feet item (single-login only) / equips feet item with id __[id]__.
-- pin [__[id]__] - prints current pin (single-login only) / equips pin with id __[id]__.
-- background [__[id]__] - prints current background (single-login only) / equips background with id __[id]__.
-- inventory - prints current inventory (single-login only).
-- stamps __[id/name]__ - prints all earned stamps of penguin with id __[id]__ _or_ penguin named __[name]__ (single-login only).
-- walk __[x]__ __[y]__ - walks to (__[x]__, __[y]__).
-- dance - dances.
-- wave - waves.
-- sit __[dir]__ - sits in direction __[dir]__, where __[dir]__ is one of the following:
-	- se - south east
-	- e - east
-	- ne - north east
-	- n - north
-	- nw - north west
-	- w - west
-	- sw - south west
-	- s - south (default)
-- snowball __[x]__ __[y]__ - throws a snowball to (__[x]__, __[y]__).
-- say __[msg]__ - says __[msg]__.
-- joke __[id]__ - tells a joke with id __[id]__.
-- emote __[id]__ - reacts an emote with id __[id]__.
-- mail __[id/name]__ __[postcard]__ - sends a poscard with id __[postcard]__ to a penguin with id __[id]__ _or_ penguin named __[name]__.
-- buy / ai __[id]__ - buys an item with id __[id]__.
-- coins [__[amount]__] - prints current coins (single-login only) / earns __[amount]__ coins.
-- ac  __[amount]__ - earns __[amount]__ coins.
-- stamp __[id]__ - earns stamp with id __[id]__.
-- add_igloo __[id]__ - buys igloo with id __[id]__.
-- add_furniture __[id]__ - buys furniture with id __[id]__.
-- music __[id]__ - sets igloo music to __[id]__.
-- buddy __[id/name]__ - sends a buddy request to a penguin with id __[id]__ _or_ penguin named __[name]__.
-- find __[id/name]__ - finds location of buddy with id __[id]__ _or_ buddy named __[name]__ (single-login only).
-- follow __[id/name]__ [__[dx]__ __[dy]__] - prints currently followed penguin (single-login only) / follows a penguin with id __[id]__ _or_ penguin named __[name]__ with no offset / follows a penguin with id __[id]__ _or_ penguin named __[name]__ with offset (__[dx]__, __[dy]__).
-- unfollow - disables follow.
-- logout / exit / quit - logouts from the game.
+| Mode | Command | Parameters | Description |
+| ---- | ------- | ---------- | ----------- |
+| Both | `help` | _None_ | Prints "HELP" (will be implemented in the future). |
+| Single-Login only | `log` | _None_ | Toggles logging on/off. |
+| Single-Login only | `log` | `level` | Sets logging level to `level`.<br>`level` must be one of the following:<ul><li>`all` - Logs all messages below.</li><li>`debug` - Logs debug messages such as sent and received packets, and below.</li><li>`info` - Logs higher-level messages such as walking, talking etc., and below.</li><li>`warning` - Logs warning messages such as unhandled packets, and below.</li><li>`error` - Logs failure messages such as "Could not add item", and below (default).</li><li>`critical` - Logs fatal error messages such as "Connection lost".</li></ul> |
+| Single-Login only | `internal` | _None_ | Prints current internal room ID. |
+| Single-Login only | `id` | _None_ | Prints current penguin ID. |
+| Both | `id` | `penguin_name` | Prints ID of penguin named `penguin_name`. |
+| Both | `name` | _None_ | Prints current penguin name. |
+| Both | `name` | `penguin_id` | Prints name of penguin with ID `penguin_id`. |
+| Both | `room` | _None_ | Prints current room name. |
+| Both | `room` | `room_id` | Goes to room with ID `room_id`. |
+| Both | `room` | `room_name` | Goes to room named `room_name`. |
+| Single-Login only | `igloo` | _None_ | Goes to your igloo. |
+| Both | `igloo` | `penguin_id` | Goes to igloo of penguin with ID `penguin_id`. |
+| Both | `igloo` | `penguin_name` | Goes to igloo of penguin named `penguin_name`. |
+| Single-Login only | `penguins` | _None_ | Lists all penguins in current room. |
+| Both | `color` | _None_ | Prints current color item ID. |
+| Both | `color` | `item_id` | Equips color item with ID `item_id`. |
+| Both | `head` | _None_ | Prints current head item ID. |
+| Both | `head` | `item_id` | Equips head item with ID `item_id`. |
+| Both | `face` | _None_ | Prints current face item ID. |
+| Both | `face` | `item_id` | Equips face item with ID `item_id`. |
+| Both | `neck` | _None_ | Prints current neck item ID. |
+| Both | `neck` | `item_id` | Equips neck item with ID `item_id`. |
+| Both | `body` | _None_ | Prints current body item ID. |
+| Both | `body` | `item_id` | Equips body item with ID `item_id`. |
+| Both | `hand` | _None_ | Prints current hand item ID. |
+| Both | `hand` | `item_id` | Equips hand item with ID `item_id`. |
+| Both | `feet` | _None_ | Prints current feet item ID. |
+| Both | `feet` | `item_id` | Equips feet item with ID `item_id`. |
+| Both | `pin` | _None_ | Prints current pin item ID. |
+| Both | `pin` | `item_id` | Equips pin item with ID `item_id`. |
+| Both | `background` | _None_ | Prints current background item ID. |
+| Both | `background` | `item_id` | Equips background item with ID `item_id`. |
+| Both | `inventory` | _None_ | Prints current inventory. |
+| Single-Login only | `stamps` | _None_ | Prints all earned stamps. |
+| Single-Login only | `stamps` | `penguin_id` | Prints all earned stamps by penguin with ID `penguin_id`. |
+| Single-Login only | `stamps` | `penguin_name` | Prints all earned stamps by penguin named `penguin_name`. |
+| Both | `walk` | `x` `y` | Walks to (`x`, `y`). |
+| Both | `dance` | _None_ | Dances. |
+| Both | `wave` | _None_ | Waves. |
+| Both | `sit` | _None_ | Sits in direction South. |
+| Both | `sit` | `direction` | Sits in direction `direction`.<br>`direction` must be one of the following:<ul><li>`se` - South East.</li><li>`e` - East.</li><li>`ne` - North East.</li><li>`n` - North.</li><li>`nw` - North West.</li><li>`w` - West.</li><li>`sw` - South West.</li><li>`s` - South.</li></ul> |
+| Both | `snowball` | `x` `y` | Throws a snowball to (`x`, `y`). |
+| Both | `say` | `message...` | Says `message`. |
+| Both | `joke` | `joke_id` | Tells joke with ID `joke_id`. |
+| Both | `emote` | `emote_id` | Reacts emote with ID `emote_id`. |
+| Both | `mail` | `penguin_id` `postcard_id` | Sends to a penguin with ID `penguin_id` a postcard with ID `postcard_id`. |
+| Both | `mail` | `penguin_name` `postcard_id` | Sends to a penguin named `penguin_name` a postcard with ID `postcard_id`. |
+| Both | `buy` | `item_id` | Buys an item with ID `item_id`. |
+| Both | `ai` | `item_id` | Buys an item with ID `item_id`. |
+| Both | `coins` | _None_ | Prints current coins. |
+| Both | `coins` | `amount` | Earns `amount` coins. |
+| Both | `ac` | `amount` | Earns `amount` coins. |
+| Both | `stamp` | `stamp_id` | Earns stamp with ID `stamp_id`. |
+| Both | `add_igloo` | `igloo_id` | Buys an igloo with ID `igloo_id`. |
+| Both | `add_furniture` | `furniture_id` | Buys a furniture with ID `furniture_id`. |
+| Both | `music` | `music_id` | Sets igloo music to `music_id`. |
+| Both | `buddy` | `penguin_id` | Sends a buddy request to a penguin with ID `penguin_id`. |
+| Both | `buddy` | `penguin_name` | Sends a buddy request to a penguin named `penguin_name`. |
+| Single-Login only | `find` | `penguin_id` | Finds room of buddy with ID `penguin_id`. |
+| Single-Login only | `find` | `penguin_name` | Finds room of buddy named `penguin_name`. |
+| Single-Login only | `follow` | _None_ | Prints currently followed penguin. |
+| Both | `follow` | `penguin_id` | Follows a penguin with ID `penguin_id`. |
+| Both | `follow` | `penguin_name` | Follows a penguin named `penguin_name`. |
+| Both | `follow` | `penguin_id` `dx` `dy` | Follows a penguin with ID `penguin_id` with offset (`dx`, `dy`). |
+| Both | `follow` | `penguin_name` `dx` `dy` | Follows a penguin named `penguin_name` with offset (`dx`, `dy`). |
+| Both | `unfollow` | _None_ | Stops following. |
+| Both | `logout` | _None_ | Logouts from the game. |
+| Both | `exit` | _None_ | Logouts from the game. |
+| Both | `quit` | _None_ | Logouts from the game. |
 
 ## Tips and Tricks
 - Define more CPPSs and servers in json/servers.json
