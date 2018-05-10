@@ -1,7 +1,7 @@
 import sys
 import logging
 import common
-from client import ClientError
+from client import Client, ClientError
 
 def login():
 	remember = common.get_remember()
@@ -188,27 +188,27 @@ def main():
 		"background": background,
 		"inventory": inventory,
 		"stamps": get_stamps,
-		"walk": client.walk,
-		"dance": client.dance,
-		"wave": client.wave,
-		"sit": client.sit,
-		"snowball": client.snowball,
+		"walk": Client.walk,
+		"dance": Client.dance,
+		"wave": Client.wave,
+		"sit": Client.sit,
+		"snowball": Client.snowball,
 		"say": say,
-		"joke": client.joke,
-		"emote": client.emote,
+		"joke": Client.joke,
+		"emote": Client.emote,
 		"mail": mail,
-		"buy": client.add_item,
-		"ai": client.add_item,
+		"buy": Client.add_item,
+		"ai": Client.add_item,
 		"coins": coins,
-		"ac": client.add_coins,
-		"stamp": client.add_stamp,
-		"add_igloo": client.add_igloo,
-		"add_furniture": client.add_furniture,
-		"music": client.igloo_music,
+		"ac": Client.add_coins,
+		"stamp": Client.add_stamp,
+		"add_igloo": Client.add_igloo,
+		"add_furniture": Client.add_furniture,
+		"music": Client.igloo_music,
 		"buddy": buddy,
 		"find": find,
 		"follow": follow,
-		"unfollow": client.unfollow,
+		"unfollow": Client.unfollow,
 		"logout": logout,
 		"exit": logout,
 		"quit": logout
@@ -219,12 +219,7 @@ def main():
 		except EOFError:
 			logout(client)
 			break
-		try:
-			common.execute_command(client, function, command, params)
-		except common.LoginError as e:
-			print e.message
-		except ClientError:
-			pass
+		common.execute_command(client, function, command, params)
 
 if __name__ == "__main__":
 	main()

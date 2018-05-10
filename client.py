@@ -1,7 +1,7 @@
 import sys
 import socket
-import re
 import hashlib
+import re
 from threading import Thread, Timer
 import Queue
 import logging
@@ -709,12 +709,12 @@ class Client(object):
 
 	@igloo.setter
 	def igloo(self, penguin_id):
-		penguin_name = self.get_penguin(penguin_id).name
-		self._info("Joining {}'s igloo...".format(penguin_name))
+		penguin = self.get_penguin(penguin_id)
+		self._info("Joining {}'s igloo...".format(penguin.name))
 		self._send_packet("s", "j#jp", None, self._id, int(penguin_id) + 1000)
 		if self.next("jr") is None:
-			self._error("Failed to join {}'s igloo".format(penguin_name))
-		self._info("Joined {}'s igloo".format(penguin_name))
+			self._error("Failed to join {}'s igloo".format(penguin.name))
+		self._info("Joined {}'s igloo".format(penguin.name))
 
 	@property
 	def penguins(self):
@@ -855,6 +855,7 @@ class Client(object):
 				self._error("Failed to fetch inventory")
 			self._info("Fetched inventory")
 			self._inventory = [int(item_id) for item_id in packet[4:-1] if item_id]
+			self._inventory.sort()
 		return self._inventory
 
 	@property
@@ -862,13 +863,13 @@ class Client(object):
 		return self.get_stamps(self._id)
 
 	def get_stamps(self, penguin_id):
-		penguin_name = self.get_penguin(penguin_id).name
-		self._info('Fetching stamps of "{}"...'.format(penguin_name))
+		penguin = self.get_penguin(penguin_id)
+		self._info('Fetching stamps of "{}"...'.format(penguin.name))
 		self._send_packet("s", "st#gps", penguin_id)
 		packet = self.next("gps")
 		if packet is None:
-			self._error('Failed to fetch stamps of "{}"'.format(penguin_name))
-		self._info('Fetched stamps of "{}"'.format(penguin_name))
+			self._error('Failed to fetch stamps of "{}"'.format(penguin.name))
+		self._info('Fetched stamps of "{}"'.format(penguin.name))
 		return [int(stamp_id) for stamp_id in packet[5].split("|") if stamp_id]
 
 	def walk(self, x, y, internal_room_id=False):

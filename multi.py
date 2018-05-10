@@ -15,35 +15,35 @@ def get_shape(shapes, shape=None):
 		raise common.LoginError("Shape not found")
 	return shapes[shape]
 
-def for_all(clients_offsets):
-	def decorator(function):
-		def star(args):
-			try:
-				function(*args)
-			except ClientError as e:
-				return e
-			return None
-		@wraps(function)
-		def wrapper(*params):
-			pool = ThreadPool()
-			for e in pool.imap(star, ((client, dx, dy) + params for client, dx, dy in clients_offsets)):
-				if e is not None:
-					print "{}: {}".format(e.client.name, e.message)
-		return wrapper
-	return decorator
+def for_all(function):
+	def star(args):
+		try:
+			function(*args)
+		except:
+			return sys.exc_info()
+		return None
+	@wraps(function)
+	def wrapper(clients_offsets, *params):
+		pool = ThreadPool()
+		for exc_info in pool.imap(star, ((client, dx, dy) + params for client, dx, dy in clients_offsets)):
+			if exc_info is not None:
+				exc_type, exc, exc_tb = exc_info
+				if not isinstance(exc, ClientError):
+					raise exc_type, exc, exc_tb
+				print "{}: {}".format(exc.client.name, exc.message)
+	return wrapper
 
 def set_all(clients_offsets, attribute, value):
-	@for_all(clients_offsets)
+	@for_all
 	def inner_set_all(client, dx, dy):
 		setattr(client, attribute, value)
-	inner_set_all()
+	inner_set_all(clients_offsets)
 
-def call_all(clients_offsets, method):
-	@for_all(clients_offsets)
+def call_all(method):
+	@for_all
 	def inner_call_all(client, dx, dy, *params):
-		method(client)(*params)
-	inner_call_all.__name__ = method(clients_offsets[0][0]).__name__
-	inner_call_all.__self__ = clients_offsets
+		getattr(client, method)(*params)
+	inner_call_all.__name__ = method
 	return inner_call_all
 
 def connect_client(client, user, password):
@@ -166,16 +166,16 @@ def name(clients_offsets, penguin_id=None):
 def room(clients_offsets, room_id_or_name=None):
 	if room_id_or_name is None:
 		return "\n".join("{}: Current room: {}".format(client.name, client.get_room_name(client.room)) for client, dx, dy in clients_offsets)
-	@for_all(clients_offsets)
+	@for_all
 	def inner_room(client, dx, dy):
 		client.room = client.get_room_id(room_id_or_name)
-	inner_room()
+	inner_room(clients_offsets)
 
 def igloo(clients_offsets, penguin_id_or_name):
-	@for_all(clients_offsets)
+	@for_all
 	def inner_igloo(client, dx, dy):
 		client.igloo = client.get_penguin_id(penguin_id_or_name)
-	inner_igloo()
+	inner_igloo(clients_offsets)
 
 def color(clients_offsets, item_id=None):
 	if item_id is None:
@@ -231,28 +231,28 @@ def walk(clients_offsets, x, y):
 		y = int(y)
 	except ValueError:
 		raise common.LoginError("Invalid parameters")
-	@for_all(clients_offsets)
+	@for_all
 	def inner_walk(client, dx, dy):
 		client.walk(x + dx, y + dy)
-	inner_walk()
+	inner_walk(clients_offsets)
 
 def say(clients_offsets, *message):
 	message = " ".join(message)
-	@for_all(clients_offsets)
+	@for_all
 	def inner_say(client, dx, dy):
 		client.say(message)
-	inner_say()
+	inner_say(clients_offsets)
 
 def coins(clients_offsets, amount=None):
 	if amount is None:
 		return "\n".join("{}: Current coins: {}".format(client.name, client.coins) for client, dx, dy in clients_offsets)
-	call_all(clients_offsets, lambda c: c.add_coins)(amount)
+	call_all("add_coins")(amount)
 
 def buddy(clients_offsets, penguin_id_or_name):
-	@for_all(clients_offsets)
+	@for_all
 	def inner_buddy(client, dx, dy):
 		client.buddy(client.get_penguin_id(penguin_id_or_name))
-	inner_buddy()
+	inner_buddy(clients_offsets)
 
 def find(clients_offsets, penguin_id_or_name):
 	client, dx, dy = clients_offsets[0]
@@ -260,17 +260,17 @@ def find(clients_offsets, penguin_id_or_name):
 	return '"{}" is in {}'.format(penguin_id_or_name, room_name)
 
 def follow(clients_offsets, penguin_id_or_name):
-	@for_all(clients_offsets)
+	@for_all
 	def inner_follow(client, dx, dy):
 		penguin_id = client.get_penguin_id(penguin_id_or_name)
 		client.follow(penguin_id, dx, dy)
-	inner_follow()
+	inner_follow(clients_offsets)
 
 def logout(clients_offsets):
-	@for_all(clients_offsets)
+	@for_all
 	def inner_logout(client, dx, dy):
 		client.logout()
-	inner_logout()
+	inner_logout(clients_offsets)
 	sys.exit()
 
 def main():
@@ -296,25 +296,25 @@ def main():
 		"background": background,
 		"inventory": inventory,
 		"walk": walk,
-		"dance": call_all(clients_offsets, lambda c: c.dance),
-		"wave": call_all(clients_offsets, lambda c: c.wave),
-		"sit": call_all(clients_offsets, lambda c: c.sit),
-		"snowball": call_all(clients_offsets, lambda c: c.snowball),
+		"dance": call_all("dance"),
+		"wave": call_all("wave"),
+		"sit": call_all("sit"),
+		"snowball": call_all("snowball"),
 		"say": say,
-		"joke": call_all(clients_offsets, lambda c: c.joke),
-		"emote": call_all(clients_offsets, lambda c: c.emote),
-		"buy": call_all(clients_offsets, lambda c: c.add_item),
-		"ai": call_all(clients_offsets, lambda c: c.add_item),
+		"joke": call_all("joke"),
+		"emote": call_all("emote"),
+		"buy": call_all("add_item"),
+		"ai": call_all("add_item"),
 		"coins": coins,
-		"ac": call_all(clients_offsets, lambda c: c.add_coins),
-		"stamp": call_all(clients_offsets, lambda c: c.add_stamp),
-		"add_igloo": call_all(clients_offsets, lambda c: c.add_igloo),
-		"add_furniture": call_all(clients_offsets, lambda c: c.add_furniture),
-		"music": call_all(clients_offsets, lambda c: c.igloo_music),
+		"ac": call_all("add_coins"),
+		"stamp": call_all("add_stamp"),
+		"add_igloo": call_all("add_igloo"),
+		"add_furniture": call_all("add_furniture"),
+		"music": call_all("igloo_music"),
 		"buddy": buddy,
 		"find": find,
 		"follow": follow,
-		"unfollow": call_all(clients_offsets, lambda c: c.unfollow),
+		"unfollow": call_all("unfollow"),
 		"logout": logout,
 		"exit": logout,
 		"quit": logout
@@ -325,10 +325,7 @@ def main():
 		except EOFError:
 			logout(clients_offsets)
 			break
-		try:
-			common.execute_command(clients_offsets, function, command, params)
-		except common.LoginError as e:
-			print e.message
+		common.execute_command(clients_offsets, function, command, params)
 
 if __name__ == "__main__":
 	main()

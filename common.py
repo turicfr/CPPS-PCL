@@ -2,9 +2,9 @@ import os
 import sys
 import json
 import hashlib
-import client
 from shlex import split
 from getpass import getpass
+import client as pcl
 try:
 	import readline
 except ImportError:
@@ -113,7 +113,7 @@ def get_client(servers, cpps, server, logger=None):
 		game_port = int(game_port)
 	magic = servers[cpps].get("magic")
 	single_quotes = servers[cpps].get("single_quotes")
-	return client.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
+	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
 
 def get_penguin(cpps=None, server=None, user=None, remember=None, client=None):
 	servers = get_json("servers")
@@ -156,13 +156,17 @@ def read_command(commands):
 
 def execute_command(client, function, command, params):
 	try:
-		if hasattr(function, "__self__"):
-			function(*params)
-		else:
-			message = function(client, *params)
-			if message is not None:
-				print message
+		message = function(client, *params)
 	except TypeError as e:
 		if function.__name__ + "() takes" not in e.message:
 			raise
 		print 'Command "{}" does not take {} arguments'.format(command, len(params))
+	except KeyboardInterrupt:
+		print
+	except LoginError as e:
+		print e.message
+	except pcl.ClientError:
+		pass
+	else:
+		if function not in vars(pcl.Client) and message is not None:
+			print message
