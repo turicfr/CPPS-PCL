@@ -372,7 +372,12 @@ class Client(object):
 		penguin_id = int(packet[4])
 		penguin_name = packet[5]
 		self._info('Received a buddy request from "{}"'.format(penguin_name))
+		self._info('Accepting buddy "{}"...'.format(penguin_name))
 		self._send_packet("s", "b#ba", penguin_id)
+		packet = self.next("ba")
+		if packet is None:
+			self._error('Failed to accept buddy "{}"'.format(penguin_name))
+		self._info('Accepted buddy "{}"'.format(penguin_name))
 
 	def _upc(self, packet):
 		penguin_id = int(packet[4])
@@ -520,6 +525,7 @@ class Client(object):
 		self.handle("ap", self._ap)
 		self.handle("rp", self._rp)
 		self.handle("jr", self._jr)
+		self.handle("br", self._br)
 		self.handle("upc", self._upc)
 		self.handle("uph", self._uph)
 		self.handle("upf", self._upf)
@@ -870,6 +876,21 @@ class Client(object):
 			self._inventory = [int(item_id) for item_id in packet[4:-1] if item_id]
 			self._inventory.sort()
 		return self._inventory
+
+	@property
+	def buddies(self):
+		self._info("Fetching buddies...")
+		self._send_packet("s", "b#gb")
+		packet = self.next("gb")
+		if packet is None:
+			self._error("Faild to fetch buddies")
+		self._info("Fetched buddies")
+		buddies = []
+		for buddy in packet[4:-1]:
+			if buddy:
+				penguin_id, penguin_name, online = buddy.split("|")
+				buddies.append((int(penguin_id), penguin_name, bool(online)))
+		return buddies
 
 	@property
 	def stamps(self):

@@ -110,6 +110,12 @@ def background(client, item_id=None):
 def inventory(client):
 	return "Current inventory:\n" + "\n".join(str(item_id) for item_id in client.inventory)
 
+def buddies(client):
+	buddies = client.buddies
+	if not buddies:
+		return "Currently has no buddies"
+	return "Current buddies:\n" + "\n".join("{} (ID: {}, {})".format(penguin_name, penguin_id, "online" if online else "offline") for penguin_id, penguin_name, online in buddies)
+
 def get_stamps(client, penguin_id_or_name=None):
 	if penguin_id_or_name is None:
 		penguin_id = client.id
@@ -187,6 +193,7 @@ def main():
 		"pin": pin,
 		"background": background,
 		"inventory": inventory,
+		"buddies": buddies,
 		"stamps": get_stamps,
 		"walk": Client.walk,
 		"dance": Client.dance,

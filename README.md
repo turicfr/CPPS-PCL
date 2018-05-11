@@ -85,6 +85,7 @@ Options:
 | Both | `background` | _None_ | Prints current background item ID. |
 | Both | `background` | `item_id` | Equips background item with ID `item_id`. |
 | Both | `inventory` | _None_ | Prints current inventory. |
+| Single-Login only | `buddies` | _None_ | Prints current buddies. |
 | Single-Login only | `stamps` | _None_ | Prints all earned stamps. |
 | Single-Login only | `stamps` | `penguin_id` | Prints all earned stamps by penguin with ID `penguin_id`. |
 | Single-Login only | `stamps` | `penguin_name` | Prints all earned stamps by penguin named `penguin_name`. |
