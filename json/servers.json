@@ -122,5 +122,21 @@
 		"servers": {
 			"cpps.one": 9875
 		}
+	},
+	"cpr": {
+		"ip": "server.cprewritten.net",
+		"login": 6112,
+		"servers": {
+			"blizzard": 6113,
+			"snow avalanche": 6114,
+			"sleet": 6119,
+			"marshmallow": 7000,
+			"zipline": 7001,
+			"deep freeze": 7002,
+			"antarctic": 7003,
+			"abominable": 7004,
+			"ascent": 7008,
+			"beanie": 7011
+		}
 	}
 }

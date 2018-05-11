@@ -9,6 +9,7 @@ from bisect import insort
 import common
 from penguin import Penguin
 from aes import AES
+import recaptcha
 
 class _ExceptionThread(Thread):
 	def __init__(self, *args, **kwargs):
@@ -216,13 +217,12 @@ class Client(object):
 		data = self._receive()
 		if "cross-domain-policy" in data:
 			data = self._receive()
+		if "apiKO" in data:
+			self._error('Received "apiKO" response')
 		if "apiOK" in data:
 			self._info('Received "apiOK" response')
-			return True
-		if "apiKO" in data:
-			self._info('Received "apiKO" response')
-			return False
-		self._error("Invalid verChk response: {}".format(data))
+		else:
+			self._error("Invalid verChk response: {}".format(data))
 
 	def _rndk(self):
 		self._info("Sending rndK request...")
@@ -237,6 +237,17 @@ class Client(object):
 		key = re.search(r"<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", data).group(1)
 		self._info("Received key: {}".format(key))
 		return key
+
+	def _recaptcha(self):
+		self._info("Retrieving reCAPTCHA token...")
+		token = recaptcha.get_token()
+		if token is None:
+			self._error("Failed to retrieve reCAPTCHA token")
+		self._info("reCAPTCHA token: {}".format(token))
+		self._send_packet("s", "rewritten#captchaverify", token)
+		packet = self._receive_packet()
+		while packet[2] != "captchasuccess":
+			packet = self._receive_packet()
 
 	def _login(self, user, password, encrypted, ver):
 		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
@@ -300,6 +311,8 @@ class Client(object):
 		if confirmation is None:
 			while packet[2] != "js":
 				packet = self._receive_packet()
+				if packet[2] == "joincaptcha":
+					self._recaptcha()
 		self._info("Joined server")
 
 	def _heartbeat(self):
@@ -871,12 +884,12 @@ class Client(object):
 		self._info('Fetched stamps of "{}"'.format(penguin_name))
 		return [int(stamp_id) for stamp_id in packet[5].split("|") if stamp_id]
 
-	def walk(self, x, y, internal_room_id=False):
+	def walk(self, x, y):
 		x = self._require_int("x", x)
 		y = self._require_int("y", y)
 		self._info("Walking to ({}, {})...".format(x, y))
-		if internal_room_id:
-			self._send_packet("s", "u#sp", self._id, x, y)
+		if self._login_ip == "server.cprewritten.net":
+			self._send_packet("s", "u#sp", x, y)
 		else:
 			self._send_packet("s", "u#sp", None, self._id, x, y)
 		if self.next("sp") is None:
