@@ -360,8 +360,7 @@ class Client(object):
 
 	def _jr(self, packet):
 		internal_room_id = int(packet[3])
-		if self._internal_room_id < 0 or internal_room_id:
-			self._internal_room_id = internal_room_id
+		self._internal_room_id = internal_room_id
 		self._room = int(packet[4])
 		self._penguins.clear()
 		for player in packet[5:-1]:
