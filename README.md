@@ -54,7 +54,7 @@ Options:
 | Both | `help` | _None_ | Prints "HELP" (will be implemented in the future). |
 | Single-Login only | `log` | _None_ | Toggles logging on/off. |
 | Single-Login only | `log` | `level` | Sets logging level to `level`.<br>`level` must be one of the following:<ul><li>`all` - Logs all messages below.</li><li>`debug` - Logs debug messages such as sent and received packets, and below.</li><li>`info` - Logs higher-level messages such as walking, talking etc., and below.</li><li>`warning` - Logs warning messages such as unhandled packets, and below.</li><li>`error` - Logs failure messages such as "Could not add item", and below (default).</li><li>`critical` - Logs fatal error messages such as "Connection lost".</li></ul> |
-| Single-Login only | `internal` | _None_ | Prints current internal room ID. |
+| Both | `internal` | _None_ | Prints current internal room ID. |
 | Single-Login only | `id` | _None_ | Prints current penguin ID. |
 | Both | `id` | `penguin_name` | Prints ID of penguin named `penguin_name`. |
 | Both | `name` | _None_ | Prints current penguin name. |
@@ -84,6 +84,9 @@ Options:
 | Both | `pin` | `item_id` | Equips pin item with ID `item_id`. |
 | Both | `background` | _None_ | Prints current background item ID. |
 | Both | `background` | `item_id` | Equips background item with ID `item_id`. |
+| Single-Login only | `clothes` | _None_ | Prints all current item IDs. |
+| Both | `clothes` | `penguin_id` | Prints all current item IDs of penguin with ID `penguin_id`. |
+| Both | `clothes` | `penguin_name` | Prints all current item IDs of penguin named `penguin_name`. |
 | Both | `inventory` | _None_ | Prints current inventory. |
 | Single-Login only | `buddies` | _None_ | Prints current buddies. |
 | Single-Login only | `stamps` | _None_ | Prints all earned stamps. |

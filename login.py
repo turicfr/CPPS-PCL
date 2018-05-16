@@ -107,6 +107,20 @@ def background(client, item_id=None):
 		return "Current background item ID: {}".format(client.background)
 	client.background = item_id
 
+def clothes(client, penguin_id_or_name=None):
+	if penguin_id_or_name is None:
+		return "\n".join([color(client), head(client), face(client), neck(client), body(client), hand(client), feet(client), pin(client), background(client)])
+	penguin = client.get_penguin(client.get_penguin_id(penguin_id_or_name))
+	return """Current color item ID of "{penguin_name}": {}
+Current head item ID of "{penguin_name}": {}
+Current face item ID of "{penguin_name}": {}
+Current neck item ID of "{penguin_name}": {}
+Current body item ID of "{penguin_name}": {}
+Current hand item ID of "{penguin_name}": {}
+Current feet item ID of "{penguin_name}": {}
+Current pin item ID of "{penguin_name}": {}
+Current background item ID of "{penguin_name}": {}""".format(penguin.color, penguin.head, penguin.face, penguin.neck, penguin.body, penguin.hand, penguin.feet, penguin.pin, penguin.background, penguin_name=penguin.name)
+
 def inventory(client):
 	return "Current inventory:\n" + "\n".join(str(item_id) for item_id in client.inventory)
 
@@ -116,7 +130,7 @@ def buddies(client):
 		return "Currently has no buddies"
 	return "Current buddies:\n" + "\n".join("{} (ID: {}, {})".format(penguin_name, penguin_id, "online" if online else "offline") for penguin_id, penguin_name, online in buddies)
 
-def get_stamps(client, penguin_id_or_name=None):
+def stamps(client, penguin_id_or_name=None):
 	if penguin_id_or_name is None:
 		penguin_id = client.id
 		stamps = client.stamps
@@ -174,59 +188,60 @@ def main():
 	except common.LoginError as e:
 		print e.message
 		sys.exit(1)
-	commands = {
-		"help": show_help,
-		"log": log,
-		"internal": internal,
-		"id": get_id,
-		"name": name,
-		"room": room,
-		"igloo": igloo,
-		"penguins": penguins,
-		"color": color,
-		"head": head,
-		"face": face,
-		"neck": neck,
-		"body": body,
-		"hand": hand,
-		"feet": feet,
-		"pin": pin,
-		"background": background,
-		"inventory": inventory,
-		"buddies": buddies,
-		"stamps": get_stamps,
-		"walk": Client.walk,
-		"dance": Client.dance,
-		"wave": Client.wave,
-		"sit": Client.sit,
-		"snowball": Client.snowball,
-		"say": say,
-		"joke": Client.joke,
-		"emote": Client.emote,
-		"mail": mail,
-		"buy": Client.add_item,
-		"ai": Client.add_item,
-		"coins": coins,
-		"ac": Client.add_coins,
-		"stamp": Client.add_stamp,
-		"add_igloo": Client.add_igloo,
-		"add_furniture": Client.add_furniture,
-		"music": Client.igloo_music,
-		"buddy": buddy,
-		"find": find,
-		"follow": follow,
-		"unfollow": Client.unfollow,
-		"logout": logout,
-		"exit": logout,
-		"quit": logout
-	}
+	commands = common.Command.commands([
+		common.Command("help", show_help),
+		common.Command("log", log, [["all", "debug", "info", "warning", "error", "critical"]]),
+		common.Command("internal", internal),
+		common.Command("id", get_id, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("name", name, [None]),
+		common.Command("room", room, [common.get_json("rooms").values()]),
+		common.Command("igloo", igloo, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("penguins", penguins),
+		common.Command("color", color, [None]),
+		common.Command("head", head, [None]),
+		common.Command("face", face, [None]),
+		common.Command("neck", neck, [None]),
+		common.Command("body", body, [None]),
+		common.Command("hand", hand, [None]),
+		common.Command("feet", feet, [None]),
+		common.Command("pin", pin, [None]),
+		common.Command("background", background, [None]),
+		common.Command("clothes", clothes, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("inventory", inventory),
+		common.Command("buddies", buddies),
+		common.Command("stamps", stamps, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("walk", Client.walk, [None, None]),
+		common.Command("dance", Client.dance),
+		common.Command("wave", Client.wave),
+		common.Command("sit", Client.sit, [["s", "e", "w", "nw", "sw", "ne", "se", "n"]]),
+		common.Command("snowball", Client.snowball, [None, None]),
+		common.Command("say", say),
+		common.Command("joke", Client.joke, [None]),
+		common.Command("emote", Client.emote, [None]),
+		common.Command("mail", mail, [lambda c: [penguin.name for penguin in c.penguins.itervalues()], None]),
+		common.Command("buy", Client.add_item, [None]),
+		common.Command("ai", Client.add_item, [None]),
+		common.Command("coins", coins, [None]),
+		common.Command("ac", Client.add_coins, [None]),
+		common.Command("stamp", Client.add_stamp, [None]),
+		common.Command("add_igloo", Client.add_igloo, [None]),
+		common.Command("add_furniture", Client.add_furniture, [None]),
+		common.Command("music", Client.igloo_music, [None]),
+		common.Command("buddy", buddy, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("find", find, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("follow", follow, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("unfollow", Client.unfollow),
+		common.Command("logout", logout),
+		common.Command("exit", logout),
+		common.Command("quit", logout)
+	])
 	while client.connected:
 		try:
-			function, command, params = common.read_command(commands)
+			command, params = common.Command.read(client, commands)
 		except EOFError:
 			logout(client)
 			break
-		common.execute_command(client, function, command, params)
+		command.execute(client, params)
 
 if __name__ == "__main__":
 	main()

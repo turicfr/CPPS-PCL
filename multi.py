@@ -153,6 +153,9 @@ def login():
 def show_help(clients_offsets):
 	return """HELP"""
 
+def internal(clients_offsets):
+	return "\n".join('Current internal room ID of "{}": {}'.format(client.name, client.internal_room_id) for client, dx, dy in clients_offsets)
+
 def get_id(clients_offsets, penguin_name):
 	client, dx, dy = clients_offsets[0]
 	return 'Penguin ID of "{}": {}'.format(penguin_name, client.get_penguin_id(penguin_name))
@@ -222,6 +225,19 @@ def background(clients_offsets, item_id=None):
 		return "\n".join("{}: Current background item ID: {}".format(client.name, client.background) for client, dx, dy in clients_offsets)
 	set_all(clients_offsets, "background", item_id)
 
+def clothes(clients_offsets, penguin_id_or_name):
+	client, dx, dy = clients_offsets[0]
+	penguin = client.get_penguin(client.get_penguin_id(penguin_id_or_name))
+	return """Current color item ID of "{penguin_name}": {}
+Current head item ID of "{penguin_name}": {}
+Current face item ID of "{penguin_name}": {}
+Current neck item ID of "{penguin_name}": {}
+Current body item ID of "{penguin_name}": {}
+Current hand item ID of "{penguin_name}": {}
+Current feet item ID of "{penguin_name}": {}
+Current pin item ID of "{penguin_name}": {}
+Current background item ID of "{penguin_name}": {}""".format(penguin.color, penguin.head, penguin.face, penguin.neck, penguin.body, penguin.hand, penguin.feet, penguin.pin, penguin.background, penguin_name=penguin.name)
+
 def inventory(clients_offsets):
 	return "Current inventory:\n" + "\n".join("{} (x{})".format(item_id, count) for item_id, count in Counter(item_id for client, dx, dy in clients_offsets for item_id in client.inventory).iteritems())
 
@@ -279,53 +295,55 @@ def main():
 	except common.LoginError as e:
 		print e.message
 		sys.exit(1)
-	commands = {
-		"help": show_help,
-		"id": get_id,
-		"name": name,
-		"room": room,
-		"igloo": igloo,
-		"color": color,
-		"head": head,
-		"face": face,
-		"neck": neck,
-		"body": body,
-		"hand": hand,
-		"feet": feet,
-		"pin": pin,
-		"background": background,
-		"inventory": inventory,
-		"walk": walk,
-		"dance": call_all("dance"),
-		"wave": call_all("wave"),
-		"sit": call_all("sit"),
-		"snowball": call_all("snowball"),
-		"say": say,
-		"joke": call_all("joke"),
-		"emote": call_all("emote"),
-		"buy": call_all("add_item"),
-		"ai": call_all("add_item"),
-		"coins": coins,
-		"ac": call_all("add_coins"),
-		"stamp": call_all("add_stamp"),
-		"add_igloo": call_all("add_igloo"),
-		"add_furniture": call_all("add_furniture"),
-		"music": call_all("igloo_music"),
-		"buddy": buddy,
-		"find": find,
-		"follow": follow,
-		"unfollow": call_all("unfollow"),
-		"logout": logout,
-		"exit": logout,
-		"quit": logout
-	}
+	client, dx, dy = clients_offsets[0]
+	commands = common.Command.commands([
+		common.Command("help", show_help),
+		common.Command("internal", internal),
+		common.Command("id", get_id, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("name", name, [None]),
+		common.Command("room", room, [common.get_json("room").values()]),
+		common.Command("igloo", igloo, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("color", color, [None]),
+		common.Command("head", head, [None]),
+		common.Command("face", face, [None]),
+		common.Command("neck", neck, [None]),
+		common.Command("body", body, [None]),
+		common.Command("hand", hand, [None]),
+		common.Command("feet", feet, [None]),
+		common.Command("pin", pin, [None]),
+		common.Command("background", background, [None]),
+		common.Command("inventory", inventory),
+		common.Command("walk", walk, [None, None]),
+		common.Command("dance", call_all("dance")),
+		common.Command("wave", call_all("wave")),
+		common.Command("sit", call_all("sit"), [["s", "e", "w", "nw", "sw", "ne", "se", "n"]]),
+		common.Command("snowball", call_all("snowball"), [None, None]),
+		common.Command("say", say),
+		common.Command("joke", call_all("joke"), [None]),
+		common.Command("emote", call_all("emote"), [None]),
+		common.Command("buy", call_all("add_item"), [None]),
+		common.Command("ai", call_all("add_item"), [None]),
+		common.Command("coins", coins, [None]),
+		common.Command("ac", call_all("add_coins"), [None]),
+		common.Command("stamp", call_all("add_stamp"), [None]),
+		common.Command("add_igloo", call_all("add_igloo"), [None]),
+		common.Command("add_furniture", call_all("add_furniture"), [None]),
+		common.Command("music", call_all("igloo_music"), [None]),
+		common.Command("buddy", buddy, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("find", find, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("follow", follow, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("unfollow", call_all("unfollow")),
+		common.Command("logout", logout),
+		common.Command("exit", logout),
+		common.Command("quit", logout)
+	])
 	while all(client.connected for client, dx, dy in clients_offsets):
 		try:
-			function, command, params = common.read_command(commands)
+			command, params = common.Command.read(client, commands)
 		except EOFError:
 			logout(clients_offsets)
 			break
-		common.execute_command(clients_offsets, function, command, params)
+		command.execute(clients_offsets, params)
 
 if __name__ == "__main__":
 	main()

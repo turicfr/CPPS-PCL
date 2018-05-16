@@ -14,6 +14,123 @@ class LoginError(Exception):
 	def __init__(self, message=""):
 		super(LoginError, self).__init__(message)
 
+class Command(object):
+	def __init__(self, name, function, params=None):
+		self._name = name
+		self._function = function
+		self._params = [] if params is None else params
+
+	@property
+	def name(self):
+		return self._name
+
+	@staticmethod
+	def commands(commands):
+		return {command.name: command for command in commands}
+
+	@staticmethod
+	def read(client, commands):
+		while True:
+			try:
+				command = get_input(">>> ", {command.name: command._params for command in commands.itervalues()}, client)
+			except ValueError as e:
+				print e.message
+				continue
+			except KeyboardInterrupt:
+				print
+				continue
+			if not command:
+				continue
+			name, params = command[0], command[1:]
+			if name not in commands:
+				print 'Command "{}" does not exist'.format(name)
+				continue
+			break
+		return commands[name], params
+
+	def execute(self, client, params):
+		try:
+			message = self._function(client, *params)
+		except TypeError as e:
+			if self._function.__name__ + "() takes" not in e.message:
+				raise
+			print 'Command "{}" does not take {} arguments'.format(self.name, len(params))
+		except KeyboardInterrupt:
+			print
+		except LoginError as e:
+			print e.message
+		except pcl.ClientError:
+			pass
+		else:
+			if self._function not in vars(pcl.Client) and message is not None:
+				print message
+
+def list_completer(options):
+	def complete(text, state):
+		return [option for option in options if option.startswith(text)][state]
+	return complete
+
+def shell_completer(client, options):
+	def resolve(options, line):
+		for i, option in enumerate(line):
+			if option is None:
+				continue
+			if isinstance(options, dict):
+				if option not in options:
+					return []
+				options = options[option]
+			elif isinstance(options, list):
+				if not options:
+					return options
+				if callable(options[0]):
+					options[0] = options[0](client)
+				if option not in options[0]:
+					continue
+				options = options[1:]
+			else:
+				assert False, "options must be either dict or list"
+		if isinstance(options, dict):
+			return options.keys()
+		if isinstance(options, list):
+			if not options:
+				return options
+			if callable(options[0]):
+				options[0] = options[0](client)
+			return options[0]
+		assert False, "options must be either dict or list"
+	def complete(text, state):
+		line_buffer = readline.get_line_buffer()
+		try:
+			line = split(line_buffer)
+		except ValueError:
+			return None
+		if not line:
+			line = [""]
+		index = len(line)
+		if not line_buffer.endswith(tuple(readline.get_completer_delims())):
+			index -= 1
+		return [option + " " for option in resolve(options, line[:index]) if option.startswith(text)][state]
+	return complete
+
+def get_input(prompt=None, options=None, shell_client=None):
+	if readline is not None and options is not None:
+		completer_delims = readline.get_completer_delims()
+		completer = readline.get_completer()
+		readline.parse_and_bind("tab: complete")
+		if shell_client is None:
+			readline.set_completer_delims("")
+			readline.set_completer(list_completer(options))
+		else:
+			readline.set_completer_delims(" ")
+			readline.set_completer(shell_completer(shell_client, options))
+	try:
+		line = raw_input() if prompt is None else raw_input(prompt)
+		return line if shell_client is None else split(line)
+	finally:
+		if readline is not None and options is not None:
+			readline.set_completer_delims(completer_delims)
+			readline.set_completer(completer)
+
 def get_json(filename):
 	filename = os.path.join(os.path.dirname(__file__), "json", filename + ".json")
 	try:
@@ -45,27 +162,6 @@ def get_remember():
 			return None
 		raise LoginError('Unknown remember option: "{}"'.format(remember))
 	return None
-
-def complete(options):
-	def inner_complete(text, state):
-		line = readline.get_line_buffer()
-		return [option for option in options if option.startswith(line)][state]
-	return inner_complete
-
-def get_input(prompt=None, options=None):
-	if readline is not None and options is not None:
-		completer_delims = readline.get_completer_delims()
-		completer = readline.get_completer()
-
-		readline.set_completer_delims("")
-		readline.parse_and_bind("tab: complete")
-		readline.set_completer(complete(options))
-	try:
-		return raw_input() if prompt is None else raw_input(prompt)
-	finally:
-		if readline is not None and options is not None:
-			readline.set_completer_delims(completer_delims)
-			readline.set_completer(completer)
 
 def get_cpps(servers, cpps=None):
 	if cpps is None:
@@ -134,39 +230,3 @@ def remove_penguin(cpps, user, penguins=None, ask=True):
 		print "Removing {}...".format(user)
 		del penguins[cpps][user]
 		set_json("penguins", penguins)
-
-def read_command(commands):
-	while True:
-		try:
-			command = split(get_input(">>> ", commands.keys()))
-		except ValueError as e:
-			print e.message
-			continue
-		except KeyboardInterrupt:
-			print
-			continue
-		if not command:
-			continue
-		command, params = command[0], command[1:]
-		if command not in commands:
-			print 'Command "{}" does not exist'.format(command)
-			continue
-		break
-	return commands[command], command, params
-
-def execute_command(client, function, command, params):
-	try:
-		message = function(client, *params)
-	except TypeError as e:
-		if function.__name__ + "() takes" not in e.message:
-			raise
-		print 'Command "{}" does not take {} arguments'.format(command, len(params))
-	except KeyboardInterrupt:
-		print
-	except LoginError as e:
-		print e.message
-	except pcl.ClientError:
-		pass
-	else:
-		if function not in vars(pcl.Client) and message is not None:
-			print message
