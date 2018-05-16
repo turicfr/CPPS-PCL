@@ -71,15 +71,6 @@
 			"sleet": 7008
 		}
 	},
-	"tundrapenguin": {
-		"ip": "198.251.83.104",
-		"login": 3945,
-		"servers": {
-			"breeze": 2873,
-			"polar": 2874,
-			"vanilla": 2875
-		}
-	},
 	"cpu": {
 		"ip": "198.100.148.54",
 		"login": 6112,
