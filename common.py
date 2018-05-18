@@ -80,22 +80,20 @@ def shell_completer(client, options):
 					return []
 				options = options[option]
 			elif isinstance(options, list):
-				if not options:
-					return options
-				if callable(options[0]):
-					options[0] = options[0](client)
-				if option not in options[0]:
-					continue
-				options = options[1:]
+				if len(line) - i >= len(options):
+					return []
+				if callable(options[len(line) - i]):
+					return options[len(line) - i](client)
+				return options[len(line) - i]
 			else:
 				assert False, "options must be either dict or list"
 		if isinstance(options, dict):
 			return options.keys()
 		if isinstance(options, list):
 			if not options:
-				return options
+				return []
 			if callable(options[0]):
-				options[0] = options[0](client)
+				return options[0](client)
 			return options[0]
 		assert False, "options must be either dict or list"
 	def complete(text, state):

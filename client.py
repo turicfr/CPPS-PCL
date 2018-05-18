@@ -9,7 +9,6 @@ from bisect import insort
 import common
 from penguin import Penguin
 from aes import AES
-import recaptcha
 
 class _ExceptionThread(Thread):
 	def __init__(self, *args, **kwargs):
@@ -186,12 +185,12 @@ class Client(object):
 
 	def _receive(self):
 		data = ""
-		try:
-			while not chr(0) in self._buffer:
-				data += self._buffer
+		while not chr(0) in self._buffer:
+			data += self._buffer
+			try:
 				self._buffer = self._sock.recv(4096)
-		except socket.error:
-			self._critical("Connection lost")
+			except socket.error:
+				self._critical("Connection lost")
 		i = self._buffer.index(chr(0))
 		data += self._buffer[:i]
 		self._buffer = self._buffer[i + 1:]
@@ -239,6 +238,10 @@ class Client(object):
 		return key
 
 	def _recaptcha(self):
+		try:
+			import recaptcha
+		except ImportError:
+			self._error("Failed to retrieve reCAPTCHA token: cefpython is not installed; Please install it using the following command and try again:\npip install cefpython3")
 		self._info("Retrieving reCAPTCHA token...")
 		token = recaptcha.get_token()
 		if token is None:
@@ -729,7 +732,7 @@ class Client(object):
 	def igloo(self, penguin_id):
 		penguin = self.get_penguin(penguin_id)
 		self._info("Joining {}'s igloo...".format(penguin.name))
-		self._send_packet("s", "j#jp", None, self._id, int(penguin_id) + 1000)
+		self._send_packet("s", "j#jp", int(penguin_id) + 1000)
 		if self.next("jr") is None:
 			self._error("Failed to join {}'s igloo".format(penguin.name))
 		self._info("Joined {}'s igloo".format(penguin.name))

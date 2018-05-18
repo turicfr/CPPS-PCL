@@ -16,6 +16,7 @@ A complex login with multiple penguins managed by a certain shape.
 ## Requirements
 - Python 2.x
 - Internet connection
+- _For Club Penguin Rewritten_: [cefpython](https://github.com/cztomczak/cefpython) (can be installed with: `pip install cefpython3`)
 
 ## Usage
 
