@@ -157,8 +157,10 @@ def buddy(client, penguin_id_or_name):
 	client.buddy(client.get_penguin_id(penguin_id_or_name))
 
 def find(client, penguin_id_or_name):
-	room_name = client.get_room_name(client.find_buddy(client.get_penguin_id(penguin_id_or_name)))
-	return '"{}" is in {}'.format(penguin_id_or_name, room_name)
+	penguin = client.get_penguin(client.get_penguin_id(penguin_id_or_name))
+	if not any(buddy_id == penguin.id and online for buddy_id, buddy_name, online in client.buddies):
+		return '"{}" is offline'.format(penguin.name)
+	return '"{}" is in {}'.format(penguin.name, client.get_room_name(client.find_buddy(penguin.id)))
 
 def follow(client, penguin_id_or_name=None, dx=None, dy=None):
 	if penguin_id_or_name is None:

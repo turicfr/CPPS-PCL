@@ -157,7 +157,7 @@ def get_tokens(count, retry=False):
 def get_token():
 	if _tokens:
 		return _tokens.pop()
-	return next(get_tokens(1))
+	return list(get_tokens(1))[0]
 
 def preload_tokens(count):
 	_tokens.extend(get_tokens(count, True))

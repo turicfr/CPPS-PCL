@@ -1,8 +1,8 @@
 class Penguin(object):
-	def __init__(self, penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x=None, y=None):
+	def __init__(self, penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background, x=None, y=None, frame=None, unknown=None, rank=None):
 		self.id = penguin_id
 		self.name = name
-		self.frame = frame
+		self.member = member
 		self.color = color
 		self.head = head
 		self.face = face
@@ -14,6 +14,9 @@ class Penguin(object):
 		self.background = background
 		self.x = x
 		self.y = y
+		self.frame = frame
+		# self.??? = unknown
+		self.rank = rank
 
 	@classmethod
 	def from_player(cls, player):
@@ -22,7 +25,7 @@ class Penguin(object):
 		player = player.split("|")
 		penguin_id = int(player[0])
 		name = player[1]
-		frame = player[2]
+		member = int(player[2])
 		color = int(player[3], 0)
 		head = int(player[4])
 		face = int(player[5])
@@ -33,7 +36,13 @@ class Penguin(object):
 		pin = int(player[10])
 		background = int(player[11])
 		if len(player) > 12:
+			# ??? = int(player[12])
+			return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background)
+		elif len(player) > 16:
 			x = int(player[12])
 			y = int(player[13])
-			return cls(penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background, x, y)
-		return cls(penguin_id, name, frame, color, head, face, neck, body, hand, feet, pin, background)
+			frame = int(player[14])
+			unknown = int(player[15])
+			rank = int(player[16])
+			return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background, x, y, frame, unknown, rank)
+		return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background)

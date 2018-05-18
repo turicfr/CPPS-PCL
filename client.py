@@ -637,6 +637,9 @@ class Client(object):
 		for penguin in self._penguins.itervalues():
 			if penguin.name.lower() == penguin_id_or_name.lower():
 				return penguin.id
+		for penguin_id, penguin_name, online in self.buddies:
+			if penguin_name.lower() == penguin_id_or_name.lower():
+				return penguin_id
 		self._error('Penguin "{}" not found'.format(penguin_id_or_name))
 
 	def get_penguin(self, penguin_id):
@@ -891,7 +894,7 @@ class Client(object):
 		for buddy in packet[4:-1]:
 			if buddy:
 				penguin_id, penguin_name, online = buddy.split("|")
-				buddies.append((int(penguin_id), penguin_name, bool(online)))
+				buddies.append((int(penguin_id), penguin_name, online == "1"))
 		return buddies
 
 	@property
