@@ -4,6 +4,8 @@ from urllib import pathname2url
 from urlparse import urljoin
 from cefpython3 import cefpython as cef
 
+_tokens = []
+
 class ClientHandler:
 	def __init__(self, old_url, new_url):
 		self.old_url = old_url
@@ -107,18 +109,19 @@ class External(object):
 		self._token = None
 
 	def setToken(self, token):
+		if self._token is not None:
+			return
 		self._token = token
 		cef.QuitMessageLoop()
 
 	def getToken(self):
 		return self._token
 
-def filename2uri(filename):
+def filename2url(filename):
 	return urljoin("file:", pathname2url(os.path.abspath(filename)))
 
-def get_token():
+def get_tokens(count, retry=False):
 	url = "https://play.cprewritten.net/"
-	excepthook = sys.excepthook
 	sys.excepthook = cef.ExceptHook
 	settings = {
 		"context_menu": {"enabled": False},
@@ -127,21 +130,34 @@ def get_token():
 	}
 	try:
 		cef.Initialize(settings=settings)
-		browser = cef.CreateBrowserSync(url=url, window_title="reCAPTCHA")
-		browser.SetBounds(0, 0, 314, 501)
+		while count:
+			browser = cef.CreateBrowserSync(url=url, window_title="reCAPTCHA")
+			browser.SetBounds(0, 0, 314, 501)
 
-		# frame = browser.GetMainFrame()
-		# frame.LoadString(html, url)
-		clientHandler = ClientHandler(url, filename2uri("recaptcha.html"))
-		browser.SetClientHandler(clientHandler)
+			# frame = browser.GetMainFrame()
+			# frame.LoadString(html, url)
+			clientHandler = ClientHandler(url, filename2url("recaptcha.html"))
+			browser.SetClientHandler(clientHandler)
 
-		external = External()
-		bindings = cef.JavascriptBindings(bindToFrames=False, bindToPopups=False)
-		bindings.SetObject("external", external)
-		browser.SetJavascriptBindings(bindings)
+			external = External()
+			bindings = cef.JavascriptBindings(bindToFrames=False, bindToPopups=False)
+			bindings.SetObject("external", external)
+			browser.SetJavascriptBindings(bindings)
 
-		cef.MessageLoop()
+			cef.MessageLoop()
+			token = external.getToken()
+			if token is None:
+				continue
+			yield token
+			count -= 1
 		cef.Shutdown()
-		return external.getToken()
 	finally:
-		sys.excepthook = excepthook
+		sys.excepthook = sys.__excepthook__
+
+def get_token():
+	if _tokens:
+		return _tokens.pop()
+	return next(get_tokens(1))
+
+def preload_tokens(count):
+	_tokens.extend(get_tokens(count, True))

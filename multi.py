@@ -46,20 +46,30 @@ def call_all(method):
 	inner_call_all.__name__ = method
 	return inner_call_all
 
-def connect_client(client, user, password):
+def equip(client, shape, pool):
+	def equip_inner(item_name):
+		if item_name in shape:
+			try:
+				setattr(client, item_name, shape[item_name])
+			except ClientError as e:
+				print "{}: {}".format(e.client.name, e.message)
+	pool.map_async(equip_inner, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
+
+def connect_client(client, user, password, shape, pool):
 	try:
 		client.connect(user, password, True)
 	except ClientError as e:
 		return user, e
+	equip(client, shape, pool)
 	return user, None
 
-def auto_login(cpps, penguins, clients):
+def auto_login(cpps, shape, penguins, clients):
 	def callback(args):
 		user, e = args
 		if e is None:
-			count["value"] -= 1
-			print "Connected with {}! ({} left)".format(user, count["value"])
-			if not count["value"]:
+			count[0] -= 1
+			print "Connected with {}! ({} left)".format(user, count[0])
+			if not count[0]:
 				semaphore.release()
 		else:
 			not_connected.append(e.client)
@@ -67,23 +77,26 @@ def auto_login(cpps, penguins, clients):
 			if e.code == 101 or e.code == 603:
 				common.remove_penguin(cpps, user, penguins)
 			semaphore.release()
-	count = {"value": len(clients)}
+	count = [len(clients)]
 	not_connected = clients[:]
 	pool = ThreadPool()
-	semaphore = Semaphore(count["value"])
+	semaphore = Semaphore(count[0])
 	for user, password in penguins[cpps].items():
 		semaphore.acquire()
-		if not count["value"]:
+		if not count[0]:
 			break
 		client = not_connected.pop()
 		print "Connecting with {}...".format(user)
-		pool.apply_async(connect_client, (client, user, password), callback=callback)
+		pool.apply_async(connect_client, (client, user, password, shape, pool), callback=callback)
+	if count[0]:
+		semaphore.acquire()
 	pool.close()
 	pool.join()
-	assert count["value"] == len(not_connected)
+	assert count[0] == len(not_connected)
 	return not_connected
 
-def manual_login(cpps, server, connected, not_connected, remember):
+def manual_login(cpps, server, shape, connected, not_connected, remember):
+	pool = ThreadPool()
 	for i, client in enumerate(not_connected):
 		while not client.connected:
 			cpps, server, user, password, encrypted, client = common.get_penguin(cpps, server, remember=remember, client=client)
@@ -98,32 +111,29 @@ def manual_login(cpps, server, connected, not_connected, remember):
 				if e.code == 101 or e.code == 603:
 					common.remove_penguin(cpps, user)
 				continue
+			equip(client, shape, pool)
 			print "Connected! ({} left)".format(len(not_connected) - i - 1)
+	pool.close()
+	pool.join()
 
-def connect_clients(cpps, server, clients_offsets, remember):
-	count = len(clients_offsets)
-	print "Logging in with {} penguin{}...".format(count, "s" if count > 1 else "")
+def connect_clients(cpps, server, shape, clients_offsets, remember):
 	clients = [client for client, dx, dy in clients_offsets]
+	print "Logging in with {} penguin{}...".format(len(clients), "s" if len(clients) > 1 else "")
+	if cpps == "cpr":
+		try:
+			import recaptcha
+		except ImportError:
+			raise common.LoginError("cefpython is not installed; Please install it using the following command and try again:\npip install cefpython3")
+		recaptcha.preload_tokens(len(clients))
 	penguins = common.get_json("penguins")
-	if cpps in penguins:
-		not_connected = auto_login(cpps, penguins, clients)
-		connected = [client for client in clients if client not in not_connected]
-	else:
-		not_connected = clients
-		connected = []
+	not_connected = auto_login(cpps, shape, penguins, clients) if cpps in penguins else clients
+	connected = [client for client in clients if client not in not_connected]
 	try:
-		manual_login(cpps, server, connected, not_connected, remember)
+		manual_login(cpps, server, shape, connected, not_connected, remember)
 	except common.LoginError:
 		logout(clients_offsets)
 		raise
 	print "All connected!"
-
-def unify_clients(clients_offsets, shape):
-	def unify_item(item_name):
-		if item_name in shape:
-			set_all(clients_offsets, item_name, shape[item_name])
-	pool = ThreadPool()
-	pool.map(unify_item, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
 
 def get_penguins(cpps=None, server=None, shape=None):
 	servers = common.get_json("servers")
@@ -146,8 +156,7 @@ def login():
 	server = sys.argv[2] if argc > 2 else None
 	shape = sys.argv[3] if argc > 3 else None
 	cpps, server, shape, clients_offsets = get_penguins(cpps, server, shape)
-	connect_clients(cpps, server, clients_offsets, remember)
-	unify_clients(clients_offsets, shape)
+	connect_clients(cpps, server, shape, clients_offsets, remember)
 	return clients_offsets
 
 def show_help(clients_offsets):
@@ -301,7 +310,7 @@ def main():
 		common.Command("internal", internal),
 		common.Command("id", get_id, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
 		common.Command("name", name, [None]),
-		common.Command("room", room, [common.get_json("room").values()]),
+		common.Command("room", room, [common.get_json("rooms").values()]),
 		common.Command("igloo", igloo, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
 		common.Command("color", color, [None]),
 		common.Command("head", head, [None]),
