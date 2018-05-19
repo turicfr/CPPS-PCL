@@ -60,7 +60,7 @@ def igloo(client, penguin_id_or_name=None):
 	client.igloo = client.id if penguin_id_or_name is None else client.get_penguin_id(penguin_id_or_name)
 
 def penguins(client):
-	return "Penguins in current room:\n" + "\n".join("{} (ID: {})".format(penguin.name, penguin.id) for penguin in client.penguins.itervalues())
+	return "Current penguins in {}:\n{}".format(client.get_room_name(client.room), "\n".join("{} (ID: {})".format(penguin.name, penguin.id) for penguin in client.penguins.itervalues()))
 
 def color(client, item_id=None):
 	if item_id is None:
@@ -109,17 +109,27 @@ def background(client, item_id=None):
 
 def clothes(client, penguin_id_or_name=None):
 	if penguin_id_or_name is None:
-		return "\n".join([color(client), head(client), face(client), neck(client), body(client), hand(client), feet(client), pin(client), background(client)])
+		return """Current item IDs:
+color: {}
+head: {}
+face: {}
+neck: {}
+body: {}
+hand: {}
+feet: {}
+pin: {}
+background: {}""".format(client.color, client.head, client.face, client.neck, client.body, client.hand, client.feet, client.pin, client.background)
 	penguin = client.get_penguin(client.get_penguin_id(penguin_id_or_name))
-	return """Current color item ID of "{penguin_name}": {}
-Current head item ID of "{penguin_name}": {}
-Current face item ID of "{penguin_name}": {}
-Current neck item ID of "{penguin_name}": {}
-Current body item ID of "{penguin_name}": {}
-Current hand item ID of "{penguin_name}": {}
-Current feet item ID of "{penguin_name}": {}
-Current pin item ID of "{penguin_name}": {}
-Current background item ID of "{penguin_name}": {}""".format(penguin.color, penguin.head, penguin.face, penguin.neck, penguin.body, penguin.hand, penguin.feet, penguin.pin, penguin.background, penguin_name=penguin.name)
+	return """Current item IDs of "{}":
+color: {}
+head: {}
+face: {}
+neck: {}
+body: {}
+hand: {}
+feet: {}
+pin: {}
+background: {}""".format(penguin.name, penguin.color, penguin.head, penguin.face, penguin.neck, penguin.body, penguin.hand, penguin.feet, penguin.pin, penguin.background)
 
 def inventory(client):
 	return "Current inventory:\n" + "\n".join(str(item_id) for item_id in client.inventory)

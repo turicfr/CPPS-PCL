@@ -237,15 +237,16 @@ def background(clients_offsets, item_id=None):
 def clothes(clients_offsets, penguin_id_or_name):
 	client, dx, dy = clients_offsets[0]
 	penguin = client.get_penguin(client.get_penguin_id(penguin_id_or_name))
-	return """Current color item ID of "{penguin_name}": {}
-Current head item ID of "{penguin_name}": {}
-Current face item ID of "{penguin_name}": {}
-Current neck item ID of "{penguin_name}": {}
-Current body item ID of "{penguin_name}": {}
-Current hand item ID of "{penguin_name}": {}
-Current feet item ID of "{penguin_name}": {}
-Current pin item ID of "{penguin_name}": {}
-Current background item ID of "{penguin_name}": {}""".format(penguin.color, penguin.head, penguin.face, penguin.neck, penguin.body, penguin.hand, penguin.feet, penguin.pin, penguin.background, penguin_name=penguin.name)
+	return """Current item IDs of "{}":
+color: {}
+head: {}
+face: {}
+neck: {}
+body: {}
+hand: {}
+feet: {}
+pin: {}
+background: {}""".format(penguin.name, penguin.color, penguin.head, penguin.face, penguin.neck, penguin.body, penguin.hand, penguin.feet, penguin.pin, penguin.background)
 
 def inventory(clients_offsets):
 	return "Current inventory:\n" + "\n".join("{} (x{})".format(item_id, count) for item_id, count in Counter(item_id for client, dx, dy in clients_offsets for item_id in client.inventory).iteritems())
