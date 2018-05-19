@@ -17,6 +17,7 @@ class Penguin(object):
 		self.frame = frame
 		# self.??? = unknown
 		self.rank = rank
+		self.online = None
 
 	@classmethod
 	def from_player(cls, player):
@@ -35,14 +36,23 @@ class Penguin(object):
 		feet = int(player[9])
 		pin = int(player[10])
 		background = int(player[11])
-		if len(player) > 12:
-			# ??? = int(player[12])
-			return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background)
-		elif len(player) > 16:
+		if len(player) > 16:
 			x = int(player[12])
 			y = int(player[13])
 			frame = int(player[14])
 			unknown = int(player[15])
 			rank = int(player[16])
 			return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background, x, y, frame, unknown, rank)
+		if len(player) > 12:
+			# ??? = int(player[12])
+			return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background)
 		return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background)
+
+	@classmethod
+	def from_buddy(cls, buddy):
+		if not buddy:
+			raise ValueError("Invalid buddy")
+		penguin_id, name, online = buddy.split("|")
+		penguin = cls(int(penguin_id), name, None, None, None, None, None, None, None, None, None, None)
+		penguin.online = online == "1"
+		return penguin

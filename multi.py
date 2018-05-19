@@ -277,7 +277,7 @@ def coins(clients_offsets, amount=None):
 def buddy(clients_offsets, penguin_id_or_name):
 	@for_all
 	def inner_buddy(client, dx, dy):
-		client.buddy(client.get_penguin_id(penguin_id_or_name))
+		client.add_buddy(client.get_penguin_id(penguin_id_or_name))
 	inner_buddy(clients_offsets)
 
 def find(clients_offsets, penguin_id_or_name):

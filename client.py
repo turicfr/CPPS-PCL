@@ -3,6 +3,7 @@ import socket
 import hashlib
 import re
 from threading import Thread, Timer
+from multiprocessing.pool import ThreadPool
 import Queue
 import logging
 from bisect import insort
@@ -110,8 +111,10 @@ class Client(object):
 		self._id = -1
 		self._coins = -1
 		self._room = -1
+		self._all_penguins = {}
 		self._penguins = {}
 		self._inventory = None
+		self._buddies = None
 		self._follow = None
 
 	def __iter__(self):
@@ -332,6 +335,7 @@ class Client(object):
 	def _lp(self, packet):
 		del self._handlers["lp"]
 		penguin = Penguin.from_player(packet[4])
+		self._all_penguins[penguin.id] = penguin
 		self._penguins[penguin.id] = penguin
 		self._coins = int(packet[5])
 		safemode = packet[6] == "1"
@@ -352,6 +356,7 @@ class Client(object):
 
 	def _ap(self, packet):
 		penguin = Penguin.from_player(packet[4])
+		self._all_penguins[penguin.id] = penguin
 		self._penguins[penguin.id] = penguin
 
 	def _rp(self, packet):
@@ -359,7 +364,11 @@ class Client(object):
 		if penguin_id in self._penguins:
 			penguin = self._penguins.pop(penguin_id)
 		if self._follow is not None and penguin_id == self._follow[0]:
-			self.room = self.find_buddy(penguin_id)
+			try:
+				room_id = self.find_buddy(penguin_id)
+			except ClientError:
+				self.unfollow()
+			self.room = room_id
 
 	def _jr(self, packet):
 		internal_room_id = int(packet[3])
@@ -369,6 +378,7 @@ class Client(object):
 		for player in packet[5:-1]:
 			penguin = Penguin.from_player(player)
 			self._penguins[penguin.id] = penguin
+		self._all_penguins.update(self._penguins)
 
 	def _br(self, packet):
 		penguin_id = int(packet[4])
@@ -379,88 +389,131 @@ class Client(object):
 		packet = self.next("ba")
 		if packet is None:
 			self._error('Failed to accept buddy "{}"'.format(penguin_name))
+		if self._buddies is not None:
+			penguin_id = int(packet[4])
+			penguin_name = packet[5]
+			penguin = Penguin(penguin_id, penguin_name, None, None, None, None, None, None, None, None, None, None)
+			penguin.online = True
+			self._buddies[penguin.id] = penguin
 		self._info('Accepted buddy "{}"'.format(penguin_name))
+
+	def _rb(self, packet):
+		penguin_id = int(packet[4])
+		if self._buddies is not None and penguin_id in self._buddies:
+			del self._buddies[penguin_id]
+
+	def _bon(self, packet):
+		penguin_id = int(packet[4])
+		if self._buddies is not None and penguin_id in self._buddies:
+			self._buddies[penguin_id].online = True
+
+	def _bof(self, packet):
+		penguin_id = int(packet[4])
+		if self._buddies is not None and penguin_id in self._buddies:
+			self._buddies[penguin_id].online = False
 
 	def _upc(self, packet):
 		penguin_id = int(packet[4])
+		color = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].color = color
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.color = int(packet[5])
+			self._penguins[penguin_id].color = color
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.color = penguin.color
+				self.color = color
 
 	def _uph(self, packet):
 		penguin_id = int(packet[4])
+		head = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].head = head
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.head = int(packet[5])
+			self._penguins[penguin_id].head = head
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.head = penguin.head
+				self.head = head
 
 	def _upf(self, packet):
 		penguin_id = int(packet[4])
+		face = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].face = face
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.face = int(packet[5])
+			self._penguins[penguin_id].face = face
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.face = penguin.face
+				self.face = face
 
 	def _upn(self, packet):
 		penguin_id = int(packet[4])
+		neck = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].neck = neck
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.neck = int(packet[5])
+			self._penguins[penguin_id].neck = neck
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.neck = penguin.neck
+				self.neck = neck
 
 	def _upb(self, packet):
 		penguin_id = int(packet[4])
+		body = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].body = body
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.body = int(packet[5])
+			self._penguins[penguin_id].body = body
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.body = penguin.body
+				self.body = body
 
 	def _upa(self, packet):
 		penguin_id = int(packet[4])
+		hand = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].hand = hand
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.hand = int(packet[5])
+			self._penguins[penguin_id].hand = hand
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.hand = penguin.hand
+				self.hand = hand
 
 	def _upe(self, packet):
 		penguin_id = int(packet[4])
+		feet = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].feet = feet
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.feet = int(packet[5])
+			self._penguins[penguin_id].feet = feet
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.feet = penguin.feet
+				self.feet = feet
 
 	def _upl(self, packet):
 		penguin_id = int(packet[4])
+		pin = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].pin = pin
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.pin = int(packet[5])
+			self._penguins[penguin_id].pin = pin
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.pin = penguin.pin
+				self.pin = pin
 
 	def _upp(self, packet):
 		penguin_id = int(packet[4])
+		background = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].background = background
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.background = int(packet[5])
+			self._penguins[penguin_id].background = background
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.background = penguin.background
+				self.background = background
 
 	def _sp(self, packet):
 		penguin_id = int(packet[4])
+		x = int(packet[5])
+		y = int(packet[6])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].x = x
+			self._all_penguins[penguin_id].y = y
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.x = int(packet[5])
-			penguin.y = int(packet[6])
+			self._penguins[penguin_id].x = x
+			self._penguins[penguin_id].y = y
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.walk(penguin.x + self._follow[1], penguin.y + self._follow[2])
+				self.walk(x + self._follow[1], y + self._follow[2])
 
 	def _sa(self, packet):
 		penguin_id = int(packet[4])
@@ -471,11 +524,13 @@ class Client(object):
 
 	def _sf(self, packet):
 		penguin_id = int(packet[4])
+		frame = int(packet[5])
+		if penguin_id in self._all_penguins:
+			self._all_penguins[penguin_id].frame = frame
 		if penguin_id in self._penguins:
-			penguin = self._penguins[penguin_id]
-			penguin.frame = int(packet[5])
+			self._penguins[penguin_id].frame = frame
 			if self._follow is not None and penguin_id == self._follow[0]:
-				self.frame = penguin.frame
+				self.frame = frame
 
 	def _sb(self, packet):
 		penguin_id = int(packet[4])
@@ -528,6 +583,9 @@ class Client(object):
 		self.handle("rp", self._rp)
 		self.handle("jr", self._jr)
 		self.handle("br", self._br)
+		self.handle("rb", self._rb)
+		self.handle("bon", self._bon)
+		self.handle("bof", self._bof)
 		self.handle("upc", self._upc)
 		self.handle("uph", self._uph)
 		self.handle("upf", self._upf)
@@ -634,27 +692,29 @@ class Client(object):
 			return int(penguin_id_or_name)
 		except ValueError:
 			pass
-		for penguin in self._penguins.itervalues():
+		penguins = self._all_penguins.values()
+		if self._buddies is not None:
+			penguins.extend(self._buddies.values())
+		for penguin in penguins:
 			if penguin.name.lower() == penguin_id_or_name.lower():
 				return penguin.id
-		for penguin_id, penguin_name, online in self.buddies:
-			if penguin_name.lower() == penguin_id_or_name.lower():
-				return penguin_id
 		self._error('Penguin "{}" not found'.format(penguin_id_or_name))
 
 	def get_penguin(self, penguin_id):
 		penguin_id = self._require_int("penguin_id", penguin_id)
-		if penguin_id in self._penguins:
-			return self._penguins[penguin_id]
+		if penguin_id in self._all_penguins:
+			return self._all_penguins[penguin_id]
 		self._info("Fetching player information...")
 		self._send_packet("s", "u#gp", penguin_id)
 		packet = self.next("gp")
 		if packet is None:
 			self._error("Failed to fetch player information")
 		try:
-			return Penguin.from_player(packet[4])
+			penguin = Penguin.from_player(packet[4])
 		except ValueError as e:
 			self._error(e.message)
+		self._all_penguins[penguin.id] = penguin
+		return penguin
 
 	def get_room_id(self, room_id_or_name):
 		try:
@@ -884,18 +944,19 @@ class Client(object):
 
 	@property
 	def buddies(self):
-		self._info("Fetching buddies...")
-		self._send_packet("s", "b#gb")
-		packet = self.next("gb")
-		if packet is None:
-			self._error("Faild to fetch buddies")
-		self._info("Fetched buddies")
-		buddies = []
-		for buddy in packet[4:-1]:
-			if buddy:
-				penguin_id, penguin_name, online = buddy.split("|")
-				buddies.append((int(penguin_id), penguin_name, online == "1"))
-		return buddies
+		if self._buddies is None:
+			self._info("Fetching buddies...")
+			self._send_packet("s", "b#gb")
+			packet = self.next("gb")
+			if packet is None:
+				self._error("Faild to fetch buddies")
+			self._info("Fetched buddies")
+			self._buddies = {}
+			for buddy in packet[4:-1]:
+				if buddy:
+					penguin = Penguin.from_buddy(buddy)
+					self._buddies[penguin.id] = penguin
+		return self._buddies
 
 	@property
 	def stamps(self):
@@ -1093,8 +1154,10 @@ class Client(object):
 			self._error("Failed to set igloo music to {}".format(music_id))
 		self._info("Set igloo music to #{}".format(music_id))
 
-	def buddy(self, penguin_id):
+	def add_buddy(self, penguin_id):
 		penguin = self.get_penguin(penguin_id)
+		if penguin.id in self.buddies:
+			self._error('"{}" is already buddy'.format(penguin.name))
 		self._info('Sending buddy request to "{}"...'.format(penguin.name))
 		self._send_packet("s", "b#br", penguin.id)
 		if self.next("br") is None:
@@ -1103,6 +1166,10 @@ class Client(object):
 
 	def find_buddy(self, penguin_id):
 		penguin = self.get_penguin(penguin_id)
+		if penguin.id not in self.buddies:
+			self._error('"{}" is not buddy'.format(penguin.name))
+		if not self.buddies[penguin.id].online:
+			self._error('"{}" is offline'.format(penguin.name))
 		self._info('Finding buddy "{}"...'.format(penguin.name))
 		self._send_packet("s", "b#bf", penguin.id)
 		packet = self.next("bf")
@@ -1113,27 +1180,32 @@ class Client(object):
 		return room_id
 
 	def follow(self, penguin_id, dx=0, dy=0):
+		def equip(item_name):
+			try:
+				setattr(self, item_name, getattr(penguin, item_name))
+			except ClientError:
+				pass
 		penguin = self.get_penguin(penguin_id)
 		self._info('Following "{}"...'.format(penguin.name))
 		if penguin.id == self._id:
 			self._error("Cannot follow self")
 		if penguin.id not in self._penguins:
-			self._error('"{}" not found'.format(penguin.name))
+			if penguin.id not in self.buddies or not self.buddies[penguin.id].online:
+				self._error('Penguin "{}" not in room'.format(penguin.name))
+			self.room = self.find_buddy(penguin.id)
 		self._follow = (penguin.id, dx, dy)
-		self.walk(penguin.x + dx, penguin.y + dy)
-		self.color = penguin.color
-		self.head = penguin.head
-		self.face = penguin.face
-		self.neck = penguin.neck
-		self.body = penguin.body
-		self.hand = penguin.hand
-		self.feet = penguin.feet
-		self.pin = penguin.pin
-		self.background = penguin.background
+		pool = ThreadPool()
+		pool.map_async(equip, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
 		try:
-			self.buddy(penguin.id)
+			self.walk(penguin.x + dx, penguin.y + dy)
 		except ClientError:
 			pass
+		try:
+			self.add_buddy(penguin.id)
+		except ClientError:
+			pass
+		pool.close()
+		pool.join()
 
 	def unfollow(self):
 		self._follow = None

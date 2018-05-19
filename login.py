@@ -138,7 +138,7 @@ def buddies(client):
 	buddies = client.buddies
 	if not buddies:
 		return "Currently has no buddies"
-	return "Current buddies:\n" + "\n".join("{} (ID: {}, {})".format(penguin_name, penguin_id, "online" if online else "offline") for penguin_id, penguin_name, online in buddies)
+	return "Current buddies:\n{}".format("\n".join("{} (ID: {}, {})".format(penguin.name, penguin.id, "online" if penguin.online else "offline") for penguin in buddies.itervalues()))
 
 def stamps(client, penguin_id_or_name=None):
 	if penguin_id_or_name is None:
@@ -164,12 +164,10 @@ def coins(client, amount=None):
 	client.add_coins(amount)
 
 def buddy(client, penguin_id_or_name):
-	client.buddy(client.get_penguin_id(penguin_id_or_name))
+	client.add_buddy(client.get_penguin_id(penguin_id_or_name))
 
 def find(client, penguin_id_or_name):
 	penguin = client.get_penguin(client.get_penguin_id(penguin_id_or_name))
-	if not any(buddy_id == penguin.id and online for buddy_id, buddy_name, online in client.buddies):
-		return '"{}" is offline'.format(penguin.name)
 	return '"{}" is in {}'.format(penguin.name, client.get_room_name(client.find_buddy(penguin.id)))
 
 def follow(client, penguin_id_or_name=None, dx=None, dy=None):
