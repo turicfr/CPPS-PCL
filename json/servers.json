@@ -10,7 +10,17 @@
 	"me": {
 		"login": "204.44.93.5:6114",
 		"servers": {
-			"1": "45.79.161.185:1337"
+			"iceberg tip": "144.217.86.166:2345",
+			"merry christmas": "144.217.86.166:6119",
+			"rio carnaval": "198.96.90.133:1338",
+			"alicia's aardvark": "45.79.161.185:1337",
+			"nom's box": "45.79.161.185:54321",
+			"machu picchu": "144.217.86.166:6117",
+			"schokoladenkuchen": "198.96.90.133:3267",
+			"aventuras mayas": "198.96.90.133:6115",
+			"covfefe": "144.217.86.166:23556",
+			"easter bunnytown": "45.79.161.185:6113",
+			"eiffel tower": "198.96.90.133:1339"
 		},
 		"single_quotes": true
 	},
