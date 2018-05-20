@@ -146,7 +146,7 @@ def get_tokens(count, retry=False):
 
 			cef.MessageLoop()
 			token = external.getToken()
-			if token is None:
+			if retry and token is None:
 				continue
 			yield token
 			count -= 1

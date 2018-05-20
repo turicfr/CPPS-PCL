@@ -8,7 +8,7 @@ import Queue
 import logging
 from bisect import insort
 import common
-from penguin import Penguin
+from penguin import Penguin, Buddy
 from aes import AES
 
 class _ExceptionThread(Thread):
@@ -133,35 +133,44 @@ class Client(object):
 		password = password[16:32] + password[0:16]
 		return password
 
+	@staticmethod
+	def _safe(function):
+		def inner_safe(*args, **kwargs):
+			try:
+				function(*args, **kwargs)
+			except ClientError:
+				pass
+		return inner_safe
+
 	def _debug(self, message):
-		if self._logger is not None:
-			self._logger.debug(message)
+		if self.logger is not None:
+			self.logger.debug(message)
 
 	def _info(self, message):
-		if self._logger is not None:
-			self._logger.info(message)
+		if self.logger is not None:
+			self.logger.info(message)
 
 	def _warning(self, message):
-		if self._logger is not None:
-			self._logger.warning(message)
+		if self.logger is not None:
+			self.logger.warning(message)
 
 	def _error(self, message):
 		if isinstance(message, list):
 			code = int(message[4])
 			message = common.get_json("errors").get(str(code), "")
-			if self._logger is not None:
+			if self.logger is not None:
 				if message:
-					self._logger.error("Error #{}: {}".format(code, message))
+					self.logger.error("Error #{}: {}".format(code, message))
 				else:
-					self._logger.error("Error #{}".format(code))
+					self.logger.error("Error #{}".format(code))
 			raise ClientError(self, message, code)
-		if self._logger is not None:
-			self._logger.error(message)
+		if self.logger is not None:
+			self.logger.error(message)
 		raise ClientError(self, message)
 
 	def _critical(self, message):
-		if self._logger is not None:
-			self._logger.critical(message)
+		if self.logger is not None:
+			self.logger.critical(message)
 		raise ClientError(self, message)
 
 	def _require_int(self, name, value):
@@ -182,7 +191,7 @@ class Client(object):
 		if args and args[0] is None:
 			args = args[1:]
 		else:
-			packet += str(self._internal_room_id) + "%"
+			packet += str(self.internal_room_id) + "%"
 		packet += "".join(str(arg) + "%" for arg in args)
 		self._send(packet)
 
@@ -256,12 +265,12 @@ class Client(object):
 			packet = self._receive_packet()
 
 	def _login(self, user, password, encrypted, ver):
-		self._info("Connecting to login server at {}:{}...".format(self._login_ip, self._login_port))
+		self._info("Connecting to login server at {}:{}...".format(self.login_ip, self.login_port))
 		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self._sock.connect((self._login_ip, self._login_port))
+			self._sock.connect((self.login_ip, self.login_port))
 		except socket.error:
-			self._error("Failed to connect to login server at {}:{}".format(self._login_ip, self._login_port))
+			self._error("Failed to connect to login server at {}:{}".format(self.login_ip, self.login_port))
 
 		try:
 			self._info("Logging in...")
@@ -269,7 +278,7 @@ class Client(object):
 			rndk = self._rndk()
 			if self._magic:
 				digest = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
-				if self._login_ip == "198.100.148.54":
+				if self.login_ip == "198.100.148.54":
 					aes = AES(256, 256)
 					digest = aes.encrypt(digest, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
 			else:
@@ -292,12 +301,12 @@ class Client(object):
 			self._sock.close()
 
 	def _join_server(self, user, login_key, confirmation, ver):
-		self._info("Connecting to game server at {}:{}...".format(self._game_ip, self._game_port))
+		self._info("Connecting to game server at {}:{}...".format(self.game_ip, self.game_port))
 		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self._sock.connect((self._game_ip, self._game_port))
+			self._sock.connect((self.game_ip, self.game_port))
 		except socket.error:
-			self._error("Failed to connect to game server at {}:{}".format(self._game_ip, self._game_port))
+			self._error("Failed to connect to game server at {}:{}".format(self.game_ip, self.game_port))
 
 		self._info("Joining server...")
 		self._ver_check(ver)
@@ -313,7 +322,7 @@ class Client(object):
 		packet = self._receive_packet()
 		while packet[2] != "l":
 			packet = self._receive_packet()
-		self._send_packet("s", "j#js", self._id, login_key, "en")
+		self._send_packet("s", "j#js", self.id, login_key, "en")
 		if confirmation is None:
 			while packet[2] != "js":
 				packet = self._receive_packet()
@@ -368,7 +377,8 @@ class Client(object):
 				room_id = self.find_buddy(penguin_id)
 			except ClientError:
 				self.unfollow()
-			self.room = room_id
+			else:
+				self.room = room_id
 
 	def _jr(self, packet):
 		internal_room_id = int(packet[3])
@@ -383,19 +393,27 @@ class Client(object):
 	def _br(self, packet):
 		penguin_id = int(packet[4])
 		penguin_name = packet[5]
+		if self._buddies is not None:
+			was_buddy = penguin_id in self._buddies
+			self._buddies = None
+			is_buddy = penguin_id in self.buddies
+			if was_buddy and not is_buddy:
+				self._info('Removed buddy "{}"'.format(penguin_name))
+				return
 		self._info('Received a buddy request from "{}"'.format(penguin_name))
 		self._info('Accepting buddy "{}"...'.format(penguin_name))
 		self._send_packet("s", "b#ba", penguin_id)
 		packet = self.next("ba")
 		if packet is None:
 			self._error('Failed to accept buddy "{}"'.format(penguin_name))
-		if self._buddies is not None:
-			penguin_id = int(packet[4])
-			penguin_name = packet[5]
-			penguin = Penguin(penguin_id, penguin_name, None, None, None, None, None, None, None, None, None, None)
-			penguin.online = True
-			self._buddies[penguin.id] = penguin
 		self._info('Accepted buddy "{}"'.format(penguin_name))
+
+	def _ba(self, packet):
+		penguin_id = int(packet[4])
+		penguin_name = packet[5]
+		if self._buddies is not None:
+			penguin = Buddy(penguin_id, penguin_name, True)
+			self._buddies[penguin.id] = penguin
 
 	def _rb(self, packet):
 		penguin_id = int(packet[4])
@@ -583,6 +601,7 @@ class Client(object):
 		self.handle("rp", self._rp)
 		self.handle("jr", self._jr)
 		self.handle("br", self._br)
+		self.handle("ba", self._ba)
 		self.handle("rb", self._rb)
 		self.handle("bon", self._bon)
 		self.handle("bof", self._bof)
@@ -608,12 +627,12 @@ class Client(object):
 		self.handle("zo", self._zo)
 
 		threads = set()
-		while self._connected:
+		while self.connected:
 			try:
 				packet = self._receive_packet(True)
 			except ClientError:
 				self.logout()
-			if not self._connected:
+			if not self.connected:
 				break
 			cmd = packet[2]
 			handled = False
@@ -766,7 +785,7 @@ class Client(object):
 
 	@property
 	def name(self):
-		return self._penguins[self._id].name
+		return self._penguins[self.id].name
 
 	@property
 	def coins(self):
@@ -782,6 +801,8 @@ class Client(object):
 		y = self._require_int("y", y)
 		room_name = self.get_room_name(room_id)
 		self._info("Joining {}...".format(room_name))
+		if room_id == self.room:
+			self._error("Already in {}".format(room_name))
 		self._send_packet("s", "j#jr", room_id, x, y)
 		if self.next("jr") is None:
 			self._error("Failed to join {}".format(room_name))
@@ -789,7 +810,7 @@ class Client(object):
 
 	@property
 	def igloo(self):
-		return self._room - 1000 if self._room > 1000 else None
+		return self.room - 1000 if self.room > 1000 else None
 
 	@igloo.setter
 	def igloo(self, penguin_id):
@@ -806,7 +827,7 @@ class Client(object):
 
 	@property
 	def color(self):
-		return self._penguins[self._id].color
+		return self._penguins[self.id].color
 
 	@color.setter
 	def color(self, item_id):
@@ -819,7 +840,7 @@ class Client(object):
 
 	@property
 	def head(self):
-		return self._penguins[self._id].head
+		return self._penguins[self.id].head
 
 	@head.setter
 	def head(self, item_id):
@@ -832,7 +853,7 @@ class Client(object):
 
 	@property
 	def face(self):
-		return self._penguins[self._id].face
+		return self._penguins[self.id].face
 
 	@face.setter
 	def face(self, item_id):
@@ -845,7 +866,7 @@ class Client(object):
 
 	@property
 	def neck(self):
-		return self._penguins[self._id].neck
+		return self._penguins[self.id].neck
 
 	@neck.setter
 	def neck(self, item_id):
@@ -858,7 +879,7 @@ class Client(object):
 
 	@property
 	def body(self):
-		return self._penguins[self._id].body
+		return self._penguins[self.id].body
 
 	@body.setter
 	def body(self, item_id):
@@ -871,7 +892,7 @@ class Client(object):
 
 	@property
 	def hand(self):
-		return self._penguins[self._id].hand
+		return self._penguins[self.id].hand
 
 	@hand.setter
 	def hand(self, item_id):
@@ -884,7 +905,7 @@ class Client(object):
 
 	@property
 	def feet(self):
-		return self._penguins[self._id].feet
+		return self._penguins[self.id].feet
 
 	@feet.setter
 	def feet(self, item_id):
@@ -897,7 +918,7 @@ class Client(object):
 
 	@property
 	def pin(self):
-		return self._penguins[self._id].pin
+		return self._penguins[self.id].pin
 
 	@pin.setter
 	def pin(self, item_id):
@@ -910,7 +931,7 @@ class Client(object):
 
 	@property
 	def background(self):
-		return self._penguins[self._id].background
+		return self._penguins[self.id].background
 
 	@background.setter
 	def background(self, item_id):
@@ -923,11 +944,11 @@ class Client(object):
 
 	@property
 	def x(self):
-		return self._penguins[self._id].x
+		return self._penguins[self.id].x
 
 	@property
 	def y(self):
-		return self._penguins[self._id].y
+		return self._penguins[self.id].y
 
 	@property
 	def inventory(self):
@@ -954,13 +975,13 @@ class Client(object):
 			self._buddies = {}
 			for buddy in packet[4:-1]:
 				if buddy:
-					penguin = Penguin.from_buddy(buddy)
+					penguin = Buddy.from_buddy(buddy)
 					self._buddies[penguin.id] = penguin
 		return self._buddies
 
 	@property
 	def stamps(self):
-		return self.get_stamps(self._id)
+		return self.get_stamps(self.id)
 
 	def get_stamps(self, penguin_id):
 		penguin = self.get_penguin(penguin_id)
@@ -976,10 +997,10 @@ class Client(object):
 		x = self._require_int("x", x)
 		y = self._require_int("y", y)
 		self._info("Walking to ({}, {})...".format(x, y))
-		if self._login_ip == "server.cprewritten.net":
+		if self.login_ip in ("server.cprewritten.net", "204.44.93.5"):
 			self._send_packet("s", "u#sp", x, y)
 		else:
-			self._send_packet("s", "u#sp", None, self._id, x, y)
+			self._send_packet("s", "u#sp", None, self.id, x, y)
 		if self.next("sp") is None:
 			self._error("Failed to walk to ({}, {})".format(x, y))
 		self._info("Walked to ({}, {})".format(x, y))
@@ -994,7 +1015,7 @@ class Client(object):
 
 	@property
 	def frame(self):
-		return self._penguins[self._id].frame
+		return self._penguins[self.id].frame
 
 	@frame.setter
 	def frame(self, frame_id):
@@ -1049,7 +1070,7 @@ class Client(object):
 			if not message:
 				self._error("Cannot say nothing")
 			self._info('Saying "{}"...'.format(message))
-			self._send_packet("s", "m#sm", self._id, message)
+			self._send_packet("s", "m#sm", self.id, message)
 			if self.next("sm") is None:
 				self._error('Failed to say "{}"'.format(message))
 			self._info('Said "{}"'.format(message))
@@ -1057,7 +1078,7 @@ class Client(object):
 	def joke(self, joke_id):
 		joke_id = self._require_int("joke_id", joke_id)
 		self._info("Telling joke {}...".format(joke_id))
-		self._send_packet("s", "u#sj", None, self._id, joke_id)
+		self._send_packet("s", "u#sj", None, self.id, joke_id)
 		if self.next("sj") is None:
 			self._error("Failed to tell joke {}".format(joke_id))
 		self._info("Told joke {}".format(joke_id))
@@ -1075,7 +1096,7 @@ class Client(object):
 		penguin = self.get_penguin(penguin_id)
 		self._info('Sending postcard #{} to "{}"...'.format(postcard_id, penguin.name))
 		self._send_packet("s", "l#ms", penguin.id, postcard_id)
-		coins = self._coins
+		coins = self.coins
 		packet = self.next("ms")
 		if packet is None:
 			self._error('Failed to send postcard #{} to "{}"'.format(postcard_id, penguin.name))
@@ -1094,7 +1115,7 @@ class Client(object):
 		item_id = self._require_int("item_id", item_id)
 		self._info("Adding item {}...".format(item_id))
 		self._send_packet("s", "i#ai", item_id)
-		coins = self._coins
+		coins = self.coins
 		packet = self.next("ai", lambda p: int(p[4]) == item_id)
 		if packet is None:
 			self._error("Failed to add item {}".format(item_id))
@@ -1104,10 +1125,10 @@ class Client(object):
 	def add_coins(self, amount):
 		amount = self._require_int("amount", amount)
 		self._info("Adding {} coins...".format(amount))
-		internal_room_id = self._internal_room_id
+		internal_room_id = self.internal_room_id
 		self._internal_room_id = -1
-		coins = self._coins
-		room = self._room
+		coins = self.coins
+		room = self.room
 		try:
 			self._send_packet("s", "j#jr", 912, 0, 0)
 			if self.next("jg") is None:
@@ -1133,7 +1154,7 @@ class Client(object):
 	def add_igloo(self, igloo_id):
 		igloo_id = self._require_int("igloo_id", igloo_id)
 		self._info("Adding igloo {}...".format(igloo_id))
-		self._send_packet("s", "g#au", None, self._id, igloo_id)
+		self._send_packet("s", "g#au", None, self.id, igloo_id)
 		if self.next("au") is None:
 			self._error("Failed to add igloo {}".format(igloo_id))
 		self._info("Added igloo {}".format(igloo_id))
@@ -1149,7 +1170,7 @@ class Client(object):
 	def igloo_music(self, music_id):
 		music_id = self._require_int("music_id", music_id)
 		self._info("Setting igloo music to #{}...".format(music_id))
-		self._send_packet("s", "g#um", None, self._id, music_id)
+		self._send_packet("s", "g#um", None, self.id, music_id)
 		if self.next("um") is None:
 			self._error("Failed to set igloo music to {}".format(music_id))
 		self._info("Set igloo music to #{}".format(music_id))
@@ -1180,14 +1201,14 @@ class Client(object):
 		return room_id
 
 	def follow(self, penguin_id, dx=0, dy=0):
+		@self._safe
 		def equip(item_name):
-			try:
-				setattr(self, item_name, getattr(penguin, item_name))
-			except ClientError:
-				pass
+			setattr(self, item_name, getattr(penguin, item_name))
+		dx = self._require_int("dx", dx)
+		dy = self._require_int("dy", dy)
 		penguin = self.get_penguin(penguin_id)
 		self._info('Following "{}"...'.format(penguin.name))
-		if penguin.id == self._id:
+		if penguin.id == self.id:
 			self._error("Cannot follow self")
 		if penguin.id not in self._penguins:
 			if penguin.id not in self.buddies or not self.buddies[penguin.id].online:
@@ -1196,14 +1217,8 @@ class Client(object):
 		self._follow = (penguin.id, dx, dy)
 		pool = ThreadPool()
 		pool.map_async(equip, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
-		try:
-			self.walk(penguin.x + dx, penguin.y + dy)
-		except ClientError:
-			pass
-		try:
-			self.add_buddy(penguin.id)
-		except ClientError:
-			pass
+		pool.apply_async(self._safe(self.walk), (penguin.x + dx, penguin.y + dy))
+		pool.apply_async(self._safe(self.add_buddy), (penguin_id,))
 		pool.close()
 		pool.join()
 
@@ -1211,7 +1226,7 @@ class Client(object):
 		self._follow = None
 
 	def logout(self):
-		if not self._connected:
+		if not self.connected:
 			return
 		self._info("Logging out...")
 		self._connected = False
