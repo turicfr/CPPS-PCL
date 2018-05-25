@@ -46,21 +46,19 @@ def call_all(method):
 	inner_call_all.__name__ = method
 	return inner_call_all
 
-def equip(client, shape, pool):
-	def equip_inner(item_name):
+def connect_client(client, user, password, shape, pool):
+	def equip(item_name):
 		if item_name in shape:
 			try:
 				setattr(client, item_name, shape[item_name])
 			except ClientError as e:
 				print "{}: {}".format(e.client.name, e.message)
-	pool.map_async(equip_inner, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
-
-def connect_client(client, user, password, shape, pool):
+	print "Connecting with {}...".format(user)
 	try:
 		client.connect(user, password, True)
 	except ClientError as e:
 		return user, e
-	equip(client, shape, pool)
+	pool.map_async(equip, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
 	return user, None
 
 def auto_login(cpps, shape, penguins, clients):
@@ -80,16 +78,15 @@ def auto_login(cpps, shape, penguins, clients):
 	count = [len(clients)]
 	not_connected = clients[:]
 	pool = ThreadPool()
+	results = []
 	semaphore = Semaphore(count[0])
 	for user, password in penguins[cpps].items():
 		semaphore.acquire()
 		if not count[0]:
 			break
-		client = not_connected.pop()
-		print "Connecting with {}...".format(user)
-		pool.apply_async(connect_client, (client, user, password, shape, pool), callback=callback)
-	if count[0]:
-		semaphore.acquire()
+		results.append(pool.apply_async(connect_client, (not_connected.pop(), user, password, shape, pool), callback=callback))
+	for result in results:
+		result.wait()
 	pool.close()
 	pool.join()
 	assert count[0] == len(not_connected)
