@@ -4,6 +4,7 @@ import json
 import hashlib
 from shlex import split
 from getpass import getpass
+from multiprocessing.pool import ThreadPool
 import client as pcl
 try:
 	import readline
@@ -15,14 +16,14 @@ class LoginError(Exception):
 		super(LoginError, self).__init__(message)
 
 class Command(object):
-	def __init__(self, name, function, params=None):
+	SINGLE_THREAD = 1
+	MULTI_THREADS = 2
+
+	def __init__(self, name, function, params, multiple_args=0):
 		self._name = name
 		self._function = function
-		self._params = [] if params is None else params
-
-	@property
-	def name(self):
-		return self._name
+		self._params = params
+		self._multiple_args = multiple_args
 
 	@staticmethod
 	def commands(commands):
@@ -48,7 +49,21 @@ class Command(object):
 			break
 		return commands[name], params
 
+	@property
+	def name(self):
+		return self._name
+
 	def execute(self, client, params):
+		def star(args):
+			self.execute(*args)
+		if self._multiple_args and len(params) > 1:
+			if self._multiple_args == self.MULTI_THREADS:
+				pool = ThreadPool()
+				pool.map(star, ((client, [param]) for param in params))
+			else:
+				for param in params:
+					self.execute(client, [param])
+			return
 		try:
 			message = self._function(client, *params)
 		except TypeError as e:

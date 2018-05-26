@@ -57,9 +57,9 @@ Options:
 | Single-Login only | `log` | `level` | Sets logging level to `level`.<br>`level` must be one of the following:<ul><li>`all` - Logs all messages below.</li><li>`debug` - Logs debug messages such as sent and received packets, and below.</li><li>`info` - Logs higher-level messages such as walking, talking etc., and below.</li><li>`warning` - Logs warning messages such as unhandled packets, and below.</li><li>`error` - Logs failure messages such as "Could not add item", and below (default).</li><li>`critical` - Logs fatal error messages such as "Connection lost".</li></ul> |
 | Both | `internal` | _None_ | Prints current internal room ID. |
 | Single-Login only | `id` | _None_ | Prints current penguin ID. |
-| Both | `id` | `penguin_name` | Prints ID of penguin named `penguin_name`. |
+| Both | `id` | `penguin_name...` | Prints ID of penguin(s) named `penguin_name`. |
 | Both | `name` | _None_ | Prints current penguin name. |
-| Both | `name` | `penguin_id` | Prints name of penguin with ID `penguin_id`. |
+| Both | `name` | `penguin_id...` | Prints name of penguin(s) with ID `penguin_id`. |
 | Both | `room` | _None_ | Prints current room name. |
 | Both | `room` | `room_id` | Goes to room with ID `room_id`. |
 | Both | `room` | `room_name` | Goes to room named `room_name`. |
@@ -86,13 +86,13 @@ Options:
 | Both | `background` | _None_ | Prints current background item ID. |
 | Both | `background` | `item_id` | Equips background item with ID `item_id`. |
 | Single-Login only | `clothes` | _None_ | Prints all current item IDs. |
-| Both | `clothes` | `penguin_id` | Prints all current item IDs of penguin with ID `penguin_id`. |
-| Both | `clothes` | `penguin_name` | Prints all current item IDs of penguin named `penguin_name`. |
+| Both | `clothes` | `penguin_id...` | Prints all current item IDs of penguin(s) with ID `penguin_id`. |
+| Both | `clothes` | `penguin_name...` | Prints all current item IDs of penguin(s) named `penguin_name`. |
 | Both | `inventory` | _None_ | Prints current inventory. |
 | Single-Login only | `buddies` | _None_ | Prints current buddies. |
 | Single-Login only | `stamps` | _None_ | Prints all earned stamps. |
-| Single-Login only | `stamps` | `penguin_id` | Prints all earned stamps by penguin with ID `penguin_id`. |
-| Single-Login only | `stamps` | `penguin_name` | Prints all earned stamps by penguin named `penguin_name`. |
+| Single-Login only | `stamps` | `penguin_id...` | Prints all earned stamps by penguin(s) with ID `penguin_id`. |
+| Single-Login only | `stamps` | `penguin_name...` | Prints all earned stamps by penguin(s) named `penguin_name`. |
 | Both | `walk` | `x` `y` | Walks to (`x`, `y`). |
 | Both | `dance` | _None_ | Dances. |
 | Both | `wave` | _None_ | Waves. |
@@ -104,19 +104,19 @@ Options:
 | Both | `emote` | `emote_id` | Reacts emote with ID `emote_id`. |
 | Both | `mail` | `penguin_id` `postcard_id` | Sends to a penguin with ID `penguin_id` a postcard with ID `postcard_id`. |
 | Both | `mail` | `penguin_name` `postcard_id` | Sends to a penguin named `penguin_name` a postcard with ID `postcard_id`. |
-| Both | `buy` | `item_id` | Buys an item with ID `item_id`. |
-| Both | `ai` | `item_id` | Buys an item with ID `item_id`. |
+| Both | `buy` | `item_id...` | Buys item(s) with ID `item_id`. |
+| Both | `ai` | `item_id...` | Buys item(s) with ID `item_id`. |
 | Both | `coins` | _None_ | Prints current coins. |
 | Both | `coins` | `amount` | Earns `amount` coins. |
 | Both | `ac` | `amount` | Earns `amount` coins. |
-| Both | `stamp` | `stamp_id` | Earns stamp with ID `stamp_id`. |
-| Both | `add_igloo` | `igloo_id` | Buys an igloo with ID `igloo_id`. |
-| Both | `add_furniture` | `furniture_id` | Buys a furniture with ID `furniture_id`. |
+| Both | `stamp` | `stamp_id...` | Earns stamp(s) with ID `stamp_id`. |
+| Both | `add_igloo` | `igloo_id...` | Buys igloo(s) with ID `igloo_id`. |
+| Both | `add_furniture...` | `furniture_id` | Buys furniture(s) with ID `furniture_id`. |
 | Both | `music` | `music_id` | Sets igloo music to `music_id`. |
-| Both | `buddy` | `penguin_id` | Sends a buddy request to a penguin with ID `penguin_id`. |
-| Both | `buddy` | `penguin_name` | Sends a buddy request to a penguin named `penguin_name`. |
-| Single-Login only | `find` | `penguin_id` | Finds room of buddy with ID `penguin_id`. |
-| Single-Login only | `find` | `penguin_name` | Finds room of buddy named `penguin_name`. |
+| Both | `buddy` | `penguin_id...` | Sends a buddy request to penguin(s) with ID `penguin_id`. |
+| Both | `buddy` | `penguin_name...` | Sends a buddy request to penguin(s) named `penguin_name`. |
+| Single-Login only | `find` | `penguin_id...` | Finds room of buddy/buddies with ID `penguin_id`. |
+| Single-Login only | `find` | `penguin_name...` | Finds room of buddy/buddies named `penguin_name`. |
 | Single-Login only | `follow` | _None_ | Prints currently followed penguin. |
 | Both | `follow` | `penguin_id` | Follows a penguin with ID `penguin_id`. |
 | Both | `follow` | `penguin_name` | Follows a penguin named `penguin_name`. |

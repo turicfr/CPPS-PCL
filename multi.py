@@ -269,7 +269,7 @@ def say(clients_offsets, *message):
 def coins(clients_offsets, amount=None):
 	if amount is None:
 		return "\n".join("{}: Current coins: {}".format(client.name, client.coins) for client, dx, dy in clients_offsets)
-	call_all("add_coins")(amount)
+	call_all("add_coins")(clients_offsets, amount)
 
 def buddy(clients_offsets, penguin_id_or_name):
 	@for_all
@@ -304,10 +304,10 @@ def main():
 		sys.exit(1)
 	client, dx, dy = clients_offsets[0]
 	commands = common.Command.commands([
-		common.Command("help", show_help),
-		common.Command("internal", internal),
-		common.Command("id", get_id, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
-		common.Command("name", name, [None]),
+		common.Command("help", show_help, []),
+		common.Command("internal", internal, []),
+		common.Command("id", get_id, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]], common.Command.SINGLE_THREAD),
+		common.Command("name", name, [None], common.Command.SINGLE_THREAD),
 		common.Command("room", room, [common.get_json("rooms").values()]),
 		common.Command("igloo", igloo, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
 		common.Command("color", color, [None]),
@@ -319,30 +319,30 @@ def main():
 		common.Command("feet", feet, [None]),
 		common.Command("pin", pin, [None]),
 		common.Command("background", background, [None]),
-		common.Command("inventory", inventory),
+		common.Command("inventory", inventory, []),
 		common.Command("walk", walk, [None, None]),
-		common.Command("dance", call_all("dance")),
-		common.Command("wave", call_all("wave")),
+		common.Command("dance", call_all("dance"), []),
+		common.Command("wave", call_all("wave"), []),
 		common.Command("sit", call_all("sit"), [["s", "e", "w", "nw", "sw", "ne", "se", "n"]]),
 		common.Command("snowball", call_all("snowball"), [None, None]),
-		common.Command("say", say),
+		common.Command("say", say, []),
 		common.Command("joke", call_all("joke"), [None]),
 		common.Command("emote", call_all("emote"), [None]),
-		common.Command("buy", call_all("add_item"), [None]),
-		common.Command("ai", call_all("add_item"), [None]),
+		common.Command("buy", call_all("add_item"), [None], common.Command.MULTI_THREADS),
+		common.Command("ai", call_all("add_item"), [None], common.Command.MULTI_THREADS),
 		common.Command("coins", coins, [None]),
 		common.Command("ac", call_all("add_coins"), [None]),
-		common.Command("stamp", call_all("add_stamp"), [None]),
-		common.Command("add_igloo", call_all("add_igloo"), [None]),
-		common.Command("add_furniture", call_all("add_furniture"), [None]),
+		common.Command("stamp", call_all("add_stamp"), [None], common.Command.MULTI_THREADS),
+		common.Command("add_igloo", call_all("add_igloo"), [None], common.Command.MULTI_THREADS),
+		common.Command("add_furniture", call_all("add_furniture"), [None], common.Command.MULTI_THREADS),
 		common.Command("music", call_all("igloo_music"), [None]),
-		common.Command("buddy", buddy, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
-		common.Command("find", find, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
+		common.Command("buddy", buddy, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]], common.Command.MULTI_THREADS),
+		common.Command("find", find, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]], common.Command.MULTI_THREADS),
 		common.Command("follow", follow, [lambda c: [penguin.name for penguin in c.penguins.itervalues()]]),
-		common.Command("unfollow", call_all("unfollow")),
-		common.Command("logout", logout),
-		common.Command("exit", logout),
-		common.Command("quit", logout)
+		common.Command("unfollow", call_all("unfollow"), []),
+		common.Command("logout", logout, []),
+		common.Command("exit", logout, []),
+		common.Command("quit", logout, [])
 	])
 	while all(client.connected for client, dx, dy in clients_offsets):
 		try:
