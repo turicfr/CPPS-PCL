@@ -381,14 +381,18 @@ class Client(object):
 				self.room = room_id
 
 	def _jr(self, packet):
-		internal_room_id = int(packet[3])
-		self._internal_room_id = internal_room_id
+		self._internal_room_id = int(packet[3])
 		self._room = int(packet[4])
 		self._penguins.clear()
 		for player in packet[5:-1]:
 			penguin = Penguin.from_player(player)
 			self._penguins[penguin.id] = penguin
 		self._all_penguins.update(self._penguins)
+
+	def _jg(self, packet):
+		self._internal_room_id = int(packet[3])
+		self._room = int(packet[4])
+		self._penguins.clear()
 
 	def _br(self, packet):
 		penguin_id = int(packet[4])
@@ -421,11 +425,15 @@ class Client(object):
 			del self._buddies[penguin_id]
 
 	def _bon(self, packet):
+		if not packet[4]:
+			return
 		penguin_id = int(packet[4])
 		if self._buddies is not None and penguin_id in self._buddies:
 			self._buddies[penguin_id].online = True
 
 	def _bof(self, packet):
+		if not packet[4]:
+			return
 		penguin_id = int(packet[4])
 		if self._buddies is not None and penguin_id in self._buddies:
 			self._buddies[penguin_id].online = False
@@ -600,6 +608,7 @@ class Client(object):
 		self.handle("ap", self._ap)
 		self.handle("rp", self._rp)
 		self.handle("jr", self._jr)
+		self.handle("jg", self._jg)
 		self.handle("br", self._br)
 		self.handle("ba", self._ba)
 		self.handle("rb", self._rb)
@@ -1125,8 +1134,6 @@ class Client(object):
 	def add_coins(self, amount):
 		amount = self._require_int("amount", amount)
 		self._info("Adding {} coins...".format(amount))
-		internal_room_id = self.internal_room_id
-		self._internal_room_id = -1
 		coins = self.coins
 		room = self.room
 		try:
@@ -1138,7 +1145,6 @@ class Client(object):
 			if packet is None:
 				self._error("Failed to add {} coins".format(amount))
 		finally:
-			self._internal_room_id = internal_room_id
 			self.room = room
 		earn = int(packet[4]) - coins
 		self._info("Added {} coins".format(earn))
