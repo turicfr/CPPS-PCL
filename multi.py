@@ -46,19 +46,22 @@ def call_all(method):
 	inner_call_all.__name__ = method
 	return inner_call_all
 
-def connect_client(client, user, password, shape, pool):
-	def equip(item_name):
+def equip(client, shape, pool):
+	def inner_equip(item_name):
 		if item_name in shape:
 			try:
 				setattr(client, item_name, shape[item_name])
 			except ClientError as e:
 				print "{}: {}".format(e.client.name, e.message)
+	pool.map_async(inner_equip, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
+
+def connect_client(client, user, password, shape, pool):
 	print "Connecting with {}...".format(user)
 	try:
 		client.connect(user, password, True)
 	except ClientError as e:
 		return user, e
-	pool.map_async(equip, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
+	equip(client, shape, pool)
 	return user, None
 
 def auto_login(cpps, shape, penguins, clients):
