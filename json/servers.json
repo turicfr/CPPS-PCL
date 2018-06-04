@@ -139,5 +139,20 @@
 			"ascent": 7008,
 			"beanie": 7011
 		}
+	},
+	"snowy island": {
+		"ip": "198.251.83.104",
+		"login": 4394,
+		"servers": {
+			"breeze": 9643
+		}
+	},
+	"again": {
+		"ip": "45.76.128.185",
+		"login": 6112,
+		"servers": {
+			"blizzard": 9875,
+			"zipline": 6113
+		}
 	}
 }
