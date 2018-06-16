@@ -9,7 +9,6 @@ import logging
 from bisect import insort
 import common
 from penguin import Penguin, Buddy
-from aes import AES
 
 class _ExceptionThread(Thread):
 	def __init__(self, *args, **kwargs):
@@ -278,9 +277,6 @@ class Client(object):
 			rndk = self._rndk()
 			if self._magic:
 				digest = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
-				if self.login_ip == "198.100.148.54":
-					aes = AES(256, 256)
-					digest = aes.encrypt(digest, "67L8CALPPCD4J283WL3JF3T2T32DFGZ8", "ECB")
 			else:
 				digest = password
 			if self._single_quotes:

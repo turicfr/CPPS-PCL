@@ -81,16 +81,6 @@
 			"sleet": 7008
 		}
 	},
-	"cpu": {
-		"ip": "198.100.148.54",
-		"login": 6112,
-		"servers": {
-			"blizzard": 6113,
-			"sleet": 6114,
-			"deep freeze": 6115,
-			"big surf": 6116
-		}
-	},
 	"hangout": {
 		"ip": "207.148.13.157",
 		"login": 6112,
