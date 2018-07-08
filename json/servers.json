@@ -72,11 +72,11 @@
 		}
 	},
 	"online": {
-		"ip": "5.9.29.202",
+		"ip": "158.69.22.196",
 		"login": 7000,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
-			"abominable": 7007,
+			"flurry": 7007,
 			"alaska": 7002,
 			"sleet": 7008
 		}
