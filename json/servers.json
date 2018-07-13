@@ -9,6 +9,7 @@
 	},
 	"me": {
 		"login": "204.44.93.5:6114",
+		"single_quotes": true,
 		"servers": {
 			"iceberg tip": "144.217.86.166:2345",
 			"merry christmas": "144.217.86.166:6119",
@@ -21,8 +22,7 @@
 			"covfefe": "144.217.86.166:23556",
 			"easter bunnytown": "45.79.161.185:6113",
 			"eiffel tower": "198.96.90.133:1339"
-		},
-		"single_quotes": true
+		}
 	},
 	"nation": {
 		"ip": "66.70.190.172",
@@ -54,10 +54,10 @@
 		"ip": "176.31.100.185",
 		"login": 6112,
 		"magic": "dc3726460bc0b89b1ba952836531486bY(02.>'H}t\":E1_root",
+		"single_quotes": true,
 		"servers": {
 			"freeland": 6116
-		},
-		"single_quotes": true
+		}
 	},
 	"super": {
 		"ip": "167.114.148.26",
@@ -71,10 +71,11 @@
 			"blizzard": 1989
 		}
 	},
-	"online": {
+	"cpo": {
 		"ip": "158.69.22.196",
 		"login": 7000,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"single_quotes": true,
 		"servers": {
 			"flurry": 7007,
 			"alaska": 7002,

@@ -35,7 +35,7 @@ class Command(object):
 			try:
 				command = get_input(">>> ", {command.name: command._params for command in commands.itervalues()}, client)
 			except ValueError as e:
-				print e.message
+				print e
 				continue
 			except KeyboardInterrupt:
 				print
@@ -67,13 +67,13 @@ class Command(object):
 		try:
 			message = self._function(client, *params)
 		except TypeError as e:
-			if self._function.__name__ + "() takes" not in e.message:
+			if self._function.__name__ + "() takes" not in str(e):
 				raise
 			print 'Command "{}" does not take {} arguments'.format(self.name, len(params))
 		except KeyboardInterrupt:
 			print
 		except LoginError as e:
-			print e.message
+			print e
 		except pcl.ClientError:
 			pass
 		else:

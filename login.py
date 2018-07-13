@@ -196,7 +196,7 @@ def main():
 	try:
 		client = login()
 	except common.LoginError as e:
-		print e.message
+		print e
 		sys.exit(1)
 	commands = common.Command.commands([
 		common.Command("help", show_help, []),

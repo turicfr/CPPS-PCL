@@ -1,7 +1,17 @@
 # CPPS-PCL
+
 A Penguin Client Library for Club Penguin Private Servers written in Python.
 
-**Warning:** High ban risk - Do not use with your own main penguin.
+**Warning:** High ban risk!
+
+* [Introduction](#introduction)
+* [Requirements](#requirements)
+* [Usage](#usage)
+* [Supported CPPSs](#supported-cppss)
+* [Interactive Commands](#interactive-commands)
+* [FAQ](#faq)
+
+## Introduction
 
 This PCL contains an API, alongside two CLI interactive modes:
 
@@ -14,9 +24,10 @@ A simple login with one penguin.
 A complex login with multiple penguins managed by a certain shape.
 
 ## Requirements
-- Python 2.x
-- Internet connection
-- _For Club Penguin Rewritten_: [cefpython](https://github.com/cztomczak/cefpython) (can be installed with: `pip install cefpython3`)
+* Python 2.x
+* Internet connection
+* _For Club Penguin Rewritten_: [cefpython](https://github.com/cztomczak/cefpython) (can be installed with: `pip install cefpython3`)
+* _For Club Penguin Online_: [PyCrypto](https://pypi.org/project/pycrypto/) (can be installed with: `pip install pycrypto`, and [here](http://www.voidspace.org.uk/python/modules.shtml#pycrypto) for Windows)
 
 ## Usage
 
@@ -24,30 +35,50 @@ A complex login with multiple penguins managed by a certain shape.
 TODO
 
 ### Single-Login
-1. Run login.py:
+1. Run `login.py`:
 ```
-python login.py [-r yes|no|ask] [<cpps>] [<server>] [<username>]
+python login.py [-r {yes,no,ask}] [<cpps>] [<server>] [<username>]
 
 Options:
 	-r  Remember password in the future
 ```
-2. Choose a server (if you didn't do that in the command line)
-3. Enter your username and password (if you didn't do that in the command line)
-4. Choose a server (if you didn't do that in the command line)
+2. Choose a server (if not already specified in the command line)
+3. Enter your username and password (if not already specified in the command line)
+4. Choose a server (if not already specified in the command line)
 5. Waddle on!
 
 ### Multi-Login
-1. Run multi.py:
+1. Run `multi.py`:
 ```
-python multi.py [-r yes|no|ask] [<cpps>] [<server>] [<shape>]
+python multi.py [-r {yes,no,ask}] [<cpps>] [<server>] [<shape>]
 
 Options:
 	-r  Remember password in the future
 ```
-2. Choose a server (if you didn't do that in the command line)
-3. Choose a shape (defined in json/shapes.json, if you didn't do that in the command line)
+2. Choose a server (if not already specified in the command line)
+3. Choose a shape (if not already specified in the command line)
 4. Enter your usernames and passwords (as many as needed for the shape)
 5. Waddle on!
+
+## Supported CPPSs
+Currently 15 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
+* `reborn` - [Club Penguin Reborn](https://cpreborn.com/)
+* `me` - [CPPS Me](http://cpps.me/)
+* `nation` - [Penguin Nation](http://penguins.coffee/)
+* `io` - [CPPS IO](https://cpps.io/)
+* `brazil` - [Club Penguin Brazil](https://www.clubpenguinbrasil.pw/)
+* `free` - [Free Penguin](http://freepenguin.xyz/)
+* `super` - [Super CPPS](https://supercpps.com/)
+* `cpo` - [Club Penguin Online](https://clubpenguinonline.com/)
+* `hangout` - [Penguin Hangout](https://penguinhangout.pw/)
+* `reversed` - [Club Penguin Reversed](https://cpreversed.me/)
+* `aventure pingouin` - [Aventure Pingouin](https://aventurepingouin.com/)
+* `one` - [CPPS One](https://cpps.one/)
+* `cpr` - [Club Penguin Rewritten](https://cprewritten.net/)
+* `snowy island` - [Snowy Island](https://snowyisland.net/)
+* `again` - [Club Penguin Again](https://www.clubpenguinagain.com/)
+
+If you want support for a new CPPS, please [open an issue](https://github.com/relrelb/CPPS-PCL/issues/new) regarding it.
 
 ## Interactive Commands
 | Mode | Command | Parameters | Description |
@@ -127,6 +158,20 @@ Options:
 | Both | `exit` | _None_ | Logouts from the game. |
 | Both | `quit` | _None_ | Logouts from the game. |
 
-## Tips and Tricks
-- Define more CPPSs and servers in json/servers.json
-- Define more shapes in json/shapes.json
+## FAQ
+
+### I double-clicked `login.py` and a command prompt appeared and then closed, what should I do?
+* If the command prompt appeared for a moment and then closed, then you are probably running `login.py` with Python 3. Consider installing Python 2, or if you have already installed it, right-click `login.py` and open it with Python 2 using the "Open With..." option.
+* If the command prompt closed after taking user input, then an unexpected error occured during the login process. Try running it again in `cmd.exe` in order to see what happened, and if it looks like a problem, please [open an issue](https://github.com/relrelb/CPPS-PCL/issues/new) regarding it.
+
+### Can I add all items?
+Sure, you can accomplish that by writing a custom script using the [API](#api). An example can be found in the answer at [Issue #3](https://github.com/relrelb/CPPS-PCL/issues/3#issuecomment-345218486).
+
+### Can I login to a CPPS that is not listed above?
+Absolutely, you can add more CPPSs yourself by editing [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json).
+
+### Can I add more shapes to Multi-Login?
+Of course, you can define more shapes by editing [`json/shapes.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/shapes.json).
+
+### Is autocompletion also available in Windows?
+Yes, in order to get that you need [PyReadline](https://pypi.org/project/pyreadline/) (can be installed with:  `pip install pyreadline`).

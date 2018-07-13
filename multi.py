@@ -30,7 +30,7 @@ def for_all(function):
 				exc_type, exc, exc_tb = exc_info
 				if not isinstance(exc, ClientError):
 					raise exc_type, exc, exc_tb
-				print "{}: {}".format(exc.client.name, exc.message)
+				print "{}: {}".format(exc.client.name, exc)
 	return wrapper
 
 def set_all(clients_offsets, attribute, value):
@@ -52,7 +52,7 @@ def equip(client, shape, pool):
 			try:
 				setattr(client, item_name, shape[item_name])
 			except ClientError as e:
-				print "{}: {}".format(e.client.name, e.message)
+				print "{}: {}".format(e.client.name, e)
 	pool.map_async(inner_equip, ["color", "head", "face", "neck", "body", "hand", "feet", "pin", "background"])
 
 def connect_client(client, user, password, shape, pool):
@@ -74,7 +74,7 @@ def auto_login(cpps, shape, penguins, clients):
 				semaphore.release()
 		else:
 			not_connected.append(e.client)
-			print "{}: {}".format(user, e.message)
+			print "{}: {}".format(user, e)
 			if e.code == 101 or e.code == 603:
 				common.remove_penguin(cpps, user, penguins)
 			semaphore.release()
@@ -107,7 +107,7 @@ def manual_login(cpps, server, shape, connected, not_connected, remember):
 			try:
 				client.connect(user, password)
 			except ClientError as e:
-				print e.message
+				print e
 				if e.code == 101 or e.code == 603:
 					common.remove_penguin(cpps, user)
 				continue
@@ -303,7 +303,7 @@ def main():
 	try:
 		clients_offsets = login()
 	except common.LoginError as e:
-		print e.message
+		print e
 		sys.exit(1)
 	client, dx, dy = clients_offsets[0]
 	commands = common.Command.commands([
