@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import hashlib
+import itertools
 from shlex import split
 from getpass import getpass
 from multiprocessing.pool import ThreadPool
@@ -16,24 +17,36 @@ class LoginError(Exception):
 		super(LoginError, self).__init__(message)
 
 class Command(object):
-	SINGLE_THREAD = 1
-	MULTI_THREADS = 2
-
-	def __init__(self, name, function, params, multiple_args=0):
+	def __init__(self, name, function, *params, **kwargs):
+		if any(param.required for param in itertools.dropwhile(lambda p: p.required, params)):
+			raise ValueError("all required parameters must appear before any optional parameters")
 		self._name = name
 		self._function = function
-		self._params = params
-		self._multiple_args = multiple_args
+		if kwargs.get("varargs", False):
+			self._params = None
+		else:
+			self._params = params
+		self._multithreading = kwargs.get("multithreading")
+
+	@property
+	def name(self):
+		return self._name
+
+	@property
+	def options(self):
+		if self._params is None:
+			return []
+		return [param.options for param in self._params]
 
 	@staticmethod
-	def commands(commands):
+	def index(*commands):
 		return {command.name: command for command in commands}
 
 	@staticmethod
 	def read(client, commands):
 		while True:
 			try:
-				command = get_input(">>> ", {command.name: command._params for command in commands.itervalues()}, client)
+				command = get_input(">>> ", {command.name: command.options for command in commands.itervalues()}, client)
 			except ValueError as e:
 				print e.message
 				continue
@@ -46,18 +59,38 @@ class Command(object):
 			if name not in commands:
 				print 'Command "{}" does not exist'.format(name)
 				continue
-			break
-		return commands[name], params
+			try:
+				return commands[name], commands[name]._convert(params)
+			except ValueError as e:
+				print e
+				continue
 
-	@property
-	def name(self):
-		return self._name
+	def _convert(self, values):
+		if self._params is None:
+			return values
+		converted = []
+		for param, value in itertools.izip_longest(self._params, values):
+			if param is None:
+				if self._params:
+					raise ValueError('Command "{}" takes at most {} parameter{} ({} given)'.format(self._name, len(self._params), "" if len(self._params) == 1 else "s", len(values)))
+				else:
+					raise ValueError('Command "{}" takes no parameters ({} given)'.format(self._name, len(values)))
+			if value is None:
+				if param.required:
+					min_params = list(itertools.takewhile(lambda p: p.required, self._params))
+					raise ValueError('Command "{}" takes at least {} parameter{} ({} given)'.format(self._name, len(min_params), "" if len(min_params) == 1 else "s", len(values)))
+				break
+			try:
+				converted.append(param.type(value))
+			except ValueError as e:
+				raise ValueError('Parameter "{}" has invalid value: "{}"'.format(param.name, value))
+		return converted
 
 	def execute(self, client, params):
 		def star(args):
 			self.execute(*args)
-		if self._multiple_args and len(params) > 1:
-			if self._multiple_args == self.MULTI_THREADS:
+		if self._multithreading is not None and len(params) > 1:
+			if self._multithreading:
 				pool = ThreadPool()
 				pool.map(star, ((client, [param]) for param in params))
 			else:
@@ -69,7 +102,7 @@ class Command(object):
 		except TypeError as e:
 			if self._function.__name__ + "() takes" not in e.message:
 				raise
-			print 'Command "{}" does not take {} arguments'.format(self.name, len(params))
+			print 'Command "{}" does not take {} parameters'.format(self.name, len(params))
 		except KeyboardInterrupt:
 			print
 		except LoginError as e:
@@ -80,6 +113,36 @@ class Command(object):
 			if self._function not in vars(pcl.Client) and message is not None:
 				print message
 
+class Parameter(object):
+	def __init__(self, name, options, required=True, type=None):
+		self._name = name
+		self._options = options
+		self._required = required
+		if type is None:
+			self._type = self._identity
+		else:
+			self._type = type
+
+	@staticmethod
+	def _identity(value):
+		return value
+
+	@property
+	def name(self):
+		return self._name
+
+	@property
+	def options(self):
+		return self._options
+
+	@property
+	def required(self):
+		return self._required
+
+	@property
+	def type(self):
+		return self._type
+
 def list_completer(options):
 	def complete(text, state):
 		return [option for option in options if option.startswith(text)][state]
@@ -88,29 +151,23 @@ def list_completer(options):
 def shell_completer(client, options):
 	def resolve(options, line):
 		for i, option in enumerate(line):
-			if option is None:
-				continue
 			if isinstance(options, dict):
 				if option not in options:
 					return []
 				options = options[option]
-			elif isinstance(options, list):
-				if len(line) - i >= len(options):
-					return []
-				if callable(options[len(line) - i]):
-					return options[len(line) - i](client)
-				return options[len(line) - i]
-			else:
-				assert False, "options must be either dict or list"
+				continue
+			if len(line) - i >= len(options):
+				return []
+			if callable(options[len(line) - i]):
+				return options[len(line) - i](client)
+			return options[len(line) - i]
 		if isinstance(options, dict):
 			return options.keys()
-		if isinstance(options, list):
-			if not options:
-				return []
-			if callable(options[0]):
-				return options[0](client)
-			return options[0]
-		assert False, "options must be either dict or list"
+		if not options:
+			return []
+		if callable(options[0]):
+			return options[0](client)
+		return options[0]
 	def complete(text, state):
 		line_buffer = readline.get_line_buffer()
 		try:
@@ -137,8 +194,10 @@ def get_input(prompt=None, options=None, shell_client=None):
 			readline.set_completer_delims(" ")
 			readline.set_completer(shell_completer(shell_client, options))
 	try:
-		line = raw_input() if prompt is None else raw_input(prompt)
-		return line if shell_client is None else split(line)
+		line = raw_input(prompt)
+		if shell_client is None:
+			return line
+		return split(line)
 	finally:
 		if readline is not None and options is not None:
 			readline.set_completer_delims(completer_delims)
