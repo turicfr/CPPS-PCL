@@ -229,12 +229,6 @@ class Client(object):
 		i = self._buffer.index("\0")
 		data += self._buffer[:i]
 		self._buffer = self._buffer[i + 1:]
-		if data.startswith("#"):
-			self._key = data.split("#")[2]
-			self._info("Received encryption key: {}".format(self._key))
-			if self._buffer:
-				return self._receive()
-			return None
 		if self._key is not None and not data.startswith(("<", "%")):
 			data = self._decrypt(self._key, data)
 		self._debug("# Receive: {}".format(data))
@@ -256,15 +250,15 @@ class Client(object):
 			request = request.replace('"', "'")
 		self._send(request.format(ver))
 		response = self._receive()
-		if response is None:
-			self._send(request)
-			response = self._receive()
 		if "cross-domain-policy" in response:
 			response = self._receive()
 		if "apiKO" in response:
 			self._error("Received apiKO response")
 		if "apiOK" in response:
 			self._info("Received apiOK response")
+		elif response.startswith("#"):
+			self._key = response.split("#")[2]
+			self._info("Received encryption key: {}".format(self._key))
 		else:
 			self._error("Invalid verChk response: {}".format(response))
 
