@@ -66,7 +66,7 @@ Currently 15 different servers are supported, which can also be found in [`json/
 * `me` - [CPPS Me](http://cpps.me/)
 * `nation` - [Penguin Nation](http://penguins.coffee/)
 * `io` - [CPPS IO](https://cpps.io/)
-* `brazil` - [Club Penguin Brazil](https://www.clubpenguinbrasil.pw/)
+* `cpbr` - [Club Penguin Brasil](https://www.clubpenguinbrasil.pw/)
 * `free` - [Free Penguin](http://freepenguin.xyz/)
 * `super` - [Super CPPS](https://supercpps.com/)
 * `cpo` - [Club Penguin Online](https://clubpenguinonline.com/)
