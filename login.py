@@ -196,7 +196,7 @@ def main():
 	try:
 		client = login()
 	except common.LoginError as e:
-		print e.message
+		print e
 		sys.exit(1)
 	int_param = lambda name, required=True: common.Parameter(name, [], required=required, type=int)
 	penguin_name_param = lambda required=True: common.Parameter("penguin_name", lambda c: [penguin.name for penguin in c.penguins.itervalues()], required=required)

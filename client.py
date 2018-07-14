@@ -7,6 +7,7 @@ from multiprocessing.pool import ThreadPool
 import Queue
 import logging
 from bisect import insort
+from binascii import hexlify, unhexlify
 import common
 from penguin import Penguin, Buddy
 
@@ -100,6 +101,7 @@ class Client(object):
 			handler = logging.StreamHandler(sys.stdout)
 			logger.addHandler(handler)
 		self._logger = logger
+		self._key = None
 
 		self._connected = False
 		self._buffer = ""
@@ -131,6 +133,28 @@ class Client(object):
 			password = hashlib.md5(password).hexdigest()
 		password = password[16:32] + password[0:16]
 		return password
+
+	def _aes(self, key):
+		try:
+			from Crypto.Cipher import AES
+		except ImportError:
+			self._error("Failed to encrypt login information: PyCrypto is not installed; Please install it and try again.")
+		return AES.new(key.encode("utf-8"), AES.MODE_ECB)
+
+	@staticmethod
+	def _pkcs7_pad(data, block_size):
+		padding_length = block_size - len(data) % block_size
+		return data + chr(padding_length) * padding_length
+
+	@staticmethod
+	def _pkcs7_unpad(data):
+		return data[:-ord(data[-1])]
+
+	def _encrypt(self, key, data):
+		return hexlify(self._aes(key).encrypt(self._pkcs7_pad(data.encode("utf-8"), 16)))
+
+	def _decrypt(self, key, data):
+		return self._pkcs7_unpad(self._aes(key).decrypt(unhexlify(data)))
 
 	@staticmethod
 	def _safe(function):
@@ -180,31 +204,33 @@ class Client(object):
 
 	def _send(self, data):
 		self._debug("# Send: {}".format(data))
+		if self._key is not None:
+			data = self._encrypt(self._key, data)
 		try:
-			self._sock.send(data + chr(0))
+			self._sock.sendall(data + "\0")
 		except socket.error:
 			self._critical("Connection lost")
 
-	def _send_packet(self, ext, cmd, *args):
+	def _send_packet(self, ext, cmd, *args, **kwargs):
 		packet = "%xt%{}%{}%".format(ext, cmd)
-		if args and args[0] is None:
-			args = args[1:]
-		else:
+		if kwargs.get("internal_room_id", True):
 			packet += str(self.internal_room_id) + "%"
 		packet += "".join(str(arg) + "%" for arg in args)
 		self._send(packet)
 
 	def _receive(self):
 		data = ""
-		while not chr(0) in self._buffer:
+		while "\0" not in self._buffer:
 			data += self._buffer
 			try:
 				self._buffer = self._sock.recv(4096)
 			except socket.error:
 				self._critical("Connection lost")
-		i = self._buffer.index(chr(0))
+		i = self._buffer.index("\0")
 		data += self._buffer[:i]
 		self._buffer = self._buffer[i + 1:]
+		if self._key is not None and not data.startswith(("<", "%")):
+			data = self._decrypt(self._key, data)
 		self._debug("# Receive: {}".format(data))
 		return data
 
@@ -217,36 +243,37 @@ class Client(object):
 			self._error(packet)
 		return packet
 
-	def _ver_check(self, ver):
-		self._info("Sending 'verChk' request...")
+	def _verchk(self, ver):
+		self._info("Sending verChk request...")
+		request = '<msg t="sys"><body action="verChk" r="0"><ver v="{}"/></body></msg>'
 		if self._single_quotes:
-			data = "<msg t='sys'><body action='verChk' r='0'><ver v='{}' /></body></msg>".format(ver)
+			request = request.replace('"', "'")
+		self._send(request.format(ver))
+		response = self._receive()
+		if "cross-domain-policy" in response:
+			response = self._receive()
+		if "apiKO" in response:
+			self._error("Received apiKO response")
+		if "apiOK" in response:
+			self._info("Received apiOK response")
+		elif response.startswith("#"):
+			self._key = response.split("#")[2]
+			self._info("Received encryption key: {}".format(self._key))
 		else:
-			data = '<msg t="sys"><body action="verChk" r="0"><ver v="{}"/></body></msg>'.format(ver)
-		self._send(data)
-		data = self._receive()
-		if "cross-domain-policy" in data:
-			data = self._receive()
-		if "apiKO" in data:
-			self._error('Received "apiKO" response')
-		if "apiOK" in data:
-			self._info('Received "apiOK" response')
-		else:
-			self._error("Invalid verChk response: {}".format(data))
+			self._error("Invalid verChk response: {}".format(response))
 
 	def _rndk(self):
 		self._info("Sending rndK request...")
+		request = '<msg t="sys"><body action="rndK" r="-1"></body></msg>'
 		if self._single_quotes:
-			data = "<msg t='sys'><body action='rndK' r='-1'></body></msg>"
-		else:
-			data = '<msg t="sys"><body action="rndK" r="-1"></body></msg>'
-		self._send(data)
-		data = self._receive()
-		if "rndK" not in data:
-			self._error("Invalid rndk response: {}".format(data))
-		key = re.search(r"<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", data).group(1)
-		self._info("Received key: {}".format(key))
-		return key
+			request = request.replace('"', "'")
+		self._send(request)
+		response = self._receive()
+		if "rndK" not in response:
+			self._error("Invalid rndK response: {}".format(response))
+		rndk = re.search(r"<k>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/k>", response).group(1)
+		self._info("Received rndK response: {}".format(rndk))
+		return rndk
 
 	def _recaptcha(self):
 		try:
@@ -270,20 +297,18 @@ class Client(object):
 			self._sock.connect((self.login_ip, self.login_port))
 		except socket.error:
 			self._error("Failed to connect to login server at {}:{}".format(self.login_ip, self.login_port))
-
 		try:
 			self._info("Logging in...")
-			self._ver_check(ver)
+			self._verchk(ver)
 			rndk = self._rndk()
 			if self._magic:
-				digest = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
+				pword = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
 			else:
-				digest = password
+				pword = password
+			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'
 			if self._single_quotes:
-				data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, digest)
-			else:
-				data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, digest)
-			self._send(data)
+				data = data.replace('"', "'")
+			self._send(data.format(user, pword))
 			packet = self._receive_packet()
 			while packet[2] != "l":
 				packet = self._receive_packet()
@@ -295,6 +320,7 @@ class Client(object):
 			except socket.error:
 				pass
 			self._sock.close()
+			self._key = None
 
 	def _join_server(self, user, login_key, confirmation, ver):
 		self._info("Connecting to game server at {}:{}...".format(self.game_ip, self.game_port))
@@ -303,18 +329,16 @@ class Client(object):
 			self._sock.connect((self.game_ip, self.game_port))
 		except socket.error:
 			self._error("Failed to connect to game server at {}:{}".format(self.game_ip, self.game_port))
-
 		self._info("Joining server...")
-		self._ver_check(ver)
+		self._verchk(ver)
 		rndk = self._rndk()
-		digest = self._swapped_md5(login_key + rndk) + login_key
+		pword = self._swapped_md5(login_key + rndk) + login_key
 		if confirmation is not None:
-			digest += "#" + confirmation
+			pword += "#" + confirmation
+		data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'
 		if self._single_quotes:
-			data = "<msg t='sys'><body action='login' r='0'><login z='w1'><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>".format(user, digest)
-		else:
-			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'.format(user, digest)
-		self._send(data)
+			data = data.replace('"', "'")
+		self._send(data.format(user, pword))
 		packet = self._receive_packet()
 		while packet[2] != "l":
 			packet = self._receive_packet()
@@ -1005,7 +1029,7 @@ class Client(object):
 		if self.login_ip in ("server.cprewritten.net", "204.44.93.5"):
 			self._send_packet("s", "u#sp", x, y)
 		else:
-			self._send_packet("s", "u#sp", None, self.id, x, y)
+			self._send_packet("s", "u#sp", self.id, x, y, internal_room_id=False)
 		if self.next("sp") is None:
 			self._error("Failed to walk to ({}, {})".format(x, y))
 		self._info("Walked to ({}, {})".format(x, y))
@@ -1083,7 +1107,7 @@ class Client(object):
 	def joke(self, joke_id):
 		joke_id = self._require_int("joke_id", joke_id)
 		self._info("Telling joke {}...".format(joke_id))
-		self._send_packet("s", "u#sj", None, self.id, joke_id)
+		self._send_packet("s", "u#sj", self.id, joke_id, internal_room_id=False)
 		if self.next("sj") is None:
 			self._error("Failed to tell joke {}".format(joke_id))
 		self._info("Told joke {}".format(joke_id))
@@ -1156,7 +1180,7 @@ class Client(object):
 	def add_igloo(self, igloo_id):
 		igloo_id = self._require_int("igloo_id", igloo_id)
 		self._info("Adding igloo {}...".format(igloo_id))
-		self._send_packet("s", "g#au", None, self.id, igloo_id)
+		self._send_packet("s", "g#au", self.id, igloo_id, internal_room_id=False)
 		if self.next("au") is None:
 			self._error("Failed to add igloo {}".format(igloo_id))
 		self._info("Added igloo {}".format(igloo_id))
@@ -1172,7 +1196,7 @@ class Client(object):
 	def igloo_music(self, music_id):
 		music_id = self._require_int("music_id", music_id)
 		self._info("Setting igloo music to #{}...".format(music_id))
-		self._send_packet("s", "g#um", None, self.id, music_id)
+		self._send_packet("s", "g#um", self.id, music_id, internal_room_id=False)
 		if self.next("um") is None:
 			self._error("Failed to set igloo music to {}".format(music_id))
 		self._info("Set igloo music to #{}".format(music_id))
