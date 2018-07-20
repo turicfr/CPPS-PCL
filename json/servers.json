@@ -8,7 +8,7 @@
 		}
 	},
 	"me": {
-		"login": "204.44.93.5:6114",
+		"login": "172.104.66.25:6114",
 		"single_quotes": true,
 		"servers": {
 			"iceberg tip": "144.217.86.166:2345",

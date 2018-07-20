@@ -299,6 +299,6 @@ def remove_penguin(cpps, user, penguins=None, ask=True):
 	if penguins is None:
 		penguins = get_json("penguins")
 	if cpps in penguins and user in penguins[cpps] and (not ask or get_input("Remove penguin? [y/N] ", ["y", "N"]) == "y"):
-		print "Removing {}...".format(user)
 		del penguins[cpps][user]
 		set_json("penguins", penguins)
+		print "Removed {}".format(user)

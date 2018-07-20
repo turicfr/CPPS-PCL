@@ -245,7 +245,7 @@ class Client(object):
 
 	def _verchk(self, ver):
 		self._info("Sending verChk request...")
-		request = '<msg t="sys"><body action="verChk" r="0"><ver v="{}"/></body></msg>'
+		request = '<msg t="sys"><body action="verChk" r="0"><ver v="{}" /></body></msg>'
 		if self._single_quotes:
 			request = request.replace('"', "'")
 		self._send(request.format(ver))
@@ -377,7 +377,7 @@ class Client(object):
 			member_left = int(packet[12])
 		except ValueError:
 			member_left = None
-		timezone = int(packet[13])
+		timezone = int(packet[13]) if packet[13] else None
 		# opened_playcard = packet[14] == "1"
 		# saved_map_category = int(packet[15])
 		# status_field = int(packet[16])
