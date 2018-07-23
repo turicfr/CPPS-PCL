@@ -1,8 +1,9 @@
 {
 	"reborn": {
-		"ip": "144.76.97.48",
+		"ip": "35.204.129.226",
 		"login": 2,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"single_quotes": true,
 		"servers": {
 			"usa": 3
 		}
@@ -55,7 +56,12 @@
 		"magic": "dc3726460bc0b89b1ba952836531486bY(02.>'H}t\":E1_root",
 		"single_quotes": true,
 		"servers": {
-			"freeland": 6116
+			"freeo": 6113,
+			"frio": 6114,
+			"nevasca": 6115,
+			"freeland": 6116,
+			"ice paradise": 6117,
+			"migator": 6118
 		}
 	},
 	"super": {
