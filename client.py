@@ -290,6 +290,49 @@ class Client(object):
 		while packet[2] != "captchasuccess":
 			packet = self._receive_packet()
 
+	def _oasis_login(self, username, password, encrypted):
+		try:
+			import requests
+		except ImportError:
+			self._error("Failed to login: requests is not installed; Please install it using the following command and try again:\npip install requests")
+		self._info("Connecting to login server at {}...".format(self._login_host))
+		if encrypted:
+			pword = password
+		else:
+			pword = hashlib.md5(password).hexdigest()
+		pword = hashlib.md5("ClientSideSaltT])C5V^Z<0g6Y+};S!" + pword).hexdigest()
+		data = {"username": username, "password": pword}
+		response = requests.put("https://{}/v2/account/session".format(self._login_host), data=data).json()
+		if not response["success"]:
+			error = response["error"]
+			self._error("Error #{}: {}".format(error["status"], error["message"]))
+		ocloud_token = response["ocloud_token"]
+		self._info("Received OCloud token: {}".format(ocloud_token))
+
+		data["sector"] = "GAME"
+		response = requests.put("https://{}/v2/account/session".format(self._login_host), headers={"Authorization": "OCloud " + ocloud_token}, data=data).json()
+		if not response["success"]:
+			error = response["error"]
+			self._error("Error #{}: {}".format(error["status"], error["message"]))
+		token = response["token"]
+		self._info("Received token: {}".format(token))
+		self._info("Logged in")
+		return token
+
+	def _oasis_join_server(self, token):
+		self._info("Connecting to game server at {}:{}...".format(self._game_host, self._game_port))
+		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			self._sock.connect((self._game_host, self._game_port))
+		except socket.error:
+			self._error("Failed to connect to game server at {}:{}".format(self._game_host, self._game_port))
+		self._info("Joining server...")
+		self._send("/auth {}".format(token))
+		self._receive_packet()
+		self._send("/world 104 en")
+		self._receive_packet()
+		self._info("Joined server")
+
 	def _login(self, username, password, encrypted, ver):
 		self._info("Connecting to login server at {}:{}...".format(self._login_host, self._login_port))
 		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -701,8 +744,12 @@ class Client(object):
 			threads = alive
 
 	def connect(self, username, password, encrypted=False, ver=153):
-		username, login_key, confirmation = self._login(username, password, encrypted, ver)
-		self._join_server(username, login_key, confirmation, ver)
+		if self._login_host == "api.penguinoasis.com":
+			token = self._oasis_login(username, password, encrypted)
+			self._oasis_join_server(token)
+		else:
+			username, login_key, confirmation = self._login(username, password, encrypted, ver)
+			self._join_server(username, login_key, confirmation, ver)
 		self._connected = True
 		thread = Thread(target=self._game)
 		thread.start()

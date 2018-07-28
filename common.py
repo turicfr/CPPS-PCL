@@ -270,18 +270,21 @@ def get_server(servers, cpps, server=None):
 	return server
 
 def get_client(servers, cpps, server, logger=None):
-	if "ip" in servers[cpps]:
-		login_ip = game_ip = servers[cpps]["ip"]
+	if "host" in servers[cpps]:
+		login_host = game_host = servers[cpps]["host"]
 		login_port = servers[cpps]["login"]
 		game_port = servers[cpps]["servers"][server]
 	else:
-		login_ip, login_port = servers[cpps]["login"].split(":")
-		login_port = int(login_port)
-		game_ip, game_port = servers[cpps]["servers"][server].split(":")
+		if ":" in servers[cpps]["login"]:
+			login_host, login_port = servers[cpps]["login"].split(":")
+			login_port = int(login_port)
+		else:
+			login_host, login_port = servers[cpps]["login"], None
+		game_host, game_port = servers[cpps]["servers"][server].split(":")
 		game_port = int(game_port)
 	magic = servers[cpps].get("magic")
 	single_quotes = servers[cpps].get("single_quotes")
-	return pcl.Client(login_ip, login_port, game_ip, game_port, magic, single_quotes, logger)
+	return pcl.Client(login_host, login_port, game_host, game_port, magic, single_quotes, logger)
 
 def get_penguin(cpps=None, server=None, user=None, remember=None, client=None):
 	servers = get_json("servers")

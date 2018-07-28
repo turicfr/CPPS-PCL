@@ -28,6 +28,7 @@ A complex login with multiple penguins managed by a certain shape.
 * Internet connection
 * _For Club Penguin Rewritten_: [cefpython](https://github.com/cztomczak/cefpython) (can be installed with: `pip install cefpython3`)
 * _For Club Penguin Online_: [PyCrypto](https://pypi.org/project/pycrypto/) (can be installed with: `pip install pycrypto`, and [here](http://www.voidspace.org.uk/python/modules.shtml#pycrypto) for Windows)
+* _For Penguin Oasis_: [Requests](http://docs.python-requests.org/) (can be installed with: `pip install requests`)
 
 ## Usage
 
@@ -77,6 +78,7 @@ Currently 15 different servers are supported, which can also be found in [`json/
 * `cpr` - [Club Penguin Rewritten](https://cprewritten.net/)
 * `snowy island` - [Snowy Island](https://snowyisland.net/)
 * `again` - [Club Penguin Again](https://www.clubpenguinagain.com/)
+* `oasis` - [Club Penguin Oasis](https://penguinoasis.com/)
 
 If you want support for a new CPPS, please [open an issue](https://github.com/relrelb/CPPS-PCL/issues/new) regarding it.
 

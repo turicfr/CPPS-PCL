@@ -26,7 +26,10 @@ class Penguin(object):
 		penguin_id = int(player[0])
 		name = player[1]
 		member = int(player[2])
-		color = int(player[3], 0)
+		try:
+			color = int(player[3], 0)
+		except ValueError:
+			color = int(player[3], 16)
 		head = int(player[4])
 		face = int(player[5])
 		neck = int(player[6])
