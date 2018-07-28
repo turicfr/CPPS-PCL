@@ -88,10 +88,10 @@ class ClientError(Exception):
 		self.code = code
 
 class Client(object):
-	def __init__(self, login_ip, login_port, game_ip, game_port, magic=None, single_quotes=False, logger=None):
-		self._login_ip = login_ip
+	def __init__(self, login_host, login_port, game_host, game_port, magic=None, single_quotes=False, logger=None):
+		self._login_host = login_host
 		self._login_port = login_port
-		self._game_ip = game_ip
+		self._game_host = game_host
 		self._game_port = game_port
 		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
 		self._single_quotes = single_quotes
@@ -166,34 +166,34 @@ class Client(object):
 		return inner_safe
 
 	def _debug(self, message):
-		if self.logger is not None:
-			self.logger.debug(message)
+		if self._logger is not None:
+			self._logger.debug(message)
 
 	def _info(self, message):
-		if self.logger is not None:
-			self.logger.info(message)
+		if self._logger is not None:
+			self._logger.info(message)
 
 	def _warning(self, message):
-		if self.logger is not None:
-			self.logger.warning(message)
+		if self._logger is not None:
+			self._logger.warning(message)
 
 	def _error(self, message):
 		if isinstance(message, list):
 			code = int(message[4])
 			message = common.get_json("errors").get(str(code), "")
-			if self.logger is not None:
+			if self._logger is not None:
 				if message:
-					self.logger.error("Error #{}: {}".format(code, message))
+					self._logger.error("Error #{}: {}".format(code, message))
 				else:
-					self.logger.error("Error #{}".format(code))
+					self._logger.error("Error #{}".format(code))
 			raise ClientError(self, message, code)
-		if self.logger is not None:
-			self.logger.error(message)
+		if self._logger is not None:
+			self._logger.error(message)
 		raise ClientError(self, message)
 
 	def _critical(self, message):
-		if self.logger is not None:
-			self.logger.critical(message)
+		if self._logger is not None:
+			self._logger.critical(message)
 		raise ClientError(self, message)
 
 	def _require_int(self, name, value):
@@ -214,7 +214,7 @@ class Client(object):
 	def _send_packet(self, ext, cmd, *args, **kwargs):
 		packet = "%xt%{}%{}%".format(ext, cmd)
 		if kwargs.get("internal_room_id", True):
-			packet += str(self.internal_room_id) + "%"
+			packet += str(self._internal_room_id) + "%"
 		packet += "".join(str(arg) + "%" for arg in args)
 		self._send(packet)
 
@@ -290,13 +290,13 @@ class Client(object):
 		while packet[2] != "captchasuccess":
 			packet = self._receive_packet()
 
-	def _login(self, user, password, encrypted, ver):
-		self._info("Connecting to login server at {}:{}...".format(self.login_ip, self.login_port))
+	def _login(self, username, password, encrypted, ver):
+		self._info("Connecting to login server at {}:{}...".format(self._login_host, self._login_port))
 		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self._sock.connect((self.login_ip, self.login_port))
+			self._sock.connect((self._login_host, self._login_port))
 		except socket.error:
-			self._error("Failed to connect to login server at {}:{}".format(self.login_ip, self.login_port))
+			self._error("Failed to connect to login server at {}:{}".format(self._login_host, self._login_port))
 		try:
 			self._info("Logging in...")
 			self._verchk(ver)
@@ -308,12 +308,18 @@ class Client(object):
 			data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'
 			if self._single_quotes:
 				data = data.replace('"', "'")
-			self._send(data.format(user, pword))
+			self._send(data.format(username, pword))
 			packet = self._receive_packet()
 			while packet[2] != "l":
 				packet = self._receive_packet()
 			self._info("Logged in")
-			return packet
+			if "|" in packet[4]:
+				data = packet[4].split("|")
+				self._id = int(data[0])
+				return packet[4], data[3], packet[5]
+			else:
+				self._id = int(packet[4])
+				return username, packet[5], None
 		finally:
 			try:
 				self._sock.shutdown(socket.SHUT_RDWR)
@@ -322,13 +328,13 @@ class Client(object):
 			self._sock.close()
 			self._key = None
 
-	def _join_server(self, user, login_key, confirmation, ver):
-		self._info("Connecting to game server at {}:{}...".format(self.game_ip, self.game_port))
+	def _join_server(self, username, login_key, confirmation, ver):
+		self._info("Connecting to game server at {}:{}...".format(self._game_host, self._game_port))
 		self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			self._sock.connect((self.game_ip, self.game_port))
+			self._sock.connect((self._game_host, self._game_port))
 		except socket.error:
-			self._error("Failed to connect to game server at {}:{}".format(self.game_ip, self.game_port))
+			self._error("Failed to connect to game server at {}:{}".format(self._game_host, self._game_port))
 		self._info("Joining server...")
 		self._verchk(ver)
 		rndk = self._rndk()
@@ -338,11 +344,11 @@ class Client(object):
 		data = '<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{}]]></nick><pword><![CDATA[{}]]></pword></login></body></msg>'
 		if self._single_quotes:
 			data = data.replace('"', "'")
-		self._send(data.format(user, pword))
+		self._send(data.format(username, pword))
 		packet = self._receive_packet()
 		while packet[2] != "l":
 			packet = self._receive_packet()
-		self._send_packet("s", "j#js", self.id, login_key, "en")
+		self._send_packet("s", "j#js", self._id, login_key, "en")
 		if confirmation is None:
 			while packet[2] != "js":
 				packet = self._receive_packet()
@@ -694,31 +700,9 @@ class Client(object):
 						pass
 			threads = alive
 
-	def connect(self, user, password, encrypted=False, ver=153):
-		packet = self._login(user, password, encrypted, ver)
-		if "|" in packet[4]:
-			user = packet[4]
-			data = packet[4].split("|")
-			self._id = int(data[0])
-			# swid = data[1]
-			# user = data[2]
-			login_key = data[3]
-			# ??? = data[4]
-			# language_approved = int(data[5])
-			# language_rejected = int(data[6])
-			# ??? = data[7] == "true"
-			# ??? = data[8] == "true"
-			# ??? = int(data[9])
-			confirmation = packet[5]
-			# friends_login_key = packet[6]
-			# ??? = packet[7]
-			# email = packet[8]
-		else:
-			self._id = int(packet[4])
-			login_key = packet[5]
-			confirmation = None
-
-		self._join_server(user, login_key, confirmation, ver)
+	def connect(self, username, password, encrypted=False, ver=153):
+		username, login_key, confirmation = self._login(username, password, encrypted, ver)
+		self._join_server(username, login_key, confirmation, ver)
 		self._connected = True
 		thread = Thread(target=self._game)
 		thread.start()
@@ -781,16 +765,16 @@ class Client(object):
 		return common.get_json("rooms").get(str(room_id), "room {}".format(room_id))
 
 	@property
-	def login_ip(self):
-		return self._login_ip
+	def login_host(self):
+		return self._login_host
 
 	@property
 	def login_port(self):
 		return self._login_port
 
 	@property
-	def game_ip(self):
-		return self._game_ip
+	def game_host(self):
+		return self._game_host
 
 	@property
 	def game_port(self):
@@ -814,7 +798,7 @@ class Client(object):
 
 	@property
 	def name(self):
-		return self._penguins[self.id].name
+		return self._penguins[self._id].name
 
 	@property
 	def coins(self):
@@ -830,7 +814,7 @@ class Client(object):
 		y = self._require_int("y", y)
 		room_name = self.get_room_name(room_id)
 		self._info("Joining {}...".format(room_name))
-		if room_id == self.room:
+		if room_id == self._room:
 			self._error("Already in {}".format(room_name))
 		self._send_packet("s", "j#jr", room_id, x, y)
 		if self.next("jr") is None:
@@ -839,7 +823,7 @@ class Client(object):
 
 	@property
 	def igloo(self):
-		return self.room - 1000 if self.room > 1000 else None
+		return self._room - 1000 if self._room > 1000 else None
 
 	@igloo.setter
 	def igloo(self, penguin_id):
@@ -856,7 +840,7 @@ class Client(object):
 
 	@property
 	def color(self):
-		return self._penguins[self.id].color
+		return self._penguins[self._id].color
 
 	@color.setter
 	def color(self, item_id):
@@ -869,7 +853,7 @@ class Client(object):
 
 	@property
 	def head(self):
-		return self._penguins[self.id].head
+		return self._penguins[self._id].head
 
 	@head.setter
 	def head(self, item_id):
@@ -882,7 +866,7 @@ class Client(object):
 
 	@property
 	def face(self):
-		return self._penguins[self.id].face
+		return self._penguins[self._id].face
 
 	@face.setter
 	def face(self, item_id):
@@ -895,7 +879,7 @@ class Client(object):
 
 	@property
 	def neck(self):
-		return self._penguins[self.id].neck
+		return self._penguins[self._id].neck
 
 	@neck.setter
 	def neck(self, item_id):
@@ -908,7 +892,7 @@ class Client(object):
 
 	@property
 	def body(self):
-		return self._penguins[self.id].body
+		return self._penguins[self._id].body
 
 	@body.setter
 	def body(self, item_id):
@@ -921,7 +905,7 @@ class Client(object):
 
 	@property
 	def hand(self):
-		return self._penguins[self.id].hand
+		return self._penguins[self._id].hand
 
 	@hand.setter
 	def hand(self, item_id):
@@ -934,7 +918,7 @@ class Client(object):
 
 	@property
 	def feet(self):
-		return self._penguins[self.id].feet
+		return self._penguins[self._id].feet
 
 	@feet.setter
 	def feet(self, item_id):
@@ -947,7 +931,7 @@ class Client(object):
 
 	@property
 	def pin(self):
-		return self._penguins[self.id].pin
+		return self._penguins[self._id].pin
 
 	@pin.setter
 	def pin(self, item_id):
@@ -960,7 +944,7 @@ class Client(object):
 
 	@property
 	def background(self):
-		return self._penguins[self.id].background
+		return self._penguins[self._id].background
 
 	@background.setter
 	def background(self, item_id):
@@ -973,11 +957,11 @@ class Client(object):
 
 	@property
 	def x(self):
-		return self._penguins[self.id].x
+		return self._penguins[self._id].x
 
 	@property
 	def y(self):
-		return self._penguins[self.id].y
+		return self._penguins[self._id].y
 
 	@property
 	def inventory(self):
@@ -999,7 +983,7 @@ class Client(object):
 			self._send_packet("s", "b#gb")
 			packet = self.next("gb")
 			if packet is None:
-				self._error("Faild to fetch buddies")
+				self._error("Failed to fetch buddies")
 			self._info("Fetched buddies")
 			self._buddies = {}
 			for buddy in packet[4:-1]:
@@ -1010,7 +994,7 @@ class Client(object):
 
 	@property
 	def stamps(self):
-		return self.get_stamps(self.id)
+		return self.get_stamps(self._id)
 
 	def get_stamps(self, penguin_id):
 		penguin = self.get_penguin(penguin_id)
@@ -1026,10 +1010,10 @@ class Client(object):
 		x = self._require_int("x", x)
 		y = self._require_int("y", y)
 		self._info("Walking to ({}, {})...".format(x, y))
-		if self.login_ip in ("server.cprewritten.net", "204.44.93.5"):
+		if self._login_host in ("server.cprewritten.net", "204.44.93.5"):
 			self._send_packet("s", "u#sp", x, y)
 		else:
-			self._send_packet("s", "u#sp", self.id, x, y, internal_room_id=False)
+			self._send_packet("s", "u#sp", self._id, x, y, internal_room_id=False)
 		if self.next("sp") is None:
 			self._error("Failed to walk to ({}, {})".format(x, y))
 		self._info("Walked to ({}, {})".format(x, y))
@@ -1044,7 +1028,7 @@ class Client(object):
 
 	@property
 	def frame(self):
-		return self._penguins[self.id].frame
+		return self._penguins[self._id].frame
 
 	@frame.setter
 	def frame(self, frame_id):
@@ -1063,14 +1047,14 @@ class Client(object):
 
 	def sit(self, direction="s"):
 		directions = {
-			"se": 24,
-			"e": 23,
-			"ne": 22,
-			"n": 21,
-			"nw": 20,
-			"w": 19,
+			"s": 17,
 			"sw": 18,
-			"s": 17
+			"w": 19,
+			"nw": 20,
+			"n": 21,
+			"ne": 22,
+			"e": 23,
+			"se": 24
 		}
 		if direction not in directions:
 			self._error('Unknown sit direction "{}"'.format(direction))
@@ -1099,7 +1083,7 @@ class Client(object):
 			if not message:
 				self._error("Cannot say nothing")
 			self._info('Saying "{}"...'.format(message))
-			self._send_packet("s", "m#sm", self.id, message)
+			self._send_packet("s", "m#sm", self._id, message)
 			if self.next("sm") is None:
 				self._error('Failed to say "{}"'.format(message))
 			self._info('Said "{}"'.format(message))
@@ -1107,7 +1091,7 @@ class Client(object):
 	def joke(self, joke_id):
 		joke_id = self._require_int("joke_id", joke_id)
 		self._info("Telling joke {}...".format(joke_id))
-		self._send_packet("s", "u#sj", self.id, joke_id, internal_room_id=False)
+		self._send_packet("s", "u#sj", self._id, joke_id, internal_room_id=False)
 		if self.next("sj") is None:
 			self._error("Failed to tell joke {}".format(joke_id))
 		self._info("Told joke {}".format(joke_id))
@@ -1125,7 +1109,7 @@ class Client(object):
 		penguin = self.get_penguin(penguin_id)
 		self._info('Sending postcard #{} to "{}"...'.format(postcard_id, penguin.name))
 		self._send_packet("s", "l#ms", penguin.id, postcard_id)
-		coins = self.coins
+		coins = self._coins
 		packet = self.next("ms")
 		if packet is None:
 			self._error('Failed to send postcard #{} to "{}"'.format(postcard_id, penguin.name))
@@ -1144,7 +1128,7 @@ class Client(object):
 		item_id = self._require_int("item_id", item_id)
 		self._info("Adding item {}...".format(item_id))
 		self._send_packet("s", "i#ai", item_id)
-		coins = self.coins
+		coins = self._coins
 		packet = self.next("ai", lambda p: int(p[4]) == item_id)
 		if packet is None:
 			self._error("Failed to add item {}".format(item_id))
@@ -1154,8 +1138,8 @@ class Client(object):
 	def add_coins(self, amount):
 		amount = self._require_int("amount", amount)
 		self._info("Adding {} coins...".format(amount))
-		coins = self.coins
-		room = self.room
+		coins = self._coins
+		room = self._room
 		try:
 			self._send_packet("s", "j#jr", 912, 0, 0)
 			if self.next("jg") is None:
@@ -1180,7 +1164,7 @@ class Client(object):
 	def add_igloo(self, igloo_id):
 		igloo_id = self._require_int("igloo_id", igloo_id)
 		self._info("Adding igloo {}...".format(igloo_id))
-		self._send_packet("s", "g#au", self.id, igloo_id, internal_room_id=False)
+		self._send_packet("s", "g#au", self._id, igloo_id, internal_room_id=False)
 		if self.next("au") is None:
 			self._error("Failed to add igloo {}".format(igloo_id))
 		self._info("Added igloo {}".format(igloo_id))
@@ -1196,7 +1180,7 @@ class Client(object):
 	def igloo_music(self, music_id):
 		music_id = self._require_int("music_id", music_id)
 		self._info("Setting igloo music to #{}...".format(music_id))
-		self._send_packet("s", "g#um", self.id, music_id, internal_room_id=False)
+		self._send_packet("s", "g#um", self._id, music_id, internal_room_id=False)
 		if self.next("um") is None:
 			self._error("Failed to set igloo music to {}".format(music_id))
 		self._info("Set igloo music to #{}".format(music_id))
@@ -1234,7 +1218,7 @@ class Client(object):
 		dy = self._require_int("dy", dy)
 		penguin = self.get_penguin(penguin_id)
 		self._info('Following "{}"...'.format(penguin.name))
-		if penguin.id == self.id:
+		if penguin.id == self._id:
 			self._error("Cannot follow self")
 		if penguin.id not in self._penguins:
 			if penguin.id not in self.buddies or not self.buddies[penguin.id].online:
@@ -1252,7 +1236,7 @@ class Client(object):
 		self._follow = None
 
 	def logout(self):
-		if not self.connected:
+		if not self._connected:
 			return
 		self._info("Logging out...")
 		self._connected = False
