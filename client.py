@@ -458,6 +458,9 @@ class Client(object):
 			self._penguins[penguin.id] = penguin
 		self._all_penguins.update(self._penguins)
 
+	def _jp(self, packet):
+		self._internal_room_id = int(packet[3])
+
 	def _jg(self, packet):
 		self._internal_room_id = int(packet[3])
 		self._room = int(packet[4])
@@ -677,6 +680,7 @@ class Client(object):
 		self.handle("ap", self._ap)
 		self.handle("rp", self._rp)
 		self.handle("jr", self._jr)
+		self.handle("jp", self._jp)
 		self.handle("jg", self._jg)
 		self.handle("br", self._br)
 		self.handle("ba", self._ba)
@@ -1227,10 +1231,10 @@ class Client(object):
 	def igloo_music(self, music_id):
 		music_id = self._require_int("music_id", music_id)
 		self._info("Setting igloo music to #{}...".format(music_id))
-		self._send_packet("s", "g#um", self._id, music_id, internal_room_id=False)
-		if self.next("um") is None:
-			self._error("Failed to set igloo music to {}".format(music_id))
-		self._info("Set igloo music to #{}".format(music_id))
+		self._send_packet("s", "g#gm", self._id)
+		if self.next("gm") is None:
+			self._error("Failed to retrieve igloo information")
+		self._send_packet("s", "g#um", music_id)
 
 	def add_buddy(self, penguin_id):
 		penguin = self.get_penguin(penguin_id)
