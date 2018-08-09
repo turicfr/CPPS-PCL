@@ -19,22 +19,16 @@ def login():
 	print "Connected!"
 	return client
 
-def show_help(client):
-	return """HELP"""
-
-def log(client, level_name=None):
-	if level_name is None:
-		level_name = "all" if client.logger.level else "error"
-	level = {
-		"all": logging.NOTSET,
-		"debug": logging.DEBUG,
-		"info": logging.INFO,
-		"warning": logging.WARNING,
-		"error": logging.ERROR,
-		"critical": logging.CRITICAL
-	}.get(level_name)
+def log(client, level=None):
 	if level is None:
-		raise common.LoginError('Unknown logging level "{}"'.format(level_name))
+		if client.logger.level:
+			level = logging.NOTSET
+			level_name = "all"
+		else:
+			level = logging.ERROR
+			level_name = "error"
+	else:
+		level, level_name = level
 	client.logger.setLevel(level)
 	return "Logging {} messages".format(level_name)
 
@@ -180,13 +174,7 @@ def follow(client, penguin_id_or_name=None, dx=None, dy=None):
 		client.follow(penguin_id)
 	elif dy is None:
 		raise common.LoginError("Invalid parameters")
-	else:
-		try:
-			dx = int(dx)
-			dy = int(dy)
-		except ValueError:
-			common.LoginError("Invalid parameters")
-		client.follow(penguin_id, dx, dy)
+	client.follow(penguin_id, dx, dy)
 
 def logout(client):
 	client.logout()
@@ -198,55 +186,51 @@ def main():
 	except common.LoginError as e:
 		print e
 		sys.exit(1)
-	int_param = lambda name, required=True: common.Parameter(name, [], required=required, type=int)
-	penguin_name_param = lambda required=True: common.Parameter("penguin_name", lambda c: [penguin.name for penguin in c.penguins.itervalues()], required=required)
-	other_penguin_name_param = lambda required=True: common.Parameter("penguin_name", lambda c: [penguin.name for penguin in c.penguins.itervalues() if penguin.id != client.id], required=required)
 	commands = common.Command.index(
-		common.Command("help", show_help),
-		common.Command("log", log, common.Parameter("level", ["all", "debug", "info", "warning", "error", "critical"], required=False)),
-		common.Command("internal", internal),
-		common.Command("id", get_id, penguin_name_param(required=False)),
-		common.Command("name", name, int_param("penguin_id", required=False)),
-		common.Command("room", room, common.Parameter("room_name", common.get_json("rooms").values(), required=False)),
-		common.Command("igloo", igloo, penguin_name_param(required=False)),
-		common.Command("penguins", penguins),
-		common.Command("color", color, int_param("item_id", required=False)),
-		common.Command("head", head, int_param("item_id", required=False)),
-		common.Command("face", face, int_param("item_id", required=False)),
-		common.Command("neck", neck, int_param("item_id", required=False)),
-		common.Command("body", body, int_param("item_id", required=False)),
-		common.Command("hand", hand, int_param("item_id", required=False)),
-		common.Command("feet", feet, int_param("item_id", required=False)),
-		common.Command("pin", pin, int_param("item_id", required=False)),
-		common.Command("background", background, int_param("item_id", required=False)),
-		common.Command("clothes", clothes, penguin_name_param(required=False)),
-		common.Command("inventory", inventory),
-		common.Command("buddies", buddies),
-		common.Command("stamps", stamps, penguin_name_param(required=False)),
-		common.Command("walk", Client.walk, int_param("x"), int_param("y")),
-		common.Command("dance", Client.dance),
-		common.Command("wave", Client.wave),
-		common.Command("sit", Client.sit, common.Parameter("direction", ["s", "e", "w", "nw", "sw", "ne", "se", "n"])),
-		common.Command("snowball", Client.snowball, int_param("x"), int_param("y")),
-		common.Command("say", say, varargs=True),
-		common.Command("joke", Client.joke, int_param("joke_id")),
-		common.Command("emote", Client.emote, int_param("emote_id")),
-		common.Command("mail", mail, other_penguin_name_param(), int_param("postcard_id")),
-		common.Command("buy", Client.add_item, int_param("item_id")),
-		common.Command("ai", Client.add_item, int_param("item_id")),
-		common.Command("coins", coins, int_param("amount", required=False)),
-		common.Command("ac", Client.add_coins, int_param("amount")),
-		common.Command("stamp", Client.add_stamp, int_param("stamp_id")),
-		common.Command("add_igloo", Client.add_igloo, int_param("igloo_id")),
-		common.Command("add_furniture", Client.add_furniture, int_param("furniture_id")),
-		common.Command("music", Client.igloo_music, int_param("music_id")),
-		common.Command("buddy", buddy, other_penguin_name_param()),
-		common.Command("find", find, other_penguin_name_param()),
-		common.Command("follow", follow, other_penguin_name_param()),
-		common.Command("unfollow", Client.unfollow),
-		common.Command("logout", logout),
-		common.Command("exit", logout),
-		common.Command("quit", logout)
+		common.Command("log", log, common.Parameter.logging_level(required=False, help="Logging level"), help="Set logging level"),
+		common.Command("internal", internal, help="Get current internal room ID"),
+		common.Command("id", get_id, common.Parameter.penguin_name(required=False, help="Penguin name"), varargs=common.VarArgs.SINGLE_THREADED, help="Get penguin ID"),
+		common.Command("name", name, common.Parameter.int_param("penguin_id", required=False, help="Penguin ID"), varargs=common.VarArgs.SINGLE_THREADED, help="Get penguin name"),
+		common.Command("room", room, common.Parameter("room_name", common.get_json("rooms").values(), required=False, help="Room name"), help="Go to room"),
+		common.Command("igloo", igloo, common.Parameter.penguin_name(required=False, help="Penguin name"), help="Go to igloo"),
+		common.Command("penguins", penguins, help="Get all penguins in current room"),
+		common.Command("color", color, common.Parameter.int_param("item_id", required=False, help="Color item ID"), help="Get current color item ID / Equip color item"),
+		common.Command("head", head, common.Parameter.int_param("item_id", required=False, help="Head item ID"), help="Get current head item ID / Equip head item"),
+		common.Command("face", face, common.Parameter.int_param("item_id", required=False, help="Face item ID"), help="Get current face item ID / Equip face item"),
+		common.Command("neck", neck, common.Parameter.int_param("item_id", required=False, help="Neck item ID"), help="Get current neck item ID / Equip neck item"),
+		common.Command("body", body, common.Parameter.int_param("item_id", required=False, help="Body item ID"), help="Get current body item ID / Equip body item"),
+		common.Command("hand", hand, common.Parameter.int_param("item_id", required=False, help="Hand item ID"), help="Get current hand item ID / Equip hand item"),
+		common.Command("feet", feet, common.Parameter.int_param("item_id", required=False, help="Feet item ID"), help="Get current feet item ID / Equip feet item"),
+		common.Command("pin", pin, common.Parameter.int_param("item_id", required=False, help="Pin item ID"), help="Get current pin item ID / Equip pin item"),
+		common.Command("background", background, common.Parameter.int_param("item_id", required=False, help="Background item ID"), help="Get current background item ID / Equip background item"),
+		common.Command("clothes", clothes, common.Parameter.penguin_name(required=False, help="Penguin name"), varargs=common.VarArgs.SINGLE_THREADED, help="Get all currently equipped item IDs"),
+		common.Command("inventory", inventory, help="Get current inventory"),
+		common.Command("buddies", buddies, help="Get all current buddies"),
+		common.Command("stamps", stamps, common.Parameter.penguin_name(required=False, help="Penguin name"), help="Get all currently earned stamps"),
+		common.Command("walk", Client.walk, common.Parameter.int_param("x", help="X"), common.Parameter.int_param("y", help="Y"), help="Walk"),
+		common.Command("dance", Client.dance, help="Dance"),
+		common.Command("wave", Client.wave, help="Wave"),
+		common.Command("sit", Client.sit, common.Parameter("direction", ["s", "e", "w", "nw", "sw", "ne", "se", "n"], required=False, help="Direction"), help="Sit"),
+		common.Command("snowball", Client.snowball, common.Parameter.int_param("x", help="X"), common.Parameter.int_param("y", help="Y"), help="Throw snowball"),
+		common.Command("say", say, varargs=common.VarArgs.NORMAL, help="Say message"),
+		common.Command("joke", Client.joke, common.Parameter.int_param("joke_id", help="Joke ID"), help="Tell a joke"),
+		common.Command("emote", Client.emote, common.Parameter.int_param("emote_id", help="Emote ID"), help="React an emote"),
+		common.Command("mail", mail, common.Parameter.other_penguin_name(help="Penguin name"), common.Parameter.int_param("postcard_id", help="Postcard ID"), help="Send a postcard"),
+		common.Command("buy", Client.add_item, common.Parameter.int_param("item_id", help="Item ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy item"),
+		common.Command("ai", Client.add_item, common.Parameter.int_param("item_id", help="Item ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy item"),
+		common.Command("coins", coins, common.Parameter.int_param("amount", required=False, help="Amount"), help="Get current coins / Earn coins"),
+		common.Command("ac", Client.add_coins, common.Parameter.int_param("amount", help="Amount"), help="Earn coins"),
+		common.Command("stamp", Client.add_stamp, common.Parameter.int_param("stamp_id", help="Stamp ID"), varargs=common.VarArgs.MULTI_THREADED, help="Earn stamp"),
+		common.Command("add_igloo", Client.add_igloo, common.Parameter.int_param("igloo_id", help="Igloo ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy igloo"),
+		common.Command("add_furniture", Client.add_furniture, common.Parameter.int_param("furniture_id", help="Furniture ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy furniture"),
+		common.Command("music", Client.igloo_music, common.Parameter.int_param("music_id", help="Music ID"), help="Set current igloo music"),
+		common.Command("buddy", buddy, common.Parameter.other_penguin_name(help="Penguin name"), varargs=common.VarArgs.MULTI_THREADED, help="Send buddy request"),
+		common.Command("find", find, common.Parameter.other_penguin_name(help="Penguin name"), varargs=common.VarArgs.MULTI_THREADED, help="Find buddy"),
+		common.Command("follow", follow, common.Parameter.other_penguin_name(help="Penguin name"), help="Follow penguin"),
+		common.Command("unfollow", Client.unfollow, help="Stop following"),
+		common.Command("logout", logout, help="Logout"),
+		common.Command("exit", logout, help="Logout"),
+		common.Command("quit", logout, help="Logout")
 	)
 	while client.connected:
 		try:

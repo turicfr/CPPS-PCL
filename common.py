@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import logging
 import hashlib
 import itertools
 from shlex import split
@@ -16,37 +17,69 @@ class LoginError(Exception):
 	def __init__(self, message=""):
 		super(LoginError, self).__init__(message)
 
+class VarArgs(object):
+	NONE = 0
+	SINGLE_THREADED = 1
+	MULTI_THREADED = 2
+	NORMAL = 3
+
 class Command(object):
 	def __init__(self, name, function, *params, **kwargs):
 		if any(param.required for param in itertools.dropwhile(lambda p: p.required, params)):
 			raise ValueError("all required parameters must appear before any optional parameters")
 		self._name = name
 		self._function = function
-		if kwargs.get("varargs", False):
-			self._params = None
-		else:
-			self._params = params
-		self._multithreading = kwargs.get("multithreading")
+		self._params = params
+		self._help = kwargs["help"]
+		self._varargs = kwargs.get("varargs", VarArgs.NONE)
 
 	@property
 	def name(self):
 		return self._name
 
 	@property
+	def help(self):
+		return self._help
+
+	@property
 	def options(self):
-		if self._params is None:
-			return []
 		return [param.options for param in self._params]
 
 	@staticmethod
 	def index(*commands):
-		return {command.name: command for command in commands}
+		def show_help(client, command=None):
+			message = ""
+			if command is None:
+				message += "Available commands:\n"
+				message += "{} - {}\n".format(help_command._name, help_command._help)
+				message += "\n".join("{} - {}".format(command._name, command._help) for command in commands)
+				message += '\n\nType help "<command>" to get help about a specific command'
+			else:
+				message += "{} - {}\n\n".format(command._name, command._help)
+				message += "Syntax:\n"
+				if command._varargs == VarArgs.NORMAL:
+					message += "{} ...\n".format(command._name)
+				elif command._params:
+					message += "{} {}\n\n".format(command._name, " ".join(("<{}>" if param.required else "[{}]").format(param.name) for param in command._params))
+					message += "Parameters:\n"
+					message += "\n".join("{} - {}".format(param.name, param.help) for param in command._params)
+				else:
+					message += command._name
+			return message
+		def command_type(command):
+			if command not in indexed:
+				raise ValueError('Command "{}" does not exist'.format(command))
+			return indexed[command]
+		indexed = {command._name: command for command in commands}
+		help_command = Command("help", show_help, Parameter("command", indexed.keys() + ["help"], "Command name", required=False, type=command_type), help="Show this help message")
+		indexed["help"] = help_command
+		return indexed
 
 	@staticmethod
 	def read(client, commands):
 		while True:
 			try:
-				command = get_input(">>> ", {command.name: command.options for command in commands.itervalues()}, client)
+				command = get_input(">>> ", {command._name: command.options for command in commands.itervalues()}, client)
 			except ValueError as e:
 				print e
 				continue
@@ -66,7 +99,7 @@ class Command(object):
 				continue
 
 	def _convert(self, values):
-		if self._params is None:
+		if self._varargs == VarArgs.NORMAL:
 			return values
 		converted = []
 		for param, value in itertools.izip_longest(self._params, values):
@@ -80,29 +113,28 @@ class Command(object):
 					min_params = list(itertools.takewhile(lambda p: p.required, self._params))
 					raise ValueError('Command "{}" takes at least {} parameter{} ({} given)'.format(self._name, len(min_params), "" if len(min_params) == 1 else "s", len(values)))
 				break
-			try:
-				converted.append(param.type(value))
-			except ValueError as e:
-				raise ValueError('Parameter "{}" has invalid value: "{}"'.format(param.name, value))
+			if param.type is not None:
+				try:
+					value = param.type(value)
+				except ValueError as e:
+					raise ValueError('Parameter "{}" has invalid value: "{}"'.format(param.name, value))
+			converted.append(value)
 		return converted
 
 	def execute(self, client, params):
 		def star(args):
 			self.execute(*args)
-		if self._multithreading is not None and len(params) > 1:
-			if self._multithreading:
-				pool = ThreadPool()
-				pool.map(star, ((client, [param]) for param in params))
-			else:
+		if len(params) > 1:
+			if self._varargs == VarArgs.SINGLE_THREADED:
 				for param in params:
 					self.execute(client, [param])
-			return
+				return
+			elif self._varargs == VarArgs.MULTI_THREADED:
+				pool = ThreadPool()
+				pool.map(star, ((client, [param]) for param in params))
+				return
 		try:
 			message = self._function(client, *params)
-		except TypeError as e:
-			if self._function.__name__ + "() takes" not in str(e):
-				raise
-			print 'Command "{}" does not take {} parameters'.format(self.name, len(params))
 		except KeyboardInterrupt:
 			print
 		except LoginError as e:
@@ -114,18 +146,40 @@ class Command(object):
 				print message
 
 class Parameter(object):
-	def __init__(self, name, options, required=True, type=None):
+	def __init__(self, name, options, help, required=True, type=None):
 		self._name = name
 		self._options = options
+		self._help = help
 		self._required = required
-		if type is None:
-			self._type = self._identity
-		else:
-			self._type = type
+		self._type = type
 
-	@staticmethod
-	def _identity(value):
-		return value
+	@classmethod
+	def logging_level(cls, help, required=True):
+		def logging_level_type(level_name):
+			if level_name not in logging_levels:
+				raise ValueError('Unknown logging level "{}"'.format(level_name))
+			return logging_levels[level_name], level_name
+		logging_levels = {
+			"all": logging.NOTSET,
+			"debug": logging.DEBUG,
+			"info": logging.INFO,
+			"warning": logging.WARNING,
+			"error": logging.ERROR,
+			"critical": logging.CRITICAL
+		}
+		return cls("level", logging_levels.keys(), required=required, type=logging_level_type, help=help)
+
+	@classmethod
+	def int_param(cls, name, help, required=True):
+		return cls(name, [], required=required, type=int, help=help)
+
+	@classmethod
+	def penguin_name(cls, help, required=True):
+		return cls("penguin_name", lambda c: [penguin.name for penguin in c.penguins.itervalues()], required=required, help=help)
+
+	@classmethod
+	def other_penguin_name(cls, help, required=True):
+		return cls("penguin_name", lambda c: [penguin.name for penguin in c.penguins.itervalues() if penguin.id != c.id], required=required, help=help)
 
 	@property
 	def name(self):
@@ -134,6 +188,10 @@ class Parameter(object):
 	@property
 	def options(self):
 		return self._options
+
+	@property
+	def help(self):
+		return self._help
 
 	@property
 	def required(self):
