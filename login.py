@@ -174,7 +174,8 @@ def follow(client, penguin_id_or_name=None, dx=None, dy=None):
 		client.follow(penguin_id)
 	elif dy is None:
 		raise common.LoginError("Invalid parameters")
-	client.follow(penguin_id, dx, dy)
+	else:
+		client.follow(penguin_id, dx, dy)
 
 def logout(client):
 	client.logout()

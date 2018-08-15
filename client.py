@@ -1061,7 +1061,7 @@ class Client(object):
 		x = self._require_int("x", x)
 		y = self._require_int("y", y)
 		self._info("Walking to ({}, {})...".format(x, y))
-		if self._login_host in ("server.cprewritten.net", "204.44.93.5"):
+		if self._login_host in ("server.cprewritten.net", "linode5.cpps.me"):
 			self._send_packet("s", "u#sp", x, y)
 		else:
 			self._send_packet("s", "u#sp", self._id, x, y, internal_room_id=False)

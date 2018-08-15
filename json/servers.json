@@ -9,7 +9,7 @@
 		}
 	},
 	"me": {
-		"login": "172.104.66.25:6114",
+		"login": "linode5.cpps.me:6114",
 		"single_quotes": true,
 		"servers": {
 			"iceberg tip": "144.217.86.166:2345",
@@ -95,29 +95,12 @@
 			"yeti": 6114
 		}
 	},
-	"reversed": {
-		"host": "144.202.117.47",
-		"login": 6112,
-		"servers": {
-			"blizzard": 6113,
-			"ice berg": 6114,
-			"white out": 6115,
-			"reversed": 6116
-		}
-	},
 	"aventure pingouin": {
 		"host": "54.37.14.208",
 		"login": 6112,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
 			"yeti": 9875
-		}
-	},
-	"one": {
-		"host": "144.217.88.9",
-		"login": 3111,
-		"servers": {
-			"cpps.one": 9875
 		}
 	},
 	"cpr": {
@@ -136,13 +119,6 @@
 			"beanie": 7011
 		}
 	},
-	"snowy island": {
-		"host": "198.251.83.104",
-		"login": 4394,
-		"servers": {
-			"breeze": 9643
-		}
-	},
 	"again": {
 		"host": "45.76.128.185",
 		"login": 6112,
@@ -155,6 +131,13 @@
 		"login": "api.penguinoasis.com",
 		"servers": {
 			"penguin oasis": "144.217.5.122:1123"
+		}
+	},
+	"tuba": {
+		"host": "104.238.172.107",
+		"login": 6112,
+		"servers": {
+			"zipline": 9875
 		}
 	}
 }
