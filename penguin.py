@@ -29,7 +29,10 @@ class Penguin(object):
 		try:
 			color = int(player[3], 0)
 		except ValueError:
-			color = int(player[3], 16)
+			try:
+				color = int(player[3], 16)
+			except ValueError:
+				color = None
 		head = int(player[4])
 		face = int(player[5])
 		neck = int(player[6])
