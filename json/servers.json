@@ -1,13 +1,4 @@
 {
-	"reborn": {
-		"host": "35.204.129.226",
-		"login": 2,
-		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
-		"single_quotes": true,
-		"servers": {
-			"usa": 3
-		}
-	},
 	"me": {
 		"login": "linode5.cpps.me:6114",
 		"single_quotes": true,
@@ -41,13 +32,12 @@
 		}
 	},
 	"cpbr": {
-		"host": "149.202.86.4",
+		"host": "188.165.206.119",
 		"login": 9700,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
 			"ventilador": 9875,
-			"deu branco": 9876,
-			"granizo": 9877
+			"deu branco": 9876
 		}
 	},
 	"free": {
@@ -130,14 +120,16 @@
 	"oasis": {
 		"login": "api.penguinoasis.com",
 		"servers": {
-			"penguin oasis": "144.217.5.122:1123"
+			"penguin oasis": "149.56.140.67:1123"
 		}
 	},
-	"tuba": {
-		"host": "104.238.172.107",
-		"login": 6112,
+	"cpu": {
+		"host": "198.100.148.54",
+		"login": 9112,
 		"servers": {
-			"zipline": 9875
+			"blizzard": 9875,
+			"battle royale": 9876,
+			"zipline": 9877
 		}
 	}
 }

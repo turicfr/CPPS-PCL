@@ -62,23 +62,20 @@ Options:
 5. Waddle on!
 
 ## Supported CPPSs
-Currently 16 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
-* `reborn` - [Club Penguin Reborn](https://cpreborn.com/)
+Currently 13 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
 * `me` - [CPPS Me](http://cpps.me/)
 * `nation` - [Penguin Nation](http://penguins.coffee/)
 * `io` - [CPPS IO](https://cpps.io/)
 * `cpbr` - [Club Penguin Brasil](https://www.clubpenguinbrasil.pw/)
 * `free` - [Free Penguin](http://freepenguin.xyz/)
 * `super` - [Super CPPS](https://supercpps.com/)
-* `cpo` - [Club Penguin Online](https://clubpenguinonline.com/)
+* `cpo` - [Club Penguin Online](https://cponline.pw/)
 * `hangout` - [Penguin Hangout](https://penguinhangout.pw/)
-* `reversed` - [Club Penguin Reversed](https://cpreversed.me/)
 * `aventure pingouin` - [Aventure Pingouin](https://aventurepingouin.com/)
-* `one` - [CPPS One](https://cpps.one/)
 * `cpr` - [Club Penguin Rewritten](https://cprewritten.net/)
-* `snowy island` - [Snowy Island](https://snowyisland.net/)
 * `again` - [Club Penguin Again](https://www.clubpenguinagain.com/)
 * `oasis` - [Club Penguin Oasis](https://penguinoasis.com/)
+* `cpu` - [Club Penguin Universe](https://cpuniverse.me/)
 
 If you want support for a new CPPS, please [open an issue](https://github.com/relrelb/CPPS-PCL/issues/new) regarding it.
 
@@ -136,8 +133,8 @@ If you want support for a new CPPS, please [open an issue](https://github.com/re
 | Both | `say` | `message...` | Say `message`. |
 | Both | `joke` | `joke_id` | Tell joke with ID `joke_id`. |
 | Both | `emote` | `emote_id` | React emote with ID `emote_id`. |
-| Both | `mail` | `penguin_id` `postcard_id` | Send to a penguin with ID `penguin_id` a postcard with ID `postcard_id`. |
-| Both | `mail` | `penguin_name` `postcard_id` | Send to a penguin named `penguin_name` a postcard with ID `postcard_id`. |
+| Both | `postcard` | `penguin_id` `postcard_id` | Send to a penguin with ID `penguin_id` a postcard with ID `postcard_id`. |
+| Both | `postcard` | `penguin_name` `postcard_id` | Send to a penguin named `penguin_name` a postcard with ID `postcard_id`. |
 | Both | `buy` | `item_id...` | Buy item(s) with ID `item_id`. |
 | Both | `ai` | `item_id...` | Buy item(s) with ID `item_id`. |
 | Both | `coins` | _None_ | Get current coins. |

@@ -327,7 +327,7 @@ def main():
 		common.Command("say", say, varargs=common.VarArgs.NORMAL, help="Say message"),
 		common.Command("joke", call_all("joke"), common.Parameter.int_param("joke_id", help="Joke ID"), help="Tell a joke"),
 		common.Command("emote", call_all("emote"), common.Parameter.int_param("emote_id", help="Emote ID"), help="React an emote"),
-		common.Command("mail", call_all("mail"), common.Parameter.other_penguin_name(help="Penguin name"), common.Parameter.int_param("postcard_id", help="Postcard ID"), help="Send a postcard"),
+		common.Command("postcard", call_all("postcard"), common.Parameter.other_penguin_name(help="Penguin name"), common.Parameter.int_param("postcard_id", help="Postcard ID"), help="Send a postcard"),
 		common.Command("buy", call_all("add_item"), common.Parameter.int_param("item_id", help="Item ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy item"),
 		common.Command("ai", call_all("add_item"), common.Parameter.int_param("item_id", help="Item ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy item"),
 		common.Command("coins", coins, common.Parameter.int_param("amount", required=False, help="Amount"), help="Get current coins / Earn coins"),

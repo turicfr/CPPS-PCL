@@ -149,8 +149,8 @@ def stamps(client, penguin_id_or_name=None):
 def say(client, *message):
 	client.say(" ".join(message))
 
-def mail(client, penguin_id_or_name, postcard_id):
-	client.mail(client.get_penguin_id(penguin_id_or_name), postcard_id)
+def postcard(client, penguin_id_or_name, postcard_id):
+	client.postcard(client.get_penguin_id(penguin_id_or_name), postcard_id)
 
 def coins(client, amount=None):
 	if amount is None:
@@ -216,7 +216,7 @@ def main():
 		common.Command("say", say, varargs=common.VarArgs.NORMAL, help="Say message"),
 		common.Command("joke", Client.joke, common.Parameter.int_param("joke_id", help="Joke ID"), help="Tell a joke"),
 		common.Command("emote", Client.emote, common.Parameter.int_param("emote_id", help="Emote ID"), help="React an emote"),
-		common.Command("mail", mail, common.Parameter.other_penguin_name(help="Penguin name"), common.Parameter.int_param("postcard_id", help="Postcard ID"), help="Send a postcard"),
+		common.Command("postcard", postcard, common.Parameter.other_penguin_name(help="Penguin name"), common.Parameter.int_param("postcard_id", help="Postcard ID"), help="Send a postcard"),
 		common.Command("buy", Client.add_item, common.Parameter.int_param("item_id", help="Item ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy item"),
 		common.Command("ai", Client.add_item, common.Parameter.int_param("item_id", help="Item ID"), varargs=common.VarArgs.MULTI_THREADED, help="Buy item"),
 		common.Command("coins", coins, common.Parameter.int_param("amount", required=False, help="Amount"), help="Get current coins / Earn coins"),
