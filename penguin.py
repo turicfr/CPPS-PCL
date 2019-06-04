@@ -49,7 +49,10 @@ class Penguin(object):
 			except ValueError:
 				frame = None
 			unknown = int(player[15])
-			rank = int(player[16])
+			try:
+				rank = int(player[16])
+			except ValueError:
+				rank = None
 			return cls(penguin_id, name, member, color, head, face, neck, body, hand, feet, pin, background, x, y, frame, unknown, rank)
 		if len(player) > 12:
 			# ??? = int(player[12])
