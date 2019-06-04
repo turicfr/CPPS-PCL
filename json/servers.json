@@ -1,6 +1,6 @@
 {
 	"me": {
-		"login": "linode5.cpps.me:6114",
+		"login": "softlayer7.cpps.me:6114",
 		"single_quotes": true,
 		"servers": {
 			"iceberg tip": "144.217.86.166:2345",
@@ -31,7 +31,7 @@
 			"main": 8868
 		}
 	},
-	"cpbr": {
+	"brasil": {
 		"host": "188.165.206.119",
 		"login": 9700,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
@@ -68,21 +68,13 @@
 	},
 	"cpo": {
 		"host": "mail.cponline.pw",
-		"login": 7000,
+		"login": 3724,
 		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"single_quotes": true,
 		"servers": {
 			"flurry": 7007,
 			"alaska": 7002,
 			"sleet": 7008
-		}
-	},
-	"hangout": {
-		"host": "207.148.13.157",
-		"login": 6112,
-		"servers": {
-			"blizzard": 6113,
-			"yeti": 6114
 		}
 	},
 	"aventure pingouin": {
@@ -123,13 +115,36 @@
 			"penguin oasis": "149.56.140.67:1123"
 		}
 	},
-	"cpu": {
-		"host": "198.100.148.54",
-		"login": 9112,
+	"origins": {
+		"host": "178.62.98.226",
+		"login": 6112,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
 		"servers": {
-			"blizzard": 9875,
-			"battle royale": 9876,
-			"zipline": 9877
+			"marshmallow": 9875,
+			"ice cream": 1870,
+			"blizzard": 3590
+		}
+	},
+	"remastered": {
+		"host": "63.142.252.89",
+		"login": 6112,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"servers": {
+			"sandbox": 9875
+		}
+	},
+	"rcpps": {
+		"host": "54.36.162.254",
+		"login": 2222,
+		"servers": {
+			"socket#0009": 8888
+		}
+	},
+	"zone": {
+		"host": "168.235.82.214",
+		"login": 6112,
+		"servers": {
+			"blizzard": 9875
 		}
 	}
 }

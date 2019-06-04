@@ -62,20 +62,22 @@ Options:
 5. Waddle on!
 
 ## Supported CPPSs
-Currently 13 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
+Currently 15 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
 * `me` - [CPPS Me](http://cpps.me/)
 * `nation` - [Penguin Nation](http://penguins.coffee/)
 * `io` - [CPPS IO](https://cpps.io/)
-* `cpbr` - [Club Penguin Brasil](https://www.clubpenguinbrasil.pw/)
+* `brasil` - [Club Penguin Brasil](https://www.clubpenguinbrasil.pw/)
 * `free` - [Free Penguin](http://freepenguin.xyz/)
 * `super` - [Super CPPS](https://supercpps.com/)
 * `cpo` - [Club Penguin Online](https://cponline.pw/)
-* `hangout` - [Penguin Hangout](https://penguinhangout.pw/)
 * `aventure pingouin` - [Aventure Pingouin](https://aventurepingouin.com/)
 * `cpr` - [Club Penguin Rewritten](https://cprewritten.net/)
 * `again` - [Club Penguin Again](https://www.clubpenguinagain.com/)
 * `oasis` - [Club Penguin Oasis](https://penguinoasis.com/)
-* `cpu` - [Club Penguin Universe](https://cpuniverse.me/)
+* `origins` - [Club Penguin Origins](https://clubpenguinorigins.com/)
+* `remastered` [Club Penguin Remastered](https://cpremastered.com/)
+* `rcpps` - [rCPPS](http://rcpps.me/)
+* `zone` - [Penguin Zone](http://penguinzone.me/)
 
 If you want support for a new CPPS, please [open an issue](https://github.com/relrelb/CPPS-PCL/issues/new) regarding it.
 
