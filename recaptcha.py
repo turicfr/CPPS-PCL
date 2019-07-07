@@ -131,13 +131,15 @@ def get_tokens(count, retry=False):
 	try:
 		cef.Initialize(settings=settings)
 		while count:
-			browser = cef.CreateBrowserSync(url=url, window_title="reCAPTCHA")
+			browser = cef.CreateBrowserSync(window_title="reCAPTCHA")
 			browser.SetBounds(0, 0, 314, 501)
 
-			# frame = browser.GetMainFrame()
-			# frame.LoadString(html, url)
 			clientHandler = ClientHandler(url, filename2url("recaptcha.html"))
 			browser.SetClientHandler(clientHandler)
+
+			frame = browser.GetMainFrame()
+			# frame.LoadString(html, url)
+			frame.LoadUrl(url)
 
 			external = External()
 			bindings = cef.JavascriptBindings(bindToFrames=False, bindToPopups=False)
