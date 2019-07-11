@@ -132,7 +132,13 @@ def get_tokens(count, retry=False):
 		cef.Initialize(settings=settings)
 		while count:
 			browser = cef.CreateBrowserSync(window_title="reCAPTCHA")
-			browser.SetBounds(0, 0, 314, 501)
+
+			if os.name == "nt":
+				import ctypes
+				hwnd = browser.GetWindowHandle()
+				ctypes.windll.user32.MoveWindow(hwnd, 0, 0, 350, 540, True)
+			else:
+				browser.SetBounds(0, 0, 314, 501)
 
 			clientHandler = ClientHandler(url, filename2url("recaptcha.html"))
 			browser.SetClientHandler(clientHandler)
