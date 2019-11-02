@@ -1,12 +1,14 @@
 import re
 import socket
-import select
 import hashlib
+import functools
 
 from .xt import xt
 from .client import Client
 
 BUFFER_SIZE = 4096
+
+PACKET_HANDLERS = {}
 
 def swapped_md5(password):
     digest = hashlib.md5(password.encode("ascii")).hexdigest()
@@ -17,7 +19,6 @@ class GenericClient(Client):
         self.host = host
         self.port = port
         self.buffer = b""
-        self.handlers = {}
         self._id = None
 
     def _send(self, data):
@@ -62,23 +63,39 @@ class GenericClient(Client):
 
         pword = swapped_md5(swapped_md5(password).upper() + rndk + self.magic)
         request = f'<msg t="sys"><body action="login" r="0"><login z="w1"><nick><![CDATA[{username}]]></nick><pword><![CDATA[{pword}]]></pword></login></body></msg>'
-        response = self._send(request)
+        self._send(request)
+
+        self.update()
+        self.socket.setblocking(False)
 
     def update(self):
-        select.select([self.socket], [], [], 0)
-        # self.handlers["l"] = self.handle_login
-        # while True:
-        #     packet = xt.parse(self._recv())
-        #     if packet[2] not in self.handlers:
-        #         print(f"Unhandled packet: {'%'.join(packet)}")
-        #         continue
-        #     self.handlers[packet[2]](packet)
+        try:
+            data = self._recv()
+        except BlockingIOError:
+            return
+        packet = xt.parse(data)
+        self.handle_packet(packet)
 
-    def handle_login(self, packet):
-        data = packet[4].split("|")
-        self._id = int(data[0])
+    def handle_packet(self, packet):
+        if packet[2] not in PACKET_HANDLERS:
+            print(f"Unhandled packet: {'%'.join(packet)}")
+            return
+        PACKET_HANDLERS[packet[2]](self, packet)
 
     @property
     def id(self):
-        assert self._id is not None
         return self._id
+
+    def packet_handler(name):
+        def _packet_handler(func):
+            @functools.wraps(func)
+            def _func(self, packet):
+                func(self, packet)
+            PACKET_HANDLERS[name] = _func
+            return _func
+        return _packet_handler
+
+    @packet_handler("l")
+    def handle_login(self, packet):
+        data = packet[4].split("|")
+        self._id = int(data[0])
