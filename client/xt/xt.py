@@ -1,2 +1,2 @@
 def parse(data):
-	return data.split("%")
+    return data.split("%")
