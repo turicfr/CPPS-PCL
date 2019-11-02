@@ -3,7 +3,7 @@ import socket
 import hashlib
 import functools
 
-from .xt import xt
+from .xt import parser as xt
 from .client import Client
 
 BUFFER_SIZE = 4096
