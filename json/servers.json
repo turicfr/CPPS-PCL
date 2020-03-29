@@ -146,5 +146,14 @@
 		"servers": {
 			"blizzard": 9875
 		}
+	},
+	"cozy": {
+		"host": "116.251.193.131",
+		"login": 21193,
+		"magic": "a1ebe00441f5aecb185d0ec178ca2305Y(02.>'H}t\":E1_root",
+		"servers": {
+			"icecube": 11947,
+			"snowball": 11534
+		}
 	}
 }
