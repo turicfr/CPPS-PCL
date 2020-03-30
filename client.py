@@ -117,6 +117,8 @@ class Client(object):
 		self._inventory = None
 		self._buddies = None
 		self._follow = None
+		if self._login_host == "server.cprewritten.net":
+			self._packet_code_num = 99999
 
 	def __iter__(self):
 		return self
@@ -213,8 +215,12 @@ class Client(object):
 
 	def _send_packet(self, ext, cmd, *args, **kwargs):
 		packet = "%xt%{}%{}%".format(ext, cmd)
+		args = list(args)
 		if kwargs.get("internal_room_id", True):
-			packet += str(self._internal_room_id) + "%"
+			args.insert(0, self._internal_room_id)
+		if self._login_host == "server.cprewritten.net":
+			args.insert(0, (self._packet_code_num + 769567) ^ 942215)
+			self._packet_code_num += 1
 		packet += "".join(str(arg) + "%" for arg in args)
 		self._send(packet)
 
