@@ -4,11 +4,10 @@
 	<head>
 		<script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
 		<script type="text/javascript">
-			var onloadCallback = function() {
-				console.log("grecaptcha is ready!");
-				grecaptcha.render('cpRewrittenCap', {
-					'sitekey': '6Lc1p0YUAAAAAKfkOa8x3gMiOH2ms2lBqYKybPmM',
-					'callback': function(token) {
+			const onloadCallback = function() {
+				grecaptcha.render("captcha", {
+					"sitekey": "6Lc1p0YUAAAAAKfkOa8x3gMiOH2ms2lBqYKybPmM",
+					callback(token) {
 						window.external.setToken(token);
 						grecaptcha.reset();
 					}
@@ -17,6 +16,6 @@
 		</script>
 	</head>
 	<body>
-		<div id="cpRewrittenCap"></div>
+		<div id="captcha"></div>
 	</body>
 </html>
