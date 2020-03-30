@@ -291,10 +291,7 @@ class Client(object):
 		if token is None:
 			self._error("Failed to retrieve reCAPTCHA token")
 		self._info("reCAPTCHA token: {}".format(token))
-		self._send_packet("s", "rewritten#captchaverify", token)
-		packet = self._receive_packet()
-		while packet[2] != "captchasuccess":
-			packet = self._receive_packet()
+		return token
 
 	def _oasis_login(self, username, password, encrypted):
 		try:
@@ -402,7 +399,11 @@ class Client(object):
 			while packet[2] != "js":
 				packet = self._receive_packet()
 				if packet[2] == "joincaptcha":
-					self._recaptcha()
+					token = self._recaptcha()
+					self._send_packet("s", "rewritten#captchaverify", token)
+					packet = self._receive_packet()
+					while packet[2] != "captchasuccess":
+						packet = self._receive_packet()
 		self._info("Joined server")
 
 	def _heartbeat(self):
