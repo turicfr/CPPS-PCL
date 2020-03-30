@@ -2,20 +2,15 @@
 
 <html>
 	<head>
-		<script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
-		<script type="text/javascript">
-			const onloadCallback = function() {
-				grecaptcha.render("captcha", {
-					"sitekey": "6Lc1p0YUAAAAAKfkOa8x3gMiOH2ms2lBqYKybPmM",
-					callback(token) {
-						window.external.setToken(token);
-						grecaptcha.reset();
-					}
+		<script>
+			function onloadCallback() {
+				grecaptcha.ready(async function() {
+					window.external.setToken(await grecaptcha.execute(window.external_sitekey));
 				});
-			};
+			}
+			const script = document.createElement("script");
+			script.src = `https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=${window.external_sitekey}`;
+			document.head.appendChild(script);
 		</script>
 	</head>
-	<body>
-		<div id="captcha"></div>
-	</body>
 </html>

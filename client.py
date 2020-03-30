@@ -88,13 +88,15 @@ class ClientError(Exception):
 		self.code = code
 
 class Client(object):
-	def __init__(self, login_host, login_port, game_host, game_port, magic=None, single_quotes=False, logger=None):
+	def __init__(self, login_host, login_port, game_host, game_port, magic=None, single_quotes=False, origin=None, sitekey=None, logger=None):
 		self._login_host = login_host
 		self._login_port = login_port
 		self._game_host = game_host
 		self._game_port = game_port
 		self._magic = "Y(02.>'H}t\":E1" if magic is None else magic
 		self._single_quotes = single_quotes
+		self._origin = origin
+		self._sitekey = sitekey
 		if logger is None:
 			logger = logging.getLogger()
 			logger.setLevel(logging.NOTSET)
@@ -287,7 +289,7 @@ class Client(object):
 		except ImportError:
 			self._error("Failed to retrieve reCAPTCHA token: cefpython is not installed; Please install it using the following command and try again:\npip install cefpython3")
 		self._info("Retrieving reCAPTCHA token...")
-		token = recaptcha.get_token()
+		token = recaptcha.get_token(self._origin, self._sitekey)
 		if token is None:
 			self._error("Failed to retrieve reCAPTCHA token")
 		self._info("reCAPTCHA token: {}".format(token))
@@ -347,7 +349,11 @@ class Client(object):
 			self._info("Logging in...")
 			self._verchk(ver)
 			rndk = self._rndk()
-			if self._magic:
+			if self._login_host == "176.31.100.185":
+				if not encrypted:
+					password = hashlib.md5(password).hexdigest()
+				pword = self._swapped_md5(password + rndk) + "|" + self._recaptcha()
+			elif self._magic:
 				pword = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
 			else:
 				pword = password
@@ -398,7 +404,7 @@ class Client(object):
 		if confirmation is None:
 			while packet[2] != "js":
 				packet = self._receive_packet()
-				if packet[2] == "joincaptcha":
+				if self._login_host == "server.cprewritten.net" and packet[2] == "joincaptcha":
 					token = self._recaptcha()
 					self._send_packet("s", "rewritten#captchaverify", token)
 					packet = self._receive_packet()

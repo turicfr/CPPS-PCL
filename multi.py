@@ -119,12 +119,13 @@ def manual_login(cpps, server, shape, connected, not_connected, remember):
 def connect_clients(cpps, server, shape, clients_offsets, remember):
 	clients = [client for client, dx, dy in clients_offsets]
 	print "Logging in with {} penguin{}...".format(len(clients), "s" if len(clients) > 1 else "")
-	if cpps == "cpr":
+	sitekey = clients[0]._sitekey
+	if sitekey is not None:
 		try:
 			import recaptcha
 		except ImportError:
 			raise common.LoginError("cefpython is not installed; Please install it using the following command and try again:\npip install cefpython3")
-		recaptcha.preload_tokens(len(clients))
+		recaptcha.preload_tokens(clients[0]._origin, sitekey, len(clients))
 	penguins = common.get_json("penguins")
 	not_connected = auto_login(cpps, shape, penguins, clients) if cpps in penguins else clients
 	connected = [client for client in clients if client not in not_connected]

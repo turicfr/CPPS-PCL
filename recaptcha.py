@@ -120,8 +120,7 @@ class External(object):
 def filename2url(filename):
 	return urljoin("file:", pathname2url(os.path.abspath(filename)))
 
-def get_tokens(count, retry=False):
-	url = "https://play.cprewritten.net/"
+def get_tokens(origin, sitekey, count, retry=False):
 	sys.excepthook = cef.ExceptHook
 	settings = {
 		"context_menu": {"enabled": False},
@@ -140,16 +139,17 @@ def get_tokens(count, retry=False):
 			else:
 				browser.SetBounds(0, 0, 314, 501)
 
-			clientHandler = ClientHandler(url, filename2url("recaptcha.html"))
+			clientHandler = ClientHandler(origin, filename2url("recaptcha.html"))
 			browser.SetClientHandler(clientHandler)
 
 			frame = browser.GetMainFrame()
-			# frame.LoadString(html, url)
-			frame.LoadUrl(url)
+			# frame.LoadString(html, origin)
+			frame.LoadUrl(origin)
 
 			external = External()
 			bindings = cef.JavascriptBindings(bindToFrames=False, bindToPopups=False)
 			bindings.SetObject("external", external)
+			bindings.SetProperty("external_sitekey", sitekey)
 			browser.SetJavascriptBindings(bindings)
 
 			cef.MessageLoop()
@@ -162,10 +162,10 @@ def get_tokens(count, retry=False):
 	finally:
 		sys.excepthook = sys.__excepthook__
 
-def get_token():
+def get_token(origin, sitekey):
 	if _tokens:
 		return _tokens.pop()
-	return list(get_tokens(1))[0]
+	return list(get_tokens(origin, sitekey, 1))[0]
 
-def preload_tokens(count):
-	_tokens.extend(get_tokens(count, True))
+def preload_tokens(origin, sitekey, count):
+	_tokens.extend(get_tokens(origin, sitekey, count, True))

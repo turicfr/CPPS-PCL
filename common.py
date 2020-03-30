@@ -342,7 +342,14 @@ def get_client(servers, cpps, server, logger=None):
 		game_port = int(game_port)
 	magic = servers[cpps].get("magic")
 	single_quotes = servers[cpps].get("single_quotes")
-	return pcl.Client(login_host, login_port, game_host, game_port, magic, single_quotes, logger)
+	recaptcha = servers[cpps].get("recaptcha")
+	if recaptcha is None:
+		origin = None
+		sitekey = None
+	else:
+		origin = recaptcha["origin"]
+		sitekey = recaptcha["sitekey"]
+	return pcl.Client(login_host, login_port, game_host, game_port, magic, single_quotes, origin, sitekey, logger)
 
 def get_penguin(cpps=None, server=None, user=None, remember=None, client=None):
 	servers = get_json("servers")
