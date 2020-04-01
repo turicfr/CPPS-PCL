@@ -62,7 +62,7 @@ Options:
 5. Waddle on!
 
 ## Supported CPPSs
-Currently 15 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
+Currently 16 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
 * `me` - [CPPS Me](http://cpps.me/)
 * `nation` - [Penguin Nation](http://penguins.coffee/)
 * `io` - [CPPS IO](https://cpps.io/)
@@ -78,6 +78,7 @@ Currently 15 different servers are supported, which can also be found in [`json/
 * `remastered` [Club Penguin Remastered](https://cpremastered.com/)
 * `rcpps` - [rCPPS](http://rcpps.me/)
 * `zone` - [Penguin Zone](http://penguinzone.me/)
+* `cozy` - [Cozy Penguin](https://cozypenguin.net/)
 
 If you want support for a new CPPS, please [open an issue](https://github.com/relrelb/CPPS-PCL/issues/new) regarding it.
 
