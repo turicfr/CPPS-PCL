@@ -221,7 +221,7 @@ class Client(object):
 		if kwargs.get("internal_room_id", True):
 			args.insert(0, self._internal_room_id)
 		if self._login_host == "server.cprewritten.net":
-			args.insert(0, (self._packet_code_num + 769567) ^ 942215)
+			args.insert(0, (self._packet_code_num + 669567) ^ 842215)
 			self._packet_code_num += 1
 		packet += "".join(str(arg) + "%" for arg in args)
 		self._send(packet)
