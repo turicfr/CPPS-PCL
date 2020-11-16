@@ -40,23 +40,6 @@
 			"deu branco": 9876
 		}
 	},
-	"free": {
-		"host": "176.31.100.185",
-		"login": 6112,
-		"single_quotes": true,
-		"servers": {
-			"freeo": 6113,
-			"frio": 6114,
-			"nevasca": 6115,
-			"freeland": 6116,
-			"ice paradise": 6117,
-			"migator": 6118
-		},
-		"recaptcha": {
-			"origin": "http://freepenguin.xyz/",
-			"sitekey": "6LdISIoUAAAAAMK1RxDjHcxY3wW4RHiUpA71Mg3L"
-		}
-	},
 	"super": {
 		"host": "167.114.148.26",
 		"login": 1708,

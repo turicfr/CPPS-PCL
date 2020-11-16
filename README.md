@@ -62,12 +62,11 @@ Options:
 5. Waddle on!
 
 ## Supported CPPSs
-Currently 16 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
+Currently 15 different servers are supported, which can also be found in [`json/servers.json`](https://github.com/relrelb/CPPS-PCL/blob/master/json/servers.json):
 * `me` - [CPPS Me](http://cpps.me/)
 * `nation` - [Penguin Nation](http://penguins.coffee/)
 * `io` - [CPPS IO](https://cpps.io/)
 * `brasil` - [Club Penguin Brasil](https://www.clubpenguinbrasil.pw/)
-* `free` - [Free Penguin](http://freepenguin.xyz/)
 * `super` - [Super CPPS](https://supercpps.com/)
 * `cpo` - [Club Penguin Online](https://cponline.pw/)
 * `aventure pingouin` - [Aventure Pingouin](https://aventurepingouin.com/)

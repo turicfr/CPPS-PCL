@@ -349,11 +349,7 @@ class Client(object):
 			self._info("Logging in...")
 			self._verchk(ver)
 			rndk = self._rndk()
-			if self._login_host == "176.31.100.185":
-				if not encrypted:
-					password = hashlib.md5(password).hexdigest()
-				pword = self._swapped_md5(password + rndk) + "|" + self._recaptcha()
-			elif self._magic:
+			if self._magic:
 				pword = self._swapped_md5(self._swapped_md5(password, encrypted).upper() + rndk + self._magic)
 			else:
 				pword = password
